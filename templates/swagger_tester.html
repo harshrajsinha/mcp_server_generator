@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swagger API Discovery - SCIKIQ MCP Studio</title>
+
+    <!-- Enterprise CSS Framework -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-color: #0168fa;
+            --primary-dark: #0055d4;
+            --secondary-color: #8392a5;
+            --success-color: #10b759;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #00cccc;
+            --light-bg: #f5f6fa;
+            --card-bg: #ffffff;
+            --border-color: #d5dae5;
+            --text-primary: #1b2e4b;
+            --text-secondary: #6c757d;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--light-bg);
+            color: var(--text-primary);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Header Section */
+        .page-header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .page-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 5px 0;
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .breadcrumb-container {
+            margin-top: 10px;
+        }
+
+        .breadcrumb {
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            font-size: 13px;
+        }
+
+        .breadcrumb-item + .breadcrumb-item::before {
+            content: "›";
+            color: var(--text-secondary);
+        }
+
+        .breadcrumb-item a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .breadcrumb-item.active {
+            color: var(--text-secondary);
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 30px 30px;
+        }
+
+        /* Card Styling */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Form Styling */
+        .form-label {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .form-label .required {
+            color: var(--danger-color);
+            margin-left: 3px;
+        }
+
+        .form-control, .form-select {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            background: var(--card-bg);
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(1, 104, 250, 0.15);
+            outline: 0;
+        }
+
+        .form-text {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        /* Accordion Styling */
+        .accordion {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .accordion .card {
+            border: none;
+            border-radius: 0;
+            margin-bottom: 0;
+            box-shadow: none;
+        }
+
+        .accordion .card + .card {
+            border-top: 1px solid var(--border-color);
+        }
+
+        .accordion .card-header {
+            background: #f8f9fa;
+            border-bottom: none;
+            padding: 0;
+        }
+
+        .btn-header-link {
+            width: 100%;
+            padding: 12px 20px;
+            text-align: left;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .btn-header-link:hover {
+            background: rgba(1, 104, 250, 0.05);
+            color: var(--primary-color);
+        }
+
+        .btn-header-link::after {
+            content: "\f078";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            transition: transform 0.2s ease;
+        }
+
+        .btn-header-link:not(.collapsed)::after {
+            transform: rotate(-180deg);
+        }
+
+        .accordion .card-body {
+            padding: 20px;
+            background: var(--card-bg);
+        }
+
+        /* Button Styling */
+        .btn {
+            padding: 8px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #6c7a8d;
+            color: white;
+        }
+
+        .btn-lg {
+            padding: 12px 30px;
+            font-size: 15px;
+        }
+
+        .btn i {
+            margin-right: 6px;
+        }
+
+        /* Alert Styling */
+        .alert {
+            border-radius: 4px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+
+        /* API Tree View */
+        .api-tree-container {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .api-tree-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .api-tree-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .api-stats {
+            display: flex;
+            gap: 10px;
+        }
+
+        .stat-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .domain-section {
+            margin-bottom: 25px;
+        }
+
+        .domain-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .domain-header i {
+            margin-right: 8px;
+        }
+
+        .api-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--primary-color);
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .api-item:hover {
+            border-left-color: var(--primary-dark);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transform: translateX(3px);
+        }
+
+        .api-method {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 3px;
+            font-weight: 600;
+            font-size: 11px;
+            margin-right: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .method-GET {
+            background: #61affe;
+            color: white;
+        }
+
+        .method-POST {
+            background: #49cc90;
+            color: white;
+        }
+
+        .method-PUT {
+            background: #fca130;
+            color: white;
+        }
+
+        .method-DELETE {
+            background: #f93e3e;
+            color: white;
+        }
+
+        .method-PATCH {
+            background: #50e3c2;
+            color: white;
+        }
+
+        .api-path {
+            font-family: 'Courier New', monospace;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .api-description {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 6px;
+            font-style: italic;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-content {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-content h4 {
+            color: var(--primary-color);
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .loading-content p {
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* Example URLs Styling */
+        .example-urls {
+            background: #f8f9fa;
+            border: 1px solid var(--border-color);
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .example-urls strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .example-urls code {
+            background: var(--card-bg);
+            padding: 3px 8px;
+            border-radius: 3px;
+            color: var(--text-primary);
+            font-size: 12px;
+            display: block;
+            margin: 5px 0;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Auth Type Specific Fields */
+        .auth-fields {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .auth-fields.active {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 0 15px 15px;
+            }
+
+            .page-header {
+                padding: 15px;
+            }
+
+            .api-tree-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h4>Discovering APIs...</h4>
+            <p>Parsing Swagger/OpenAPI specification</p>
+        </div>
+    </div>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h1><i class="fas fa-search"></i> Swagger API Discovery</h1>
+                <p>Discover and analyze APIs from Swagger/OpenAPI specifications</p>
+                <nav class="breadcrumb-container" aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Swagger API Discovery</li>
+                    </ol>
+                </nav>
+            </div>
+            <div>
+                <a href="/" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Alert Container -->
+        <div id="alertContainer"></div>
+
+        <!-- Swagger Configuration Card -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cog"></i> Swagger Specification Configuration
+            </div>
+            <div class="card-body">
+                <!-- Basic Configuration -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="swaggerUrl" class="form-label">
+                            <i class="fas fa-link"></i> Swagger/OpenAPI Specification URL<span class="required">*</span>
+                        </label>
+                        <input type="url" class="form-control" id="swaggerUrl"
+                               placeholder="https://api.example.com/swagger.json" required>
+                        <div class="example-urls">
+                            <strong><i class="fas fa-info-circle"></i> Examples:</strong>
+                            <code>https://petstore.swagger.io/v2/swagger.json</code>
+                            <code>https://api.example.com/v1/swagger.json</code>
+                            <code>https://api.example.com/v1/openapi.yaml</code>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="apiBaseUrl" class="form-label">
+                            <i class="fas fa-server"></i> API Base URL (Optional)
+                        </label>
+                        <input type="url" class="form-control" id="apiBaseUrl"
+                               placeholder="https://api.example.com">
+                        <small class="form-text">Override the base URL from the Swagger specification</small>
+                    </div>
+                </div>
+
+                <!-- Authentication Configuration Accordion -->
+                <div class="accordion" id="authAccordion">
+                    <!-- Authentication Type -->
+                    <div class="card">
+                        <div class="card-header" id="authTypeHeader">
+                            <a href="#" class="btn-header-link collapsed" data-bs-toggle="collapse"
+                               data-bs-target="#authTypeCollapse" aria-expanded="false">
+                                <span class="tx-bold"><i class="fas fa-shield-alt"></i> Authentication</span>
+                            </a>
+                        </div>
+                        <div id="authTypeCollapse" class="collapse" data-bs-parent="#authAccordion">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="authType" class="form-label">Authentication Type</label>
+                                        <select class="form-select" id="authType" onchange="toggleAuthFields()">
+                                            <option value="none">No Authentication</option>
+                                            <option value="bearer">Bearer Token</option>
+                                            <option value="apikey">API Key</option>
+                                            <option value="basic">Basic Auth</option>
+                                            <option value="oauth2">OAuth 2.0</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Bearer Token Fields -->
+                                <div id="bearerFields" class="auth-fields">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <label for="bearerToken" class="form-label">Bearer Token</label>
+                                            <input type="text" class="form-control" id="bearerToken"
+                                                   placeholder="Enter your bearer token">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- API Key Fields -->
+                                <div id="apikeyFields" class="auth-fields">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="apiKeyName" class="form-label">API Key Name</label>
+                                            <input type="text" class="form-control" id="apiKeyName"
+                                                   placeholder="e.g., X-API-Key">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="apiKeyValue" class="form-label">API Key Value</label>
+                                            <input type="text" class="form-control" id="apiKeyValue"
+                                                   placeholder="Enter your API key">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="apiKeyLocation" class="form-label">Send In</label>
+                                            <select class="form-select" id="apiKeyLocation">
+                                                <option value="header">Header</option>
+                                                <option value="query">Query Parameter</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Basic Auth Fields -->
+                                <div id="basicFields" class="auth-fields">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="basicUsername" class="form-label">Username</label>
+                                            <input type="text" class="form-control" id="basicUsername"
+                                                   placeholder="Enter username">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="basicPassword" class="form-label">Password</label>
+                                            <input type="password" class="form-control" id="basicPassword"
+                                                   placeholder="Enter password">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- OAuth2 Fields -->
+                                <div id="oauth2Fields" class="auth-fields">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <label for="oauth2Token" class="form-label">OAuth 2.0 Access Token</label>
+                                            <input type="text" class="form-control" id="oauth2Token"
+                                                   placeholder="Enter your OAuth 2.0 access token">
+                                            <small class="form-text">
+                                                <i class="fas fa-info-circle"></i> Obtain this token from your OAuth provider
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Headers -->
+                    <div class="card">
+                        <div class="card-header" id="headersHeader">
+                            <a href="#" class="btn-header-link collapsed" data-bs-toggle="collapse"
+                               data-bs-target="#headersCollapse" aria-expanded="false">
+                                <span class="tx-bold"><i class="fas fa-code"></i> Custom Headers</span>
+                            </a>
+                        </div>
+                        <div id="headersCollapse" class="collapse" data-bs-parent="#authAccordion">
+                            <div class="card-body">
+                                <div id="customHeadersContainer">
+                                    <div class="row mb-2">
+                                        <div class="col-md-5">
+                                            <input type="text" class="form-control" placeholder="Header Name"
+                                                   id="headerName1">
+                                        </div>
+                                        <div class="col-md-5">
+                                            <input type="text" class="form-control" placeholder="Header Value"
+                                                   id="headerValue1">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-primary w-100" onclick="addHeaderRow()">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SSL/TLS Configuration -->
+                    <div class="card">
+                        <div class="card-header" id="sslHeader">
+                            <a href="#" class="btn-header-link collapsed" data-bs-toggle="collapse"
+                               data-bs-target="#sslCollapse" aria-expanded="false">
+                                <span class="tx-bold"><i class="fas fa-lock"></i> SSL/TLS Configuration</span>
+                            </a>
+                        </div>
+                        <div id="sslCollapse" class="collapse" data-bs-parent="#authAccordion">
+                            <div class="card-body">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="verifySsl" checked>
+                                    <label class="form-check-label" for="verifySsl">
+                                        Verify SSL Certificates
+                                    </label>
+                                    <small class="form-text d-block">
+                                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                                        Disable only for testing with self-signed certificates
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="text-center mt-4">
+                    <button class="btn btn-primary btn-lg" onclick="discoverAPIs()">
+                        <i class="fas fa-search"></i> Discover APIs
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Tree Container -->
+        <div class="api-tree-container" id="apiTreeContainer">
+            <div class="card">
+                <div class="card-header">
+                    <div class="api-tree-header">
+                        <h3><i class="fas fa-sitemap"></i> Discovered APIs</h3>
+                        <div class="api-stats">
+                            <span class="stat-badge">
+                                <i class="fas fa-code"></i> <span id="apiCount">0</span> APIs
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="apiList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Header row counter for dynamic additions
+        let headerRowCount = 1;
+
+        // Toggle authentication fields based on selected type
+        function toggleAuthFields() {
+            const authType = document.getElementById('authType').value;
+
+            // Hide all auth field sections
+            document.querySelectorAll('.auth-fields').forEach(field => {
+                field.classList.remove('active');
+            });
+
+            // Show relevant auth fields
+            if (authType === 'bearer') {
+                document.getElementById('bearerFields').classList.add('active');
+            } else if (authType === 'apikey') {
+                document.getElementById('apikeyFields').classList.add('active');
+            } else if (authType === 'basic') {
+                document.getElementById('basicFields').classList.add('active');
+            } else if (authType === 'oauth2') {
+                document.getElementById('oauth2Fields').classList.add('active');
+            }
+        }
+
+        // Add custom header row
+        function addHeaderRow() {
+            headerRowCount++;
+            const container = document.getElementById('customHeadersContainer');
+            const newRow = document.createElement('div');
+            newRow.className = 'row mb-2';
+            newRow.innerHTML = `
+                <div class="col-md-5">
+                    <input type="text" class="form-control" placeholder="Header Name"
+                           id="headerName${headerRowCount}">
+                </div>
+                <div class="col-md-5">
+                    <input type="text" class="form-control" placeholder="Header Value"
+                           id="headerValue${headerRowCount}">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-danger w-100" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(newRow);
+        }
+
+        // Show alert message
+        function showAlert(message, type = 'danger') {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle'}"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            // Scroll to alert
+            alertContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Collect custom headers
+        function collectCustomHeaders() {
+            const headers = {};
+            for (let i = 1; i <= headerRowCount; i++) {
+                const nameInput = document.getElementById(`headerName${i}`);
+                const valueInput = document.getElementById(`headerValue${i}`);
+                if (nameInput && valueInput && nameInput.value && valueInput.value) {
+                    headers[nameInput.value] = valueInput.value;
+                }
+            }
+            return headers;
+        }
+
+        // Collect authentication configuration
+        function collectAuthConfig() {
+            const authType = document.getElementById('authType').value;
+            const config = {
+                auth_type: authType
+            };
+
+            if (authType === 'bearer') {
+                config.bearer_token = document.getElementById('bearerToken').value;
+            } else if (authType === 'apikey') {
+                config.api_key_name = document.getElementById('apiKeyName').value;
+                config.api_key_value = document.getElementById('apiKeyValue').value;
+                config.api_key_location = document.getElementById('apiKeyLocation').value;
+            } else if (authType === 'basic') {
+                config.basic_username = document.getElementById('basicUsername').value;
+                config.basic_password = document.getElementById('basicPassword').value;
+            } else if (authType === 'oauth2') {
+                config.oauth2_token = document.getElementById('oauth2Token').value;
+            }
+
+            return config;
+        }
+
+        // Discover APIs from Swagger specification
+        async function discoverAPIs() {
+            const swaggerUrl = document.getElementById('swaggerUrl').value.trim();
+            const apiBaseUrl = document.getElementById('apiBaseUrl').value.trim();
+            const verifySsl = document.getElementById('verifySsl').checked;
+
+            // Validation
+            if (!swaggerUrl) {
+                showAlert('Please enter a Swagger/OpenAPI specification URL', 'warning');
+                return;
+            }
+
+            // Show loading overlay
+            document.getElementById('loadingOverlay').classList.add('active');
+            document.getElementById('alertContainer').innerHTML = '';
+
+            try {
+                // Collect authentication and headers
+                const authConfig = collectAuthConfig();
+                const customHeaders = collectCustomHeaders();
+
+                // Prepare request payload
+                const payload = {
+                    swagger_url: swaggerUrl,
+                    api_base_url: apiBaseUrl || undefined,
+                    verify_ssl: verifySsl,
+                    ...authConfig,
+                    custom_headers: customHeaders
+                };
+
+                // Call backend API
+                const response = await fetch('/api/parse-swagger', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displayAPIs(result.api_definitions, result.total_apis);
+                    showAlert(`Successfully discovered ${result.total_apis} API${result.total_apis !== 1 ? 's' : ''}!`, 'success');
+                } else {
+                    showAlert(`Error: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                showAlert(`Failed to parse Swagger specification: ${error.message}`, 'danger');
+                console.error('Error:', error);
+            } finally {
+                document.getElementById('loadingOverlay').classList.remove('active');
+            }
+        }
+
+        // Display discovered APIs in tree view
+        function displayAPIs(apis, totalCount) {
+            const apiTreeContainer = document.getElementById('apiTreeContainer');
+            const apiList = document.getElementById('apiList');
+            const apiCount = document.getElementById('apiCount');
+
+            // Update count
+            apiCount.textContent = totalCount;
+
+            // Clear previous results
+            apiList.innerHTML = '';
+
+            // Group APIs by domain/tag
+            const groupedAPIs = {};
+            apis.forEach(api => {
+                const domain = api.business_domain || api.tag || 'General';
+                if (!groupedAPIs[domain]) {
+                    groupedAPIs[domain] = [];
+                }
+                groupedAPIs[domain].push(api);
+            });
+
+            // Render grouped APIs
+            Object.keys(groupedAPIs).sort().forEach(domain => {
+                const domainSection = document.createElement('div');
+                domainSection.className = 'domain-section';
+
+                const domainHeader = document.createElement('div');
+                domainHeader.className = 'domain-header';
+                domainHeader.innerHTML = `<i class="fas fa-folder-open"></i> ${domain} <span style="font-weight: normal; color: var(--text-secondary);">(${groupedAPIs[domain].length})</span>`;
+                domainSection.appendChild(domainHeader);
+
+                groupedAPIs[domain].forEach(api => {
+                    const methods = api.methods || [api.method || 'GET'];
+                    const method = methods[0].toUpperCase();
+
+                    const apiItem = document.createElement('div');
+                    apiItem.className = 'api-item';
+                    apiItem.innerHTML = `
+                        <div>
+                            <span class="api-method method-${method}">${method}</span>
+                            <span class="api-path">${api.route || api.path}</span>
+                        </div>
+                        ${api.docstring || api.description ? `<div class="api-description">${api.docstring || api.description}</div>` : ''}
+                    `;
+
+                    apiItem.onclick = () => {
+                        console.log('API selected:', api);
+                        // Future: Add functionality to show API details or test
+                    };
+
+                    domainSection.appendChild(apiItem);
+                });
+
+                apiList.appendChild(domainSection);
+            });
+
+            // Show container
+            apiTreeContainer.style.display = 'block';
+
+            // Scroll to results
+            apiTreeContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Allow Enter key to trigger discovery on Swagger URL field
+            document.getElementById('swaggerUrl').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    discoverAPIs();
+                }
+            });
+
+            // Set default example URL
+            document.getElementById('swaggerUrl').value = 'https://petstore.swagger.io/v2/swagger.json';
+        });
+    </script>
+</body>
+</html>
