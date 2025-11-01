@@ -1576,6 +1576,27 @@
                 <button class="action-btn" onclick="rescanSource()" id="scanBtn">
                     <i class="fas fa-search"></i> Scan Project
                 </button>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <label for="confidenceThreshold" style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); min-width: 90px;">Min Score:</label>
+                    <select id="confidenceThreshold" onchange="updateBulkAnalyzeButton()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; padding: 0.4rem 0.6rem; font-size: 0.85rem; min-width: 80px;">
+                        <option value="60">60%</option>
+                        <option value="70">70%</option>
+                        <option value="80" selected>80%</option>
+                        <option value="90">90%</option>
+                        <option value="95">95%</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <label for="maxApisToAnalyze" style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); min-width: 90px;">Max APIs:</label>
+                    <select id="maxApisToAnalyze" onchange="updateBulkAnalyzeButton()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; padding: 0.4rem 0.6rem; font-size: 0.85rem; min-width: 80px;">
+                        <option value="3" selected>3 APIs</option>
+                        <option value="5">5 APIs</option>
+                        <option value="10">10 APIs</option>
+                        <option value="15">15 APIs</option>
+                        <option value="20">20 APIs</option>
+                        <option value="all">All APIs</option>
+                    </select>
+                </div>
                 <button class="action-btn" onclick="bulkAnalyzeAPIs()" id="bulkAnalyzeBtn" disabled style="background: linear-gradient(135deg, #7C3AED, #9333EA);">
                     <i class="fas fa-chart-line"></i> Bulk Analyze (80%+)
                 </button>
@@ -2052,6 +2073,9 @@
                     document.getElementById('bulkAnalyzeBtn').disabled = false;
                     document.getElementById('generateBtn').disabled = false;
                     document.getElementById('docsBtn').disabled = false;
+                    
+                    // Update bulk analyze button text with count
+                    updateBulkAnalyzeButton();
 
                     // Show success message
                     document.getElementById('scanBtn').innerHTML = '<i class="fas fa-check"></i> Swagger Parsed Successfully';
@@ -2153,6 +2177,9 @@
                     document.getElementById('bulkAnalyzeBtn').disabled = false;
                     document.getElementById('generateBtn').disabled = false;
                     document.getElementById('docsBtn').disabled = false;
+                    
+                    // Update bulk analyze button text with count
+                    updateBulkAnalyzeButton();
 
                     btn.innerHTML = '<i class="fas fa-check"></i> Swagger Re-parsed Successfully';
                     setTimeout(() => {
@@ -2206,6 +2233,9 @@
                 document.getElementById('generateBtn').disabled = false;
                 document.getElementById('docsBtn').disabled = false;
                 document.getElementById('bulkAnalyzeBtn').disabled = false;
+                
+                // Update bulk analyze button text with count
+                updateBulkAnalyzeButton();
 
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-check"></i> Scan Complete';
@@ -3384,6 +3414,52 @@
             window.open('https://modelcontextprotocol.io/quickstart', '_blank');
         }
 
+        // Update bulk analyze button text based on selected threshold and max APIs
+        function updateBulkAnalyzeButton() {
+            const threshold = document.getElementById('confidenceThreshold').value;
+            const maxApisSelection = document.getElementById('maxApisToAnalyze').value;
+            const btn = document.getElementById('bulkAnalyzeBtn');
+            const icon = '<i class="fas fa-chart-line"></i>';
+            
+            // Calculate number of APIs that will be analyzed
+            let apiCount = 0;
+            if (projectData && projectData.api_definitions) {
+                let apisToAnalyze;
+                
+                if (projectSourceType === 'swagger') {
+                    apisToAnalyze = projectData.api_definitions;
+                } else {
+                    // Filter business APIs for folder scans
+                    apisToAnalyze = projectData.api_definitions.filter(api => {
+                        const route = api.route.toLowerCase();
+                        const isBusinessAPI = (
+                            route.includes('/products') ||
+                            route.includes('/quote/') ||
+                            route.includes('/claims') ||
+                            route.includes('/policy') ||
+                            route.includes('/customer')
+                        );
+                        const isFrameworkAPI = (
+                            route.includes('scan') ||
+                            route.includes('convert') ||
+                            route.includes('analyze') ||
+                            route.includes('mcp') ||
+                            route.includes('read-file') ||
+                            route.includes('docstring')
+                        );
+                        return isBusinessAPI && !isFrameworkAPI;
+                    });
+                }
+                
+                // Apply max APIs limit
+                const maxApis = maxApisSelection === 'all' ? apisToAnalyze.length : parseInt(maxApisSelection);
+                apiCount = Math.min(apisToAnalyze.length, maxApis);
+            }
+            
+            const countText = apiCount > 0 ? ` (${apiCount} APIs)` : '';
+            btn.innerHTML = `${icon} Bulk Analyze ${threshold}%+${countText}`;
+        }
+
         // Bulk Analysis Function
         async function bulkAnalyzeAPIs() {
             if (!projectData || !projectData.api_definitions) {
@@ -3428,32 +3504,46 @@
             }
 
             const totalAPIs = apisToAnalyze.length;
-            const maxAPIs = 3;  // Testing with 3 APIs for batch testing
+            
+            // Get selected max APIs from UI
+            const maxApisSelection = document.getElementById('maxApisToAnalyze').value;
+            const maxAPIs = maxApisSelection === 'all' ? totalAPIs : parseInt(maxApisSelection);
 
-            // Warn if too many APIs
-            if (totalAPIs > maxAPIs) {
+            // Warn if too many APIs (only if not selecting "all")
+            if (maxApisSelection !== 'all' && totalAPIs > maxAPIs) {
                 const filteredCount = projectData.api_definitions.length - apisToAnalyze.length;
                 const filterMsg = filteredCount > 0 ? ` (filtered out ${filteredCount} framework APIs)` : '';
-                const proceed = confirm(`Found ${totalAPIs} APIs${filterMsg}.\n\nThis will analyze only the first ${maxAPIs} APIs.\n\n💡 TIP: Use "Analyze Selected" to analyze specific domains or APIs.\n\nContinue with ${maxAPIs} APIs?`);
+                const proceed = confirm(`Found ${totalAPIs} APIs${filterMsg}.\n\nThis will analyze only the first ${maxAPIs} APIs.\n\n💡 TIP: Select "All APIs" to analyze everything, or use "Analyze Selected" for specific domains.\n\nContinue with ${maxAPIs} APIs?`);
+                if (!proceed) return;
+            } else if (maxApisSelection === 'all' && totalAPIs > 10) {
+                // Warning for analyzing all APIs if it's a large number
+                const proceed = confirm(`This will analyze ALL ${totalAPIs} APIs.\n\n⚠️  This may take several minutes and consume API credits.\n\n💡 TIP: Consider using a smaller number first to test.\n\nContinue with all ${totalAPIs} APIs?`);
                 if (!proceed) return;
             }
 
             const btn = document.getElementById('bulkAnalyzeBtn');
             btn.disabled = true;
-            btn.innerHTML = '<div class="spinner"></div> Analyzing APIs (0/' + Math.min(totalAPIs, maxAPIs) + ')...';
+            const actualMaxAPIs = Math.min(totalAPIs, maxAPIs);
+            btn.innerHTML = '<div class="spinner"></div> Analyzing APIs (0/' + actualMaxAPIs + ')...';
 
             try {
-                // Create abort controller for timeout
+                // Create abort controller for timeout (dynamic based on API count)
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+                const baseTimeout = 60000; // 1 minute base
+                const perApiTimeout = 15000; // 15 seconds per API
+                const dynamicTimeout = Math.max(baseTimeout, actualMaxAPIs * perApiTimeout);
+                const timeoutId = setTimeout(() => controller.abort(), dynamicTimeout);
 
+                // Get dynamic confidence threshold
+                const selectedThreshold = parseInt(document.getElementById('confidenceThreshold').value);
+                
                 const response = await fetch('/api/bulk-analyze-apis', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         endpoints: apisToAnalyze,
-                        min_confidence: 80,
-                        max_apis: maxAPIs
+                        min_confidence: selectedThreshold,
+                        max_apis: actualMaxAPIs
                     }),
                     signal: controller.signal
                 });
@@ -3494,7 +3584,7 @@
                     btn.innerHTML = '<i class="fas fa-check"></i> Analysis Complete';
 
                     setTimeout(() => {
-                        btn.innerHTML = '<i class="fas fa-chart-line"></i> Bulk Analyze (80%+)';
+                        updateBulkAnalyzeButton();
                     }, 3000);
                 } else {
                     throw new Error(result.error || 'Analysis failed');
@@ -3514,7 +3604,7 @@
 
                 alert(errorMsg);
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-chart-line"></i> Bulk Analyze (80%+)';
+                updateBulkAnalyzeButton();
             }
         }
 
@@ -3688,6 +3778,32 @@
                                 <p style="color: rgba(255, 255, 255, 0.8); margin: 0 0 1.5rem 0; font-size: 0.95rem;">
                                     Automatically configure Claude Desktop and start using your MCP tools instantly!
                                 </p>
+                                
+                                <!-- MCP Server Configuration -->
+                                <div style="background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: left;">
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="display: block; color: white; font-weight: 600; margin-bottom: 0.5rem;">
+                                            <i class="fas fa-server"></i> MCP Server Name
+                                        </label>
+                                        <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+                                            <input type="text" id="mcpServerName" placeholder="my-api-server" 
+                                                style="flex: 1; padding: 0.75rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 1rem; font-family: 'Fira Code', monospace; transition: border-color 0.3s ease;"
+                                                value="scikiq-mcp-autoAPI" 
+                                                oninput="validateServerNameInput(this)" />
+                                            <button type="button" onclick="generateSuggestedServerName()" 
+                                                style="padding: 0.75rem 1rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(124, 58, 237, 0.2); color: white; font-size: 0.9rem; cursor: pointer; transition: all 0.3s ease; white-space: nowrap;"
+                                                onmouseover="this.style.background='rgba(124, 58, 237, 0.4)'" 
+                                                onmouseout="this.style.background='rgba(124, 58, 237, 0.2)'">
+                                                <i class="fas fa-magic"></i> Generate
+                                            </button>
+                                        </div>
+                                        <div id="serverNameFeedback" style="margin-top: 0.5rem; font-size: 0.85rem; transition: all 0.3s ease;"></div>
+                                        <small style="color: rgba(255, 255, 255, 0.7); margin-top: 0.5rem; display: block; font-size: 0.85rem;">
+                                            <i class="fas fa-info-circle"></i> This name will identify your MCP server in Claude Desktop. Use lowercase letters, numbers, and hyphens only.
+                                        </small>
+                                    </div>
+                                </div>
+                                
                                 <button id="autoDeployBtn" onclick="autoDeployMCP('${fullPath}')"
                                     style="background: linear-gradient(135deg, var(--scikiq-light-blue), #7C3AED); color: white; border: none; padding: 1rem 2.5rem; border-radius: 8px; font-size: 1.1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 163, 224, 0.4); transition: all 0.3s ease;">
                                     <i class="fas fa-rocket"></i> Auto-Deploy to Claude Desktop
@@ -3735,16 +3851,16 @@
                                             Windows: <code style="background: rgba(0, 0, 0, 0.3); padding: 0.2rem 0.4rem; border-radius: 3px;">%APPDATA%\\\\Claude\\\\claude_desktop_config.json</code><br>
                                             Mac: <code style="background: rgba(0, 0, 0, 0.3); padding: 0.2rem 0.4rem; border-radius: 3px;">~/Library/Application Support/Claude/claude_desktop_config.json</code>
                                         </div>
-                                        <div style="background: rgba(0, 0, 0, 0.5); padding: 1rem; border-radius: 6px; font-family: 'Fira Code', monospace; font-size: 0.85rem; position: relative; max-height: 200px; overflow-y: auto;">
+                                        <div id="manualConfigExample" style="background: rgba(0, 0, 0, 0.5); padding: 1rem; border-radius: 6px; font-family: 'Fira Code', monospace; font-size: 0.85rem; position: relative; max-height: 200px; overflow-y: auto;">
 <code style="color: rgba(255, 255, 255, 0.9);">{
   "mcpServers": {
-    "scikiq-mcp-autoAPI": {
+    "<span id="configServerNameDisplay">scikiq-mcp-autoAPI</span>": {
       "command": "python",
       "args": ["${fullPath.replace(/\\\\/g, '\\\\\\\\')}"]
     }
   }
 }</code>
-                                            <button onclick="copyToClipboard('{\\n  \\"mcpServers\\": {\\n    \\"scikiq-mcp-autoAPI\\": {\\n      \\"command\\": \\"python\\",\\n      \\"args\\": [\\"${fullPath.replace(/\\\\/g, '\\\\\\\\\\\\\\\\')}\\"]\\n    }\\n  }\\n}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(255, 255, 255, 0.1); border: none; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                            <button id="copyConfigBtn" onclick="copyManualConfig('${fullPath}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(255, 255, 255, 0.1); border: none; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                                                 <i class="fas fa-copy"></i>
                                             </button>
                                         </div>
@@ -3905,23 +4021,162 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             URL.revokeObjectURL(url);
         }
 
+        function generateServerNameSuggestion() {
+            const apiNameInput = document.getElementById('apiName');
+            const serverNameInput = document.getElementById('mcpServerName');
+            
+            if (apiNameInput && apiNameInput.value && serverNameInput) {
+                // Convert API name to valid server name format
+                let suggestion = apiNameInput.value.toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+                    .replace(/\s+/g, '-') // Replace spaces with hyphens
+                    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+                    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+                
+                if (suggestion.length > 0) {
+                    serverNameInput.value = suggestion;
+                    validateServerNameInput(serverNameInput);
+                }
+            }
+        }
+
+        function generateSuggestedServerName() {
+            const serverNameInput = document.getElementById('mcpServerName');
+            const apiNameInput = document.getElementById('apiName');
+            
+            let suggestions = [];
+            
+            // Try to generate from API name first
+            if (apiNameInput && apiNameInput.value) {
+                let suggestion = apiNameInput.value.toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+                if (suggestion) suggestions.push(suggestion);
+            }
+            
+            // Add some generic suggestions
+            suggestions.push(
+                'my-api-server',
+                'api-mcp-server',
+                'custom-api-tools',
+                'api-connector'
+            );
+            
+            // Use the first valid suggestion
+            for (let suggestion of suggestions) {
+                const validation = validateServerName(suggestion);
+                if (validation.valid) {
+                    serverNameInput.value = suggestion;
+                    validateServerNameInput(serverNameInput);
+                    break;
+                }
+            }
+        }
+
+        function validateServerName(name) {
+            // Check format
+            if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+                return { valid: false, message: 'Server name can only contain letters, numbers, hyphens, and underscores' };
+            }
+            
+            // Check length
+            if (name.length < 2) {
+                return { valid: false, message: 'Server name must be at least 2 characters long' };
+            }
+            
+            if (name.length > 50) {
+                return { valid: false, message: 'Server name must be 50 characters or less' };
+            }
+            
+            // Check that it doesn't start with hyphen
+            if (name.startsWith('-') || name.startsWith('_')) {
+                return { valid: false, message: 'Server name cannot start with hyphen or underscore' };
+            }
+            
+            return { valid: true };
+        }
+
+        function validateServerNameInput(input) {
+            const feedback = document.getElementById('serverNameFeedback');
+            const name = input.value.trim();
+            
+            // Update manual configuration display
+            updateManualConfigDisplay(name);
+            
+            if (!name) {
+                feedback.innerHTML = '';
+                input.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                return;
+            }
+            
+            const validation = validateServerName(name);
+            
+            if (validation.valid) {
+                feedback.innerHTML = '<i class="fas fa-check-circle" style="color: #10B981;"></i> <span style="color: #10B981;">Valid server name</span>';
+                input.style.borderColor = '#10B981';
+            } else {
+                feedback.innerHTML = `<i class="fas fa-exclamation-triangle" style="color: #EF4444;"></i> <span style="color: #EF4444;">${validation.message}</span>`;
+                input.style.borderColor = '#EF4444';
+            }
+        }
+
+        function updateManualConfigDisplay(serverName) {
+            const displayElement = document.getElementById('configServerNameDisplay');
+            if (displayElement && serverName) {
+                displayElement.textContent = serverName;
+            }
+        }
+
+        function copyManualConfig(serverPath) {
+            const serverNameInput = document.getElementById('mcpServerName');
+            const serverName = serverNameInput ? serverNameInput.value.trim() : 'scikiq-mcp-autoAPI';
+            
+            const config = {
+                "mcpServers": {}
+            };
+            config.mcpServers[serverName] = {
+                "command": "python",
+                "args": [serverPath.replace(/\\\\/g, '\\\\')]
+            };
+            
+            const configText = JSON.stringify(config, null, 2);
+            copyToClipboard(configText);
+        }
+
         async function autoDeployMCP(serverPath) {
             const btn = document.getElementById('autoDeployBtn');
             const statusDiv = document.getElementById('autoDeployStatus');
+            const serverNameInput = document.getElementById('mcpServerName');
+
+            // Get server name from input field and validate
+            let serverName = serverNameInput.value.trim();
+            if (!serverName) {
+                alert('Please enter a server name');
+                return;
+            }
+
+            // Validate server name
+            const validation = validateServerName(serverName);
+            if (!validation.valid) {
+                alert(validation.message);
+                return;
+            }
 
             // Disable button and show loading
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deploying...';
             statusDiv.style.display = 'block';
-            statusDiv.innerHTML = '<div style="color: var(--scikiq-light-blue);"><i class="fas fa-spinner fa-spin"></i> Configuring Claude Desktop...</div>';
+            statusDiv.innerHTML = `<div style="color: var(--scikiq-light-blue);"><i class="fas fa-spinner fa-spin"></i> Configuring Claude Desktop with server name: <strong>${serverName}</strong>...</div>`;
 
             try {
                 const response = await fetch('/api/auto-deploy-mcp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        server_path: serverPath.replace(/\\\\/g, '/'),
-                        server_name: 'scikiq-mcp-autoAPI',
+                        server_path: serverPath,  // Send path as-is, let backend handle normalization
+                        server_name: serverName,
                         auto_restart: true
                     })
                 });

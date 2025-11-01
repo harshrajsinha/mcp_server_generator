@@ -843,11 +843,11 @@ Provide response in JSON format:
             data = request.get_json()
             endpoints = data.get('endpoints', [])
             min_confidence = data.get('min_confidence', 80)
-            max_apis = data.get('max_apis', 10)  # Reduced to 10 to prevent timeout
+            max_apis = data.get('max_apis', 10)  # Default to 10, but can be overridden by frontend
 
-            # Limit number of APIs to analyze
+            # Limit number of APIs to analyze based on frontend selection
             if len(endpoints) > max_apis:
-                print(f"[INFO] Limiting analysis from {len(endpoints)} to {max_apis} APIs to prevent timeout")
+                print(f"[INFO] Limiting analysis from {len(endpoints)} to {max_apis} APIs as requested")
                 endpoints = endpoints[:max_apis]
 
             if len(endpoints) == 0:
@@ -1096,6 +1096,9 @@ Respond in JSON:
             yaml_tools_path = data.get('yaml_path')  # Optional YAML tools file
             server_name = data.get('server_name', 'scikiq-mcp-autoAPI')
             auto_restart = data.get('auto_restart', True)
+
+            print(f"[DEBUG] Received server_path from frontend: {repr(mcp_server_path)}")
+            print(f"[DEBUG] Server name: {server_name}")
 
             if not mcp_server_path:
                 return jsonify({

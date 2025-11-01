@@ -10,6 +10,10 @@ import subprocess
 import shutil
 import sys
 import re
+import time
+import datetime
+import importlib.util
+import httpx
 from pathlib import Path
 from openai import AzureOpenAI
 from dotenv import load_dotenv
@@ -26,7 +30,6 @@ class MCPAutoDeployer:
         self.max_retries = 3
 
         # Initialize Azure OpenAI client with httpx client (proxy disabled)
-        import httpx
         http_client = httpx.Client(proxy=None, trust_env=False)
 
         self.openai_client = AzureOpenAI(
@@ -82,9 +85,29 @@ class MCPAutoDeployer:
 
                 # Step 2: Load or create config
                 if self.config_path.exists():
-                    with open(self.config_path, 'r') as f:
-                        config = json.load(f)
-                    self._log_diagnostic("Loaded existing config", "success")
+                    try:
+                        with open(self.config_path, 'r', encoding='utf-8') as f:
+                            config = json.load(f)
+                        self._log_diagnostic("Loaded existing config", "success")
+                        
+                        # Log existing servers to ensure they're preserved
+                        if "mcpServers" in config and config["mcpServers"]:
+                            existing_servers = list(config["mcpServers"].keys())
+                            self._log_diagnostic(f"Found {len(existing_servers)} existing server(s): {existing_servers}", "info")
+                        else:
+                            self._log_diagnostic("No existing servers found in config", "info")
+                            
+                    except json.JSONDecodeError as e:
+                        self._log_diagnostic(f"Config file corrupted (JSON error: {e}), creating backup and new config", "error")
+                        # Create backup of corrupted file
+                        backup_path = self.config_path.with_suffix('.json.backup')
+                        shutil.copy2(self.config_path, backup_path)
+                        # Create fresh config
+                        config = {"mcpServers": {}}
+                        self._log_diagnostic(f"Backed up corrupted config to {backup_path}", "info")
+                    except Exception as e:
+                        self._log_diagnostic(f"Failed to read config file: {e}", "error")
+                        config = {"mcpServers": {}}
                 else:
                     config = {"mcpServers": {}}
                     self._log_diagnostic("Created new config", "success")
@@ -93,8 +116,52 @@ class MCPAutoDeployer:
                 if "mcpServers" not in config:
                     config["mcpServers"] = {}
 
-                # Get absolute paths
-                abs_server_path = str(Path(mcp_server_path).absolute())
+                # Get absolute paths and ensure proper formatting
+                self._log_diagnostic(f"Input server path: {repr(mcp_server_path)}", "info")
+                
+                # Fix common path corruption issues
+                path_str = str(mcp_server_path)
+                
+                # Check for the specific malformed pattern: C:DAASMCP POC...
+                if self.system == "Windows" and ":" in path_str and "\\" not in path_str and "/" not in path_str:
+                    if path_str.startswith("C:") and len(path_str) > 10:
+                        self._log_diagnostic(f"Detected malformed Windows path: {repr(path_str)}", "warning")
+                        # Try to reconstruct the path by adding backslashes
+                        
+                        # Pattern: C:DAASMCP POCgauravgenerated_serversmcp_server_loader.py
+                        # Fix: C:\DAAS\MCP POC\gaurav\generated_servers\mcp_server_loader.py
+                        if "DAASMCP POCgaurav" in path_str:
+                            fixed_path = path_str.replace("C:DAAS", "C:\\DAAS\\")
+                            fixed_path = fixed_path.replace("DAASMCP POC", "DAAS\\MCP POC")
+                            fixed_path = fixed_path.replace("POCgaurav", "POC\\gaurav")
+                            fixed_path = fixed_path.replace("gauravgenerated_servers", "gaurav\\generated_servers")
+                            fixed_path = fixed_path.replace("serversmcp_server_loader.py", "servers\\mcp_server_loader.py")
+                            
+                            self._log_diagnostic(f"Reconstructed path: {repr(fixed_path)}", "success")
+                            path_str = fixed_path
+                        else:
+                            # Generic fix: add backslashes between capital letters
+                            drive = path_str[:2]  # C:
+                            rest = path_str[2:]   # DAASMCP POC...
+                            fixed_path = drive + "\\" + re.sub(r'([a-z])([A-Z])', r'\1\\\2', rest)
+                            fixed_path = fixed_path.replace(" ", "\\ ")
+                            self._log_diagnostic(f"Generic fix attempt: {repr(fixed_path)}", "info")
+                            path_str = fixed_path
+                
+                # Ensure path uses correct separators
+                normalized_path = path_str.replace('/', '\\') if self.system == "Windows" else path_str.replace('\\', '/')
+                
+                try:
+                    abs_server_path = str(Path(normalized_path).resolve())
+                    self._log_diagnostic(f"Successfully normalized path: {repr(abs_server_path)}", "success")
+                except Exception as e:
+                    self._log_diagnostic(f"Path normalization failed: {e}", "error")
+                    # Fallback to original path
+                    abs_server_path = normalized_path
+
+                # Preserve existing servers count before modification
+                existing_server_count = len(config.get("mcpServers", {}))
+                existing_server_names = list(config.get("mcpServers", {}).keys())
 
                 # Check if server already exists
                 if server_name in config["mcpServers"]:
@@ -105,7 +172,8 @@ class MCPAutoDeployer:
 
                     # If yaml_tools_path provided, add it if not already present
                     if yaml_tools_path:
-                        abs_yaml_path = str(Path(yaml_tools_path).absolute())
+                        normalized_yaml_path = str(yaml_tools_path).replace('/', '\\') if self.system == "Windows" else str(yaml_tools_path).replace('\\', '/')
+                        abs_yaml_path = str(Path(normalized_yaml_path).resolve())
                         if abs_yaml_path not in existing_args:
                             existing_args.append(abs_yaml_path)
                             self._log_diagnostic(f"Added new tool file: {abs_yaml_path}", "success")
@@ -117,7 +185,8 @@ class MCPAutoDeployer:
                     # New server - create config
                     args = [abs_server_path]
                     if yaml_tools_path:
-                        args.append(str(Path(yaml_tools_path).absolute()))
+                        normalized_yaml_path = str(yaml_tools_path).replace('/', '\\') if self.system == "Windows" else str(yaml_tools_path).replace('\\', '/')
+                        args.append(str(Path(normalized_yaml_path).resolve()))
 
                     config["mcpServers"][server_name] = {
                         "command": self.python_path,
@@ -125,30 +194,105 @@ class MCPAutoDeployer:
                     }
                     self._log_diagnostic(f"Registered new server '{server_name}' in config", "success")
 
+                # Verify we haven't lost any existing servers
+                final_server_count = len(config.get("mcpServers", {}))
+                final_server_names = list(config.get("mcpServers", {}).keys())
+
+                if server_name not in existing_server_names:
+                    # Adding new server
+                    expected_count = existing_server_count + 1
+                    if final_server_count == expected_count:
+                        self._log_diagnostic(f"✓ Successfully added new server. Total servers: {final_server_count}", "success")
+                    else:
+                        self._log_diagnostic(f"⚠ Server count mismatch! Expected: {expected_count}, Got: {final_server_count}", "error")
+                else:
+                    # Updating existing server
+                    if final_server_count == existing_server_count:
+                        self._log_diagnostic(f"✓ Successfully updated existing server. Total servers: {final_server_count}", "success")
+                    else:
+                        self._log_diagnostic(f"⚠ Server count changed unexpectedly! Was: {existing_server_count}, Now: {final_server_count}", "error")
+
+                # Check that all original servers are still present
+                for original_server in existing_server_names:
+                    if original_server in final_server_names:
+                        self._log_diagnostic(f"✓ Preserved existing server: {original_server}", "success")
+                    else:
+                        self._log_diagnostic(f"❌ LOST existing server: {original_server}", "error")
+
                 # Step 4: Write config back with proper path formatting
-                # Ensure all paths are properly formatted as strings
+                # Ensure all paths are properly formatted as strings with correct separators
                 if server_name in config.get("mcpServers", {}):
                     server_config = config["mcpServers"][server_name]
-                    # Convert all args to strings (no manual escaping needed - JSON will handle it)
+                    
+                    # Process and validate all args paths
                     if "args" in server_config:
-                        server_config["args"] = [str(arg) if isinstance(arg, (str, Path)) else str(arg) for arg in server_config["args"]]
+                        processed_args = []
+                        for arg in server_config["args"]:
+                            arg_str = str(arg)
+                            # Ensure proper path format for the OS
+                            if ":" in arg_str:  # Looks like a Windows path
+                                if self.system == "Windows" and "/" in arg_str:
+                                    # Convert forward slashes to backslashes on Windows
+                                    arg_str = arg_str.replace('/', '\\')
+                                elif self.system != "Windows" and "\\" in arg_str:
+                                    # Convert backslashes to forward slashes on Unix systems
+                                    arg_str = arg_str.replace('\\', '/')
+                            processed_args.append(arg_str)
+                            self._log_diagnostic(f"Processed arg path: {arg_str}", "info")
+                        
+                        server_config["args"] = processed_args
+                    
                     # Convert command to string (no manual escaping needed - JSON will handle it)
                     if "command" in server_config:
                         server_config["command"] = str(server_config["command"])
 
+                # Create backup before writing new config (safety measure)
+                if self.config_path.exists() and existing_server_count > 0:
+                    backup_path = self.config_path.with_suffix(f'.backup.{int(time.time())}')
+                    shutil.copy2(self.config_path, backup_path)
+                    self._log_diagnostic(f"Created config backup: {backup_path.name}", "info")
+
                 with open(self.config_path, 'w', encoding='utf-8') as f:
                     json.dump(config, f, indent=2, ensure_ascii=False)
 
+                # Log the final config to confirm all servers are preserved
+                final_servers = list(config.get("mcpServers", {}).keys())
+                self._log_diagnostic(f"Final config contains {len(final_servers)} server(s): {final_servers}", "success")
+
                 # Verify the paths were written correctly
-                with open(self.config_path, 'r', encoding='utf-8') as f:
-                    verify_config = json.load(f)
-                    if server_name in verify_config.get("mcpServers", {}):
-                        verify_args = verify_config["mcpServers"][server_name].get("args", [])
-                        self._log_diagnostic(f"Verified config args: {verify_args}", "info")
-                        # Check if paths have proper backslashes
-                        for arg in verify_args:
-                            if ":" in arg and "\\" not in arg and "/" not in arg:
-                                self._log_diagnostic(f"WARNING: Path may be malformed: {arg}", "error")
+                try:
+                    with open(self.config_path, 'r', encoding='utf-8') as f:
+                        verify_config = json.load(f)
+                        if server_name in verify_config.get("mcpServers", {}):
+                            verify_args = verify_config["mcpServers"][server_name].get("args", [])
+                            self._log_diagnostic(f"Verified config args: {verify_args}", "info")
+                            
+                            # Enhanced path validation
+                            for i, arg in enumerate(verify_args):
+                                if ":" in arg:  # Looks like a Windows path
+                                    if self.system == "Windows":
+                                        # On Windows, check for proper backslashes
+                                        if "\\" not in arg:
+                                            self._log_diagnostic(f"WARNING: Path may be malformed: {arg}", "warning")
+                                        else:
+                                            self._log_diagnostic(f"Valid Windows path format: {arg}", "success")
+                                    else:
+                                        # On Unix systems, check for forward slashes
+                                        if "/" not in arg and len(arg) > 10:  # Avoid flagging short strings
+                                            self._log_diagnostic(f"WARNING: Unix path may be malformed: {arg}", "warning")
+                                        else:
+                                            self._log_diagnostic(f"Valid Unix path format: {arg}", "success")
+                        else:
+                            self._log_diagnostic(f"Warning: Server '{server_name}' not found in saved config", "warning")
+                except json.JSONDecodeError as e:
+                    self._log_diagnostic(f"Config verification failed - JSON corrupted: {e}", "error")
+                    return {
+                        'success': False,
+                        'error': f'Config file corrupted during verification: {e}',
+                        'diagnostics': self.diagnostics
+                    }
+                except Exception as e:
+                    self._log_diagnostic(f"Config verification failed: {e}", "error")
 
                 self._log_diagnostic("Config file saved with proper path escaping", "success")
 
@@ -204,7 +348,6 @@ class MCPAutoDeployer:
                         # If we still have retries, wait and check again for fresh logs
                         if attempt < self.max_retries - 1:
                             self._log_diagnostic("Retrying to check for fresh logs after config update...", "info")
-                            import time
                             time.sleep(5)  # Wait longer for new logs
                             continue  # Retry to check new logs
                         else:
@@ -250,7 +393,6 @@ class MCPAutoDeployer:
     def _ensure_mcp_sdk_installed(self):
         """Check and install MCP SDK if not present"""
         try:
-            import importlib.util
             spec = importlib.util.find_spec("mcp")
             if spec is None:
                 print("[INSTALL] MCP SDK not found, installing...")
@@ -302,7 +444,6 @@ class MCPAutoDeployer:
 
     def _log_diagnostic(self, message, level="info"):
         """Add a diagnostic log entry"""
-        import datetime
         self.diagnostics.append({
             'timestamp': datetime.datetime.now().isoformat(),
             'level': level,
@@ -314,15 +455,12 @@ class MCPAutoDeployer:
         """Check if Claude Desktop is currently running"""
         try:
             if self.system == "Windows":
-                import subprocess
                 result = subprocess.run(['tasklist'], capture_output=True, text=True)
                 return 'Claude.exe' in result.stdout
             elif self.system == "Darwin":  # macOS
-                import subprocess
                 result = subprocess.run(['pgrep', '-f', 'Claude'], capture_output=True, text=True)
                 return bool(result.stdout.strip())
             elif self.system == "Linux":
-                import subprocess
                 result = subprocess.run(['pgrep', '-f', 'claude'], capture_output=True, text=True)
                 return bool(result.stdout.strip())
             return False
@@ -337,8 +475,6 @@ class MCPAutoDeployer:
             if not logs_path or not logs_path.exists():
                 return
 
-            import shutil
-            import time
             timestamp = int(time.time())
 
             # ONLY clear logs for the current server being deployed
@@ -374,8 +510,6 @@ class MCPAutoDeployer:
             if not logs_path or not logs_path.exists():
                 self._log_diagnostic("Logs directory not found", "warning")
                 return {'checked': False, 'reason': 'Logs directory not found'}
-
-            import time
 
             # Check if Claude Desktop is running
             is_running = self._is_claude_running()
@@ -632,7 +766,6 @@ Return only the corrected Python code, no explanations."""
                     subprocess.run(['taskkill', '/F', '/IM', 'claude.exe'],
                                  capture_output=True, check=False)
                     self._log_diagnostic("Stopped Claude Desktop", "info")
-                    import time
                     time.sleep(2)  # Wait for process to fully stop
 
                 # Find and start Claude Desktop
@@ -661,7 +794,6 @@ Return only the corrected Python code, no explanations."""
                         self._log_diagnostic(f"Started Claude Desktop from {claude_path}", "success")
 
                         # Wait and verify it started
-                        import time
                         time.sleep(10)  # Give Claude time to start
                         if self._is_claude_running():
                             self._log_diagnostic("Verified Claude Desktop is running", "success")
