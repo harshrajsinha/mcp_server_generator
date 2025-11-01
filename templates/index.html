@@ -3698,18 +3698,39 @@
             btn.innerHTML = '<div class="spinner"></div> Converting...';
 
             try {
+                // Get base URL from either Swagger config or folder scan config
+                let baseUrl = '';
+                if (projectSourceType === 'swagger' && selectedSwaggerConfig.api_base_url) {
+                    baseUrl = selectedSwaggerConfig.api_base_url;
+                } else if (selectedProjectConfig.api_base_url) {
+                    baseUrl = selectedProjectConfig.api_base_url;
+                } else {
+                    // Fallback: try to read from input field
+                    const baseUrlInput = document.getElementById('baseUrl');
+                    baseUrl = baseUrlInput ? baseUrlInput.value : '';
+                }
+                
+                // Get server name from input field
+                const serverNameInput = document.getElementById('apiName');
+                const serverName = serverNameInput ? serverNameInput.value : 'scikiq-mcp-autoAPI';
+                
                 const response = await fetch('/api/batch-convert-to-mcp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         endpoints: window.highConfidenceAPIs,
-                        output_file: 'mcp_server_high_confidence.py'
+                        output_file: 'mcp_server_high_confidence.py',
+                        base_url: baseUrl,
+                        server_name: serverName
                     })
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
+                    // Store yaml_path for later auto-deploy
+                    window.lastGeneratedYamlPath = result.yaml_path;
+                    
                     // Show detailed setup modal instead of simple alert
                     showMCPSetupModal(result);
 
@@ -4171,11 +4192,15 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             statusDiv.innerHTML = `<div style="color: var(--scikiq-light-blue);"><i class="fas fa-spinner fa-spin"></i> Configuring Claude Desktop with server name: <strong>${serverName}</strong>...</div>`;
 
             try {
+                // Include yaml_path if available from last conversion
+                const yamlPath = window.lastGeneratedYamlPath || null;
+                
                 const response = await fetch('/api/auto-deploy-mcp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         server_path: serverPath,  // Send path as-is, let backend handle normalization
+                        yaml_path: yamlPath,      // Include YAML file path so config includes it as arg
                         server_name: serverName,
                         auto_restart: true
                     })

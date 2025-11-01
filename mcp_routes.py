@@ -987,7 +987,22 @@ Respond in JSON:
             data = request.get_json()
             endpoints = data.get('endpoints', [])
             output_file = data.get('output_file', 'mcp_server_generated.py')
-            base_url = data.get('base_url', 'http://localhost:9321')
+            # Get base_url, with proper fallback to default if not provided or empty
+            base_url = data.get('base_url') or data.get('api_base_url') or 'http://localhost:9321'
+            # If base_url is empty string, use default
+            if not base_url or base_url.strip() == '':
+                base_url = 'http://localhost:9321'
+            
+            server_name = data.get('server_name', 'scikiq-mcp-autoAPI')
+            # Authentication and other API connection options to persist in YAML
+            auth_config = {
+                'auth_type': data.get('auth_type', 'none'),
+                'auth_token': data.get('auth_token'),
+                'auth_user': data.get('auth_user'),
+                'auth_pass': data.get('auth_pass'),
+                'verify_ssl': data.get('verify_ssl', True),
+                'timeout': data.get('timeout', 30)
+            }
 
             # Ensure output goes to generated_servers folder
             os.makedirs('generated_servers', exist_ok=True)
@@ -999,12 +1014,16 @@ Respond in JSON:
                 route = endpoint_data.get('route')
                 methods = endpoint_data.get('methods', ['GET'])
                 function_name = endpoint_data.get('function_name', '')
+                # Prefer human-friendly description from analysis if present
+                analysis = endpoint_data.get('analysis', {}) or {}
+                plain_desc = analysis.get('plain_english') if isinstance(analysis, dict) else None
                 docstring = endpoint_data.get('docstring', '')
+                description = plain_desc or docstring or f'Access {route}'
                 parameters = endpoint_data.get('parameters', [])
 
                 tool_definition = {
                     'name': function_name.replace('glic_', '').replace('_', '-'),
-                    'description': docstring or f'Access {route}',
+                    'description': description,
                     'endpoint': route,
                     'method': methods[0],
                     'parameters': parameters
@@ -1016,19 +1035,39 @@ Respond in JSON:
             from datetime import datetime
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-            # Generate YAML tools file
-            yaml_filename = f'tools_{timestamp}.yaml'
+            # Create a YAML filename that includes the server name for easy linking
+            safe_server = ''.join(c for c in server_name if (c.isalnum() or c in '-_')).lower() or 'scikiq'
+            yaml_filename = f'tools_{safe_server}_{timestamp}.yaml'
             yaml_path = os.path.join('generated_servers', yaml_filename)
+
+            # Build YAML content including auth and generated metadata
             yaml_content = generate_yaml_tools_file(mcp_tools, base_url)
+            # If generate_yaml_tools_file returns a string, try to prepend top-level metadata
+            try:
+                # Try to parse as text and prepend metadata block
+                meta = f"base_url: {base_url}\ngenerated_at: '{datetime.now().isoformat()}'\nserver: {server_name}\n"
+                # include auth only if provided
+                if auth_config.get('auth_type') and auth_config.get('auth_type') != 'none':
+                    meta += 'auth:\n'
+                    for k, v in auth_config.items():
+                        if v is not None:
+                            meta += f"  {k}: {v}\n"
+
+                # If yaml_content already has a top-level base_url, avoid duplicating
+                if isinstance(yaml_content, str) and 'base_url:' not in yaml_content.split('\n', 1)[0]:
+                    yaml_full = meta + yaml_content
+                else:
+                    yaml_full = yaml_content
+            except Exception:
+                yaml_full = yaml_content
 
             with open(yaml_path, 'w', encoding='utf-8') as f:
-                f.write(yaml_content)
+                f.write(yaml_full)
 
-            # Generate/update the dynamic loader script
+            # Generate/update the dynamic loader script (ensure loader exists)
             loader_filename = 'mcp_server_loader.py'
             loader_path = os.path.join('generated_servers', loader_filename)
 
-            # Only write loader if it doesn't exist
             if not os.path.exists(loader_path):
                 loader_code = generate_dynamic_mcp_server_loader()
                 with open(loader_path, 'w', encoding='utf-8') as f:
@@ -1043,7 +1082,8 @@ Respond in JSON:
                 'yaml_path': os.path.abspath(yaml_path),
                 'tools': mcp_tools,
                 'message': f'Successfully converted {len(mcp_tools)} APIs to MCP tools',
-                'note': 'Tools saved to YAML file. Use loader script with YAML file(s) as arguments.'
+                'note': 'Tools saved to YAML file. Use loader script with YAML file(s) as arguments.',
+                'linked_server': server_name
             })
 
         except Exception as e:
