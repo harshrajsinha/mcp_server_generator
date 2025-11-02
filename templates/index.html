@@ -2003,6 +2003,137 @@
             });
         }
 
+        function renderCodebaseEndpointsTree(apis, intelligence) {
+            const fileTree = document.getElementById('fileTree');
+            fileTree.innerHTML = '';
+
+            // Create header for codebase source
+            const projectType = intelligence?.project_type || 'Python API';
+            const frameworks = intelligence?.frameworks?.join(', ') || 'Unknown';
+            
+            const header = document.createElement('div');
+            header.className = 'file-tree-item directory';
+            header.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+            header.style.marginBottom = '0.5rem';
+            header.innerHTML = `
+                <span class="icon"><i class="fas fa-code-branch" style="color: #10B981;"></i></span>
+                <span style="flex: 1; font-weight: 700;">${projectType}</span>
+                <span style="font-size: 0.65rem; color: rgba(255,255,255,0.4); margin-left: 0.5rem;">${apis.length} endpoints</span>
+            `;
+            header.title = `Framework: ${frameworks}\nEndpoints: ${apis.length}`;
+            fileTree.appendChild(header);
+
+            // Group endpoints by business domain (like Swagger tags)
+            const domainGroups = {};
+            apis.forEach((api, index) => {
+                const domain = api.business_domain || 'general';
+                
+                if (!domainGroups[domain]) {
+                    domainGroups[domain] = [];
+                }
+                domainGroups[domain].push({ ...api, index });
+            });
+
+            // Sort domains alphabetically
+            const sortedDomains = Object.keys(domainGroups).sort();
+
+            // Render each domain group
+            sortedDomains.forEach(domain => {
+                const endpoints = domainGroups[domain];
+
+                // Create group container
+                const groupDiv = document.createElement('div');
+                groupDiv.style.marginBottom = '0.3rem';
+
+                // Domain icon mapping
+                const domainIcons = {
+                    'insurance': 'fa-shield-alt',
+                    'health': 'fa-heartbeat',
+                    'financial': 'fa-dollar-sign',
+                    'customer': 'fa-users',
+                    'product': 'fa-box',
+                    'administration': 'fa-cog',
+                    'general': 'fa-folder'
+                };
+                const domainIcon = domainIcons[domain] || 'fa-folder';
+
+                // Group header
+                const groupHeader = document.createElement('div');
+                groupHeader.className = 'file-tree-item directory';
+                groupHeader.style.fontWeight = '600';
+                groupHeader.innerHTML = `
+                    <span class="icon"><i class="fas ${domainIcon}" style="color: #F59E0B;"></i></span>
+                    <span style="flex: 1;">${domain.charAt(0).toUpperCase() + domain.slice(1)}</span>
+                    <span style="font-size: 0.65rem; color: rgba(255,255,255,0.4); margin-left: 0.5rem;">${endpoints.length}</span>
+                `;
+                groupDiv.appendChild(groupHeader);
+
+                // Create children container for endpoints
+                const childContainer = document.createElement('div');
+                childContainer.className = 'file-tree-children';
+                childContainer.style.display = 'block'; // Always expanded
+
+                endpoints.forEach(api => {
+                    const item = document.createElement('div');
+                    item.className = 'file-tree-item';
+                    item.setAttribute('data-route', api.route);
+                    item.setAttribute('data-file', api.file);
+
+                    // Method color coding
+                    const methodColors = {
+                        'GET': '#10B981',
+                        'POST': '#3B82F6',
+                        'PUT': '#F59E0B',
+                        'DELETE': '#EF4444',
+                        'PATCH': '#8B5CF6'
+                    };
+
+                    const method = api.methods[0];
+                    const methodColor = methodColors[method] || '#9CA3AF';
+                    
+                    // Show file name as badge
+                    const fileName = api.file_name || '';
+                    const fileBadge = fileName ? `<span style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.6rem; margin-left: 0.3rem; font-family: 'Fira Code', monospace;">${fileName}</span>` : '';
+
+                    item.innerHTML = `
+                        <span class="icon"><i class="fas fa-plug" style="color: ${methodColor};"></i></span>
+                        <span style="flex: 1;">${api.route}</span>
+                        <span style="background: ${methodColor}; color: white; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.65rem; margin-left: 0.5rem;">${method}</span>
+                        ${fileBadge}
+                    `;
+
+                    const confidence = Math.round(api.confidence * 100);
+                    item.title = `${method} ${api.route}\nFunction: ${api.function_name}\nFile: ${fileName} (line ${api.line_number})\nConfidence: ${confidence}%\n\n${api.docstring || 'No description'}`;
+                    item.style.cursor = 'pointer';
+
+                    // Highlight corresponding API in center panel on click
+                    item.onclick = () => {
+                        // Remove previous selection
+                        document.querySelectorAll('.file-tree-item').forEach(el => el.classList.remove('selected'));
+                        item.classList.add('selected');
+
+                        // Scroll to and highlight the API card in center panel
+                        const apiCards = document.querySelectorAll('.api-card');
+                        if (apiCards[api.index]) {
+                            apiCards[api.index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                            // Add temporary highlight effect
+                            apiCards[api.index].style.transition = 'all 0.3s ease';
+                            apiCards[api.index].style.boxShadow = '0 0 20px rgba(0, 163, 224, 0.5)';
+                            setTimeout(() => {
+                                apiCards[api.index].style.boxShadow = '';
+                            }, 1500);
+                        }
+                    };
+
+                    childContainer.appendChild(item);
+                });
+
+                groupDiv.appendChild(childContainer);
+                fileTree.appendChild(groupDiv);
+            });
+        }
+
         async function importFromSwagger() {
             const swaggerUrl = document.getElementById('swaggerUrl').value;
             const apiBaseUrl = document.getElementById('baseUrl').value;
@@ -2109,17 +2240,19 @@
         async function scanFromCodebase() {
             const projectPath = document.getElementById('projectPath').value;
             const sourceFile = document.getElementById('sourceFile').value;
+            const apiBaseUrl = document.getElementById('apiServerUrl').value;
 
             if (!projectPath) {
                 alert('Please enter a project path');
                 return;
             }
 
-            // Store the configuration
+            // Store the configuration (similar to Swagger config)
             projectSourceType = 'folder';
             selectedProjectConfig = {
                 project_path: projectPath,
-                source_file: sourceFile
+                source_file: sourceFile,
+                api_base_url: apiBaseUrl || 'http://localhost:5000'
             };
 
             closeCodebaseModal();
@@ -2202,7 +2335,7 @@
             const btn = document.getElementById('scanBtn');
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = '<div class="spinner"></div> Scanning...';
+                btn.innerHTML = '<div class="spinner"></div> Scanning Codebase...';
             }
 
             try {
@@ -2220,14 +2353,17 @@
 
                 projectData = await response.json();
 
-                // Update UI
-                if (projectData.file_tree) {
-                    renderFileTree(projectData.file_tree);
-                }
+                // Display URLs in tree format (like Swagger), not file tree
                 if (projectData.api_definitions) {
                     renderAPIs(projectData.api_definitions);
+                    
+                    // Render URL tree grouped by business domain (like Swagger tags)
+                    renderCodebaseEndpointsTree(projectData.api_definitions, projectData.intelligence);
                 }
-                updateStats(projectData);
+
+                // Update stats
+                document.getElementById('totalFiles').textContent = '0'; // Not showing files anymore
+                document.getElementById('apisFound').textContent = projectData.total_apis || projectData.api_definitions.length;
 
                 // Enable buttons
                 document.getElementById('generateBtn').disabled = false;
@@ -2241,13 +2377,14 @@
                 btn.innerHTML = '<i class="fas fa-check"></i> Scan Complete';
 
                 setTimeout(() => {
-                    btn.innerHTML = '<i class="fas fa-search"></i> Scan Project';
+                    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Re-scan Project';
                 }, 2000);
 
             } catch (error) {
                 console.error('Scan error:', error);
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Scan Failed';
+                alert(`Failed to scan project: ${error.message}`);
             }
         }
 
@@ -3467,38 +3604,38 @@
                 return;
             }
 
-            // Filter APIs based on source type
+            // Filter APIs based on source type and confidence threshold
             let apisToAnalyze;
 
             if (projectSourceType === 'swagger') {
                 // For Swagger imports, use all APIs (no filtering needed)
                 apisToAnalyze = projectData.api_definitions;
             } else {
-                // For folder scans, filter out framework/infrastructure APIs - only keep business APIs
+                // For codebase scans, trust the intelligent analyzer
+                // It already filtered out web pages and non-API routes
+                // Just exclude framework/MCP tool routes from THIS app
                 apisToAnalyze = projectData.api_definitions.filter(api => {
                     const route = api.route.toLowerCase();
-                    // Only include routes that are actual business APIs
-                    const isBusinessAPI = (
-                        route.includes('/products') ||
-                        route.includes('/quote/') ||
-                        route.includes('/claims') ||
-                        route.includes('/policy') ||
-                        route.includes('/customer')
-                    );
-                    // Exclude any route with MCP framework keywords
+                    
+                    // Exclude MCP Studio's own framework routes
                     const isFrameworkAPI = (
-                        route.includes('scan') ||
-                        route.includes('convert') ||
-                        route.includes('analyze') ||
-                        route.includes('mcp') ||
-                        route.includes('read-file') ||
-                        route.includes('docstring')
+                        route.includes('/api/scan') ||
+                        route.includes('/api/convert') ||
+                        route.includes('/api/analyze') ||
+                        route.includes('/api/batch-convert') ||
+                        route.includes('/api/read-file') ||
+                        route.includes('/api/parse-swagger') ||
+                        route.includes('/health') ||
+                        route.includes('/about') ||
+                        route === '/'
                     );
-                    return isBusinessAPI && !isFrameworkAPI;
+                    
+                    // Include all user APIs that aren't our framework APIs
+                    return !isFrameworkAPI;
                 });
 
                 if (apisToAnalyze.length === 0) {
-                    alert('No business APIs found. Only framework APIs detected.\n\nPlease scan the correct project folder with your business APIs.');
+                    alert('No business APIs found. The scanned project appears to contain only framework/infrastructure routes.\n\nPlease scan a different project folder with your business APIs.');
                     return;
                 }
             }

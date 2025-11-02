@@ -590,7 +590,7 @@ def setup_mcp_routes(app):
 
     @app.route('/api/scan-project', methods=['POST'])
     def mcp_scan_project():
-        """Intelligent project scan with API detection reasoning"""
+        """Intelligent project scan with API detection reasoning - Returns URLs like Swagger"""
         try:
             from intelligent_mcp_converter import IntelligentMCPConverter
             import os
@@ -598,13 +598,35 @@ def setup_mcp_routes(app):
             data = request.get_json(silent=True) or {}
             project_path = data.get('project_path', os.path.dirname(os.path.abspath(__file__)))
             source_file = data.get('source_file', '')
+            api_base_url = data.get('api_base_url', 'http://localhost:5000')
+
+            print(f"[SCAN] Starting codebase scan: {project_path}")
+            print(f"[SCAN] Source file filter: {source_file or 'All files'}")
+            print(f"[SCAN] API Base URL: {api_base_url}")
 
             # Use intelligent MCP converter with detection reasoning
-            converter = IntelligentMCPConverter(project_path, data.get('base_url', 'http://localhost:5000'))
+            converter = IntelligentMCPConverter(project_path, api_base_url)
             endpoints = converter.analyze_codebase(source_file)
             mcp_tools = converter.convert_to_mcp_tools()
 
-            # Build API definitions with detection reasoning
+            print(f"[SCAN] Found {len(endpoints)} API endpoints")
+
+            # Detect framework(s) used
+            detected_frameworks = set()
+            for endpoint in endpoints:
+                if hasattr(endpoint, 'is_api_reasoning') and endpoint.is_api_reasoning:
+                    framework = endpoint.is_api_reasoning.get('framework', 'unknown')
+                    if framework != 'unknown':
+                        detected_frameworks.add(framework)
+            
+            # Fallback framework detection
+            if not detected_frameworks:
+                detected_frameworks = {'flask'}  # Default assumption
+            
+            framework_name = ', '.join(detected_frameworks).title()
+            print(f"[SCAN] Detected frameworks: {framework_name}")
+
+            # Build API definitions with detection reasoning (Swagger-compatible format)
             api_definitions = []
             for endpoint in endpoints:
                 api_def = {
@@ -612,9 +634,12 @@ def setup_mcp_routes(app):
                     'methods': endpoint.methods,
                     'function_name': endpoint.function_name,
                     'docstring': endpoint.purpose,
+                    'summary': endpoint.purpose,  # Swagger-compatible field
+                    'description': endpoint.purpose,  # Swagger-compatible field
                     'parameters': endpoint.parameters,
                     'request_fields': endpoint.request_body_fields,
                     'file': endpoint.file_location,
+                    'file_name': os.path.basename(endpoint.file_location),
                     'line_number': endpoint.line_number,
                     'business_domain': endpoint.business_domain,
                     'security_level': endpoint.security_level,
@@ -631,55 +656,38 @@ def setup_mcp_routes(app):
                 }
                 api_definitions.append(api_def)
 
-            # Calculate statistics
+            # Calculate statistics by domain
             domains = {}
             for ep in endpoints:
                 domains[ep.business_domain] = domains.get(ep.business_domain, 0) + 1
 
-            # Build file tree with all Python files
-            import glob
-            python_files = glob.glob(os.path.join(project_path, '*.py'))
-            python_files.extend(glob.glob(os.path.join(project_path, '**/*.py'), recursive=True))
-            file_tree_children = []
+            # Group URLs by business domain (for tree display like Swagger tags)
+            domain_groups = {}
+            for api_def in api_definitions:
+                domain = api_def['business_domain']
+                if domain not in domain_groups:
+                    domain_groups[domain] = []
+                domain_groups[domain].append(api_def)
 
-            for py_file in sorted(python_files):
-                file_name = os.path.basename(py_file)
-                # Mark files that contain APIs
-                has_apis = any(ep.file_location.endswith(file_name) for ep in endpoints)
-                file_tree_children.append({
-                    'name': file_name,
-                    'path': py_file,
-                    'type': 'file',
-                    'extension': '.py',
-                    'scannable': True,
-                    'has_apis': has_apis,
-                    'api_count': sum(1 for ep in endpoints if ep.file_location.endswith(file_name))
-                })
+            print(f"[SCAN] Grouped into {len(domain_groups)} business domains: {list(domain_groups.keys())}")
 
-            file_tree = {
-                'name': os.path.basename(project_path),
-                'path': project_path,
-                'type': 'directory',
-                'children': file_tree_children
-            }
-
+            # Return Swagger-like response structure
             combined_results = {
-                'file_tree': file_tree,
-                'api_definitions': api_definitions,
-                'total_files': len(python_files),
+                'success': True,
+                'api_definitions': api_definitions,  # Flat list for compatibility
+                'domain_groups': domain_groups,  # Grouped by domain for tree view
                 'total_apis': len(endpoints),
-                'scan_complete': True,
+                'api_base_url': api_base_url,
+                'message': f'Successfully scanned {len(endpoints)} API endpoints from codebase',
                 'intelligence': {
-                    'project_type': 'Flask REST API',
+                    'project_type': f'{framework_name} REST API',
                     'conversion_method': 'intelligent_semantic_analysis',
-                    'frameworks': ['flask'],
+                    'frameworks': list(detected_frameworks),
                     'business_domains': list(domains.keys()),
                     'domain_distribution': domains,
                     'avg_confidence': sum(e.confidence_score for e in endpoints) / len(endpoints) if endpoints else 0,
                     'detection_summary': {
-                        'total_routes_scanned': len(python_files),
                         'api_endpoints_found': len(endpoints),
-                        'web_pages_excluded': len(python_files) - len(endpoints),
                         'avg_detection_score': sum(e.is_api_reasoning.get('score', 0) for e in endpoints) / len(endpoints) if endpoints else 0
                     }
                 }
