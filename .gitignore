@@ -239,3 +239,4 @@ fix_claude_config.py
 test_*.py
 demo_*.py
 example_*.py
+scikiq mcp tools.zip

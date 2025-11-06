@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import os
 import json
 import yaml
+import platform
 from datetime import datetime
 
 # Load environment variables from .env file
@@ -1417,6 +1418,320 @@ Respond in JSON:
                 'success': False,
                 'error': str(e)
             }), 500
+
+    @app.route('/api/generate-database-mcp', methods=['POST'])
+    def mcp_generate_database_mcp():
+        """Generate database MCP server configuration and config.ini file"""
+        try:
+            data = request.get_json()
+            server_name = data.get('server_name', 'database-mcp-server')
+            server_path = data.get('server_path', '')
+            connections = data.get('connections', [])
+            
+            if not server_path:
+                return jsonify({
+                    'success': False,
+                    'error': 'Server path is required'
+                }), 400
+            
+            if not connections:
+                return jsonify({
+                    'success': False,
+                    'error': 'At least one database connection is required'
+                }), 400
+            
+            # Generate config.ini content
+            config_content = generate_database_config_ini(connections)
+            
+            # Save config.ini file
+            config_dir = Path(server_path)
+            config_path = config_dir / 'config.ini'
+            
+            # Ensure directory exists
+            config_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Write config file
+            with open(config_path, 'w', encoding='utf-8') as f:
+                f.write(config_content)
+            
+            # Detect Python path
+            python_path = detect_python_executable()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Database MCP server configuration generated successfully',
+                'config_path': str(config_path),
+                'server_path': str(server_path),
+                'server_name': server_name,
+                'python_path': python_path,
+                'connections_count': len(connections)
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    @app.route('/api/get-database-config', methods=['GET'])
+    def mcp_get_database_config():
+        """Get the content of a database config.ini file"""
+        try:
+            config_path = request.args.get('path')
+            
+            if not config_path or not Path(config_path).exists():
+                return jsonify({
+                    'success': False,
+                    'error': 'Config file not found'
+                }), 404
+            
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config_content = f.read()
+            
+            return jsonify({
+                'success': True,
+                'config_content': config_content
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    @app.route('/api/auto-deploy-database-mcp', methods=['POST'])
+    def mcp_auto_deploy_database_mcp():
+        """Auto-deploy database MCP server to Claude Desktop"""
+        try:
+            data = request.get_json()
+            config_path = data.get('config_path')
+            server_path = data.get('server_path')
+            server_name = data.get('server_name')
+            
+            if not all([config_path, server_path, server_name]):
+                return jsonify({
+                    'success': False,
+                    'error': 'Missing required parameters'
+                }), 400
+            
+            # Detect Python path
+            python_path = detect_python_executable()
+            
+            # Deploy to Claude Desktop using manual config update
+            result = deploy_database_mcp_to_claude(server_name, server_path, config_path, python_path)
+            
+            if result['success']:
+                return jsonify({
+                    'success': True,
+                    'message': 'Database MCP server deployed successfully to Claude Desktop',
+                    'config_path': result.get('config_path'),
+                    'backup_path': result.get('backup_path')
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': result.get('error', 'Deployment failed')
+                }), 500
+                
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    def deploy_database_mcp_to_claude(server_name, server_path, config_ini_path, python_path):
+        """Deploy database MCP server to Claude Desktop configuration"""
+        try:
+            # Get Claude Desktop config path
+            config_path = get_claude_desktop_config_path()
+            
+            # Create backup
+            backup_path = None
+            if config_path.exists():
+                backup_path = config_path.with_suffix(f'.backup.{datetime.now().strftime("%Y%m%d_%H%M%S")}.json')
+                import shutil
+                shutil.copy2(config_path, backup_path)
+            
+            # Load or create config
+            if config_path.exists():
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+            else:
+                config = {}
+            
+            # Ensure mcpServers section exists
+            if "mcpServers" not in config:
+                config["mcpServers"] = {}
+            
+            # Add database MCP server
+            # Ensure paths are properly escaped for Windows
+            run_server_path = str(Path(server_path) / "run_mcp_server.py").replace('/', '\\') if platform.system() == "Windows" else str(Path(server_path) / "run_mcp_server.py")
+            config_ini_path_fixed = str(Path(config_ini_path)).replace('/', '\\') if platform.system() == "Windows" else str(Path(config_ini_path))
+            
+            print(f"[DEBUG] Original paths:")
+            print(f"  server_path: {server_path}")
+            print(f"  config_ini_path: {config_ini_path}")
+            print(f"[DEBUG] Fixed paths:")
+            print(f"  run_server_path: {run_server_path}")
+            print(f"  config_ini_path_fixed: {config_ini_path_fixed}")
+            
+            config["mcpServers"][server_name] = {
+                "command": python_path,
+                "args": [
+                    run_server_path,
+                    "--config-file",
+                    config_ini_path_fixed
+                ]
+            }
+            
+            # Ensure config directory exists
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Write updated config
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+            
+            return {
+                'success': True,
+                'config_path': str(config_path),
+                'backup_path': str(backup_path) if backup_path else None
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def get_claude_desktop_config_path():
+        """Get Claude Desktop config path based on OS"""
+        system = platform.system()
+        if system == "Windows":
+            return Path(os.getenv('APPDATA')) / "Claude" / "claude_desktop_config.json"
+        elif system == "Darwin":  # macOS
+            return Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+        elif system == "Linux":
+            return Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
+        else:
+            raise Exception(f"Unsupported operating system: {system}")
+
+
+    def generate_database_config_ini(connections):
+        """Generate config.ini content from database connections"""
+        config_lines = []
+        config_lines.append("# Database MCP Server Configuration")
+        config_lines.append("# Generated by MCP Studio")
+        config_lines.append(f"# Created: {datetime.now().isoformat()}")
+        config_lines.append("")
+        
+        for conn in connections:
+            connection_name = conn.get('connection_name', 'database')
+            db_type = conn.get('db_type', 'MYSQL').upper()
+            
+            config_lines.append(f"[{connection_name}]")
+            config_lines.append(f"DB_TYPE={db_type}")
+            
+            # Add connection parameters based on database type
+            if db_type == 'DUCKDB':
+                # DuckDB specific configuration
+                connection_type = conn.get('duckdb_connection_type', 'local')
+                
+                if connection_type == 's3':
+                    # S3 configuration for DuckDB
+                    aws_access_key_id = conn.get('aws_access_key_id', '')
+                    aws_secret_access_key = conn.get('aws_secret_access_key', '')
+                    region_name = conn.get('region_name', 'ap-south-1')
+                    bucket_name = conn.get('bucket_name', '')
+                    
+                    if aws_access_key_id:
+                        config_lines.append(f"aws_access_key_id={aws_access_key_id}")
+                    if aws_secret_access_key:
+                        config_lines.append(f"aws_secret_access_key={aws_secret_access_key}")
+                    if region_name:
+                        config_lines.append(f"region_name={region_name}")
+                    if bucket_name:
+                        config_lines.append(f"bucket_name={bucket_name}")
+                else:
+                    # Local file configuration
+                    database_path = conn.get('database_path', '')
+                    if database_path:
+                        config_lines.append(f"DATABASE_PATH={database_path}")
+            else:
+                # Standard database configuration
+                host = conn.get('host', 'localhost')
+                port = conn.get('port', get_default_port_for_db(db_type))
+                database = conn.get('database', '')
+                username = conn.get('username', '')
+                password = conn.get('password', '')
+                
+                config_lines.append(f"HOSTNAME={host}")
+                config_lines.append(f"PORT={port}")
+                config_lines.append(f"DATABASE={database}")
+                config_lines.append(f"USERNAME={username}")
+                config_lines.append(f"PASSWORD={password}")
+                config_lines.append("PASSWORD_ENCRYPTED=0")
+                
+                # Add database-specific parameters
+                if db_type == 'ORACLE':
+                    service_name = conn.get('service_name', '')
+                    if service_name:
+                        config_lines.append(f"SERVICE_NAME={service_name}")
+                elif db_type == 'MONGODB':
+                    auth_db = conn.get('auth_database', 'admin')
+                    config_lines.append(f"AUTH_DATABASE={auth_db}")
+                elif db_type in ['POSTGRES', 'MYSQL', 'SQLSERVER']:
+                    # Add default schema
+                    if db_type == 'POSTGRES':
+                        config_lines.append("SCHEMA=public")
+                    elif db_type == 'SQLSERVER':
+                        config_lines.append("SCHEMA=dbo")
+                
+                # Add SSL configuration if provided
+                ssl_mode = conn.get('ssl_mode', '')
+                if ssl_mode:
+                    config_lines.append(f"SSL_MODE={ssl_mode}")
+            
+            config_lines.append("")  # Empty line between connections
+        
+        return "\n".join(config_lines)
+
+    def get_default_port_for_db(db_type):
+        """Get default port for database type"""
+        ports = {
+            'MYSQL': 3306,
+            'POSTGRES': 5432,
+            'SQLSERVER': 1433,
+            'ORACLE': 1521,
+            'MONGODB': 27017,
+            'SNOWFLAKE': 443,
+            'REDSHIFT': 5439,
+            'BIGQUERY': 443
+        }
+        return ports.get(db_type, 3306)
+
+    def detect_python_executable():
+        """Detect the appropriate Python executable"""
+        import sys
+        import shutil
+        
+        # Try to find python in common locations
+        python_candidates = [
+            sys.executable,
+            shutil.which('python'),
+            shutil.which('python3'),
+            shutil.which('py')
+        ]
+        
+        for candidate in python_candidates:
+            if candidate and Path(candidate).exists():
+                return candidate
+        
+        # Fallback to system python
+        return 'python'
 
 
     print("[OK] MCP Studio routes initialized")

@@ -1154,6 +1154,53 @@
             background: rgba(255, 255, 255, 0.08);
         }
 
+        .input-group select {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .input-group select:focus {
+            outline: none;
+            border-color: var(--scikiq-light-blue);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .input-group select option {
+            background: var(--dark-bg) !important;
+            color: white !important;
+            padding: 0.5rem;
+            border: none;
+        }
+
+        .input-group select option:checked {
+            background: var(--scikiq-light-blue) !important;
+            color: white !important;
+        }
+
+        .input-group select option:hover {
+            background: rgba(0, 163, 224, 0.2) !important;
+            color: white !important;
+        }
+
+        /* Additional select styling for better visibility */
+        .input-group select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1rem;
+            padding-right: 3rem;
+        }
+
         .input-buttons {
             display: flex;
             gap: 1rem;
@@ -1365,6 +1412,32 @@
                         </div>
                         <div class="method-card-cta">
                             <i class="fas fa-arrow-right"></i> Browse Code
+                        </div>
+                    </div>
+
+                    <!-- Method 3: Database MCP Server -->
+                    <div class="method-card" onclick="selectMethod('database')">
+                        <div class="method-card-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <h4>Database MCP Server</h4>
+                        <p>Create MCP server for database operations with support for multiple database connections</p>
+                        <div class="method-card-features">
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Multi-database support</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>SQL operations</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Secure connections</span>
+                            </div>
+                        </div>
+                        <div class="method-card-cta">
+                            <i class="fas fa-arrow-right"></i> Configure Databases
                         </div>
                     </div>
                 </div>
@@ -1703,6 +1776,8 @@
                 showSwaggerModal();
             } else if (method === 'codebase') {
                 showCodebaseModal();
+            } else if (method === 'database') {
+                showDatabaseModal();
             }
         }
 
@@ -1888,6 +1963,649 @@
         function closeCodebaseModal() {
             const modal = document.getElementById('codebaseModal');
             if (modal) modal.remove();
+        }
+
+        function showDatabaseModal() {
+            const modalHTML = `
+                <div class="input-modal" id="databaseModal">
+                    <div class="input-modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+                        <h3><i class="fas fa-database"></i> Database MCP Server Configuration</h3>
+                        <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
+                            Configure database connections for your MCP server. You can add multiple databases and the server will provide tools to interact with them through Claude.
+                        </p>
+                        
+                        <!-- Server Configuration -->
+                        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                            <h4 style="margin-bottom: 1rem; color: var(--scikiq-light-blue);">
+                                <i class="fas fa-cog"></i> Server Configuration
+                            </h4>
+                            <div class="input-group">
+                                <label>Server Name</label>
+                                <input type="text" id="dbServerName" placeholder="database-mcp-server" value="database-mcp-server" />
+                                <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                    Used as identifier in Claude Desktop configuration
+                                </small>
+                            </div>
+                            <div class="input-group">
+                                <label>Server Path</label>
+                                <input type="text" id="dbServerPath" placeholder="C:/path/to/dbhandler_mcpserver" value="C:/DAAS/MCP POC/gaurav/dbhandler_mcpserver/scikiq_pkg_dbutils" />
+                                <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                    Path to the database MCP server codebase
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Database Connections -->
+                        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h4 style="margin: 0; color: var(--scikiq-light-blue);">
+                                    <i class="fas fa-plug"></i> Database Connections
+                                </h4>
+                                <button onclick="addDatabaseConnection()" style="background: var(--scikiq-light-blue); border: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                                    <i class="fas fa-plus"></i> Add Database
+                                </button>
+                            </div>
+                            <div id="databaseConnections">
+                                <!-- Database connections will be added here -->
+                            </div>
+                        </div>
+
+                        <div class="input-buttons">
+                            <button class="btn-secondary-custom" onclick="closeDatabaseModal()">
+                                Cancel
+                            </button>
+                            <button class="btn-primary-custom" onclick="generateDatabaseMCP()">
+                                <i class="fas fa-rocket"></i> Generate & Deploy MCP Server
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Add initial database connection
+            addDatabaseConnection();
+        }
+
+        function closeDatabaseModal() {
+            const modal = document.getElementById('databaseModal');
+            if (modal) modal.remove();
+        }
+
+        let dbConnectionCounter = 0;
+
+        function addDatabaseConnection() {
+            dbConnectionCounter++;
+            const connectionId = 'db_connection_' + dbConnectionCounter;
+            
+            const connectionHTML = `
+                <div class="database-connection" id="${connectionId}" style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h5 style="margin: 0; color: var(--scikiq-green);">Connection ${dbConnectionCounter}</h5>
+                        <button onclick="removeDatabaseConnection('${connectionId}')" style="background: #EF4444; border: none; color: white; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="input-group">
+                            <label>Connection Name</label>
+                            <input type="text" name="connection_name" placeholder="prod_mysql" value="connection_${dbConnectionCounter}" />
+                            <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                Unique identifier for this connection
+                            </small>
+                        </div>
+                        <div class="input-group">
+                            <label>Database Type</label>
+                            <select name="db_type" onchange="updateDatabaseTypeFields('${connectionId}', this.value)">
+                                <option value="MYSQL">MySQL</option>
+                                <option value="POSTGRES">PostgreSQL</option>
+                                <option value="SQLSERVER">SQL Server</option>
+                                <option value="ORACLE">Oracle</option>
+                                <option value="MONGODB">MongoDB</option>
+                                <option value="SNOWFLAKE">Snowflake</option>
+                                <option value="REDSHIFT">AWS Redshift</option>
+                                <option value="BIGQUERY">Google BigQuery</option>
+                                <option value="DUCKDB">DuckDB (Local/S3)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="database-fields" id="${connectionId}_fields">
+                        <!-- Dynamic fields based on database type will be inserted here -->
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('databaseConnections').insertAdjacentHTML('beforeend', connectionHTML);
+            updateDatabaseTypeFields(connectionId, 'MYSQL'); // Default to MySQL
+        }
+
+        function removeDatabaseConnection(connectionId) {
+            const connection = document.getElementById(connectionId);
+            if (connection) {
+                connection.remove();
+            }
+        }
+
+        function updateDatabaseTypeFields(connectionId, dbType) {
+            const fieldsContainer = document.getElementById(connectionId + '_fields');
+            let fieldsHTML = '';
+            
+            // Common fields for most databases
+            const commonFields = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                    <div class="input-group">
+                        <label>Host</label>
+                        <input type="text" name="host" placeholder="localhost" value="localhost" />
+                    </div>
+                    <div class="input-group">
+                        <label>Port</label>
+                        <input type="number" name="port" placeholder="${getDefaultPort(dbType)}" value="${getDefaultPort(dbType)}" />
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="input-group">
+                        <label>Database</label>
+                        <input type="text" name="database" placeholder="${getDatabasePlaceholder(dbType)}" />
+                    </div>
+                    <div class="input-group">
+                        <label>Username</label>
+                        <input type="text" name="username" placeholder="username" />
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" name="password" placeholder="password" />
+                </div>
+            `;
+            
+            fieldsHTML = commonFields;
+            
+            // Add database-specific fields
+            if (dbType === 'MONGODB') {
+                fieldsHTML += `
+                    <div class="input-group">
+                        <label>Authentication Database</label>
+                        <input type="text" name="auth_database" placeholder="admin" value="admin" />
+                    </div>
+                `;
+            } else if (dbType === 'ORACLE') {
+                fieldsHTML += `
+                    <div class="input-group">
+                        <label>Service Name / SID</label>
+                        <input type="text" name="service_name" placeholder="ORCL" />
+                    </div>
+                `;
+            } else if (dbType === 'DUCKDB') {
+                fieldsHTML = `
+                    <div style="background: rgba(0, 163, 224, 0.1); border-left: 4px solid var(--scikiq-light-blue); padding: 1rem; margin-top: 1rem; border-radius: 8px;">
+                        <h5 style="margin: 0 0 1rem; color: var(--scikiq-light-blue);">
+                            <i class="fas fa-info-circle"></i> DuckDB Configuration
+                        </h5>
+                        <p style="margin: 0 0 1rem; color: rgba(255, 255, 255, 0.8); font-size: 0.9rem;">
+                            DuckDB can work with local files or S3 data sources. Choose your configuration below.
+                        </p>
+                        
+                        <div class="input-group">
+                            <label>Connection Type</label>
+                            <select name="duckdb_connection_type" onchange="updateDuckDBConnectionType('${connectionId}', this.value)">
+                                <option value="local">Local Database File</option>
+                                <option value="s3">S3 Data Source</option>
+                            </select>
+                        </div>
+                        
+                        <div id="${connectionId}_duckdb_fields">
+                            <!-- Dynamic DuckDB fields will be inserted here -->
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Add SSL/Security options for applicable databases
+            if (['POSTGRES', 'MYSQL', 'SQLSERVER'].includes(dbType)) {
+                fieldsHTML += `
+                    <details style="margin-top: 1rem;">
+                        <summary style="cursor: pointer; color: var(--scikiq-light-blue); margin-bottom: 0.5rem;">
+                            <i class="fas fa-lock"></i> SSL/Security Options (Optional)
+                        </summary>
+                        <div style="background: rgba(255, 255, 255, 0.03); padding: 1rem; border-radius: 4px;">
+                            <div class="input-group">
+                                <label>SSL Mode</label>
+                                <select name="ssl_mode">
+                                    <option value="">None</option>
+                                    <option value="require">Require</option>
+                                    <option value="prefer">Prefer</option>
+                                    <option value="disable">Disable</option>
+                                </select>
+                            </div>
+                        </div>
+                    </details>
+                `;
+            }
+            
+            fieldsContainer.innerHTML = fieldsHTML;
+            
+            // Initialize DuckDB fields if it's DuckDB
+            if (dbType === 'DUCKDB') {
+                setTimeout(() => updateDuckDBConnectionType(connectionId, 'local'), 100);
+            }
+        }
+
+        function updateDuckDBConnectionType(connectionId, connectionType) {
+            const duckdbFieldsContainer = document.getElementById(connectionId + '_duckdb_fields');
+            let fieldsHTML = '';
+            
+            if (connectionType === 'local') {
+                fieldsHTML = `
+                    <div class="input-group">
+                        <label>Database Path</label>
+                        <input type="text" name="database_path" placeholder="/path/to/database.duckdb" />
+                        <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                            Path to DuckDB file (leave empty for in-memory database)
+                        </small>
+                    </div>
+                `;
+            } else if (connectionType === 's3') {
+                fieldsHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="input-group">
+                            <label>AWS Access Key ID</label>
+                            <input type="text" name="aws_access_key_id" placeholder="AKIAIOSFODNN7EXAMPLE" />
+                        </div>
+                        <div class="input-group">
+                            <label>AWS Secret Access Key</label>
+                            <input type="password" name="aws_secret_access_key" placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" />
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="input-group">
+                            <label>AWS Region</label>
+                            <select name="region_name">
+                                <option value="us-east-1">US East (N. Virginia)</option>
+                                <option value="us-west-2">US West (Oregon)</option>
+                                <option value="ap-south-1" selected>Asia Pacific (Mumbai)</option>
+                                <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                                <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
+                                <option value="eu-west-1">Europe (Ireland)</option>
+                                <option value="eu-central-1">Europe (Frankfurt)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>S3 Bucket Name</label>
+                            <input type="text" name="bucket_name" placeholder="my-data-bucket" />
+                        </div>
+                    </div>
+                    <div style="background: rgba(255, 193, 7, 0.1); border-left: 4px solid #FFC107; padding: 0.8rem; margin-top: 1rem; border-radius: 4px;">
+                        <div style="display: flex; align-items: start; gap: 0.5rem;">
+                            <i class="fas fa-exclamation-triangle" style="color: #FFC107; margin-top: 0.2rem;"></i>
+                            <div>
+                                <strong style="color: #FFC107;">S3 Configuration Note:</strong>
+                                <p style="margin: 0.3rem 0 0; color: rgba(255, 255, 255, 0.8); font-size: 0.85rem;">
+                                    DuckDB will use these credentials to read data directly from S3. Ensure your AWS credentials have appropriate S3 read permissions for the specified bucket.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (duckdbFieldsContainer) {
+                duckdbFieldsContainer.innerHTML = fieldsHTML;
+            }
+        }
+
+        function getDefaultPort(dbType) {
+            const ports = {
+                'MYSQL': 3306,
+                'POSTGRES': 5432,
+                'SQLSERVER': 1433,
+                'ORACLE': 1521,
+                'MONGODB': 27017,
+                'SNOWFLAKE': 443,
+                'REDSHIFT': 5439,
+                'BIGQUERY': 443,
+                'DUCKDB': ''
+            };
+            return ports[dbType] || '';
+        }
+
+        function getDatabasePlaceholder(dbType) {
+            const placeholders = {
+                'MYSQL': 'database_name',
+                'POSTGRES': 'database_name',
+                'SQLSERVER': 'master',
+                'ORACLE': 'ORCL',
+                'MONGODB': 'database_name',
+                'SNOWFLAKE': 'database_name',
+                'REDSHIFT': 'database_name',
+                'BIGQUERY': 'project_id',
+                'DUCKDB': 'memory'
+            };
+            return placeholders[dbType] || 'database_name';
+        }
+
+        async function generateDatabaseMCP() {
+            try {
+                // Collect server configuration
+                const serverName = document.getElementById('dbServerName').value;
+                const serverPath = document.getElementById('dbServerPath').value;
+                
+                if (!serverName || !serverPath) {
+                    alert('Please provide server name and path');
+                    return;
+                }
+                
+                // Collect database connections
+                const connections = [];
+                const connectionElements = document.querySelectorAll('.database-connection');
+                
+                for (let connectionEl of connectionElements) {
+                    const connection = {};
+                    
+                    // Get all input fields in this connection
+                    const inputs = connectionEl.querySelectorAll('input, select');
+                    for (let input of inputs) {
+                        if (input.value) {
+                            connection[input.name] = input.value;
+                        }
+                    }
+                    
+                    // Validate required fields
+                    if (!connection.connection_name || !connection.db_type) {
+                        alert('Please fill in all required fields for all connections');
+                        return;
+                    }
+                    
+                    connections.push(connection);
+                }
+                
+                if (connections.length === 0) {
+                    alert('Please add at least one database connection');
+                    return;
+                }
+                
+                // Show loading
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<div class="loading-spinner"></div> Generating...';
+                button.disabled = true;
+                
+                // Send to backend to generate config.ini and deploy
+                const response = await fetch('/api/generate-database-mcp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        server_name: serverName,
+                        server_path: serverPath,
+                        connections: connections
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Close the modal
+                    closeDatabaseModal();
+                    
+                    // Show success modal with deployment information
+                    showDatabaseMCPSetupModal(result);
+                } else {
+                    throw new Error(result.error || 'Failed to generate database MCP server');
+                }
+                
+            } catch (error) {
+                console.error('Error generating database MCP:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                // Reset button
+                const button = event.target;
+                if (button) {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            }
+        }
+
+        function showDatabaseMCPSetupModal(result) {
+            const configPath = result.config_path;
+            const serverPath = result.server_path;
+            const pythonPath = result.python_path || 'python';
+            const serverName = result.server_name;
+            
+            // Ensure proper Windows path formatting for display
+            const normalizedConfigPath = configPath.replace(/\//g, '\\');
+            const normalizedServerPath = serverPath.replace(/\//g, '\\');
+            
+            const modalHTML = `
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+                    <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
+                        
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, var(--scikiq-light-blue), var(--scikiq-green)); padding: 2rem; text-align: center; border-radius: 14px 14px 0 0;">
+                            <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 1rem; color: white;"></i>
+                            <h2 style="margin: 0; color: white; font-family: 'Space Grotesk', sans-serif;">
+                                Database MCP Server Ready!
+                            </h2>
+                            <p style="margin: 0.5rem 0 0; color: rgba(255, 255, 255, 0.9); font-size: 1.1rem;">
+                                Your database MCP server has been configured and is ready for deployment
+                            </p>
+                        </div>
+
+                        <div style="padding: 2rem;">
+                            
+                            <!-- Auto-Deployment Option -->
+                            <div style="background: rgba(0, 163, 224, 0.1); border-left: 4px solid var(--scikiq-light-blue); padding: 1.5rem; margin-bottom: 2rem; border-radius: 8px;">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="background: var(--scikiq-light-blue); width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">1</div>
+                                    <div style="flex: 1;">
+                                        <h4 style="margin: 0 0 0.5rem; color: var(--scikiq-light-blue);">Automatic Deployment (Recommended)</h4>
+                                        <p style="margin: 0 0 1rem; color: rgba(255, 255, 255, 0.8);">
+                                            We can automatically add this server to your Claude Desktop configuration.
+                                        </p>
+                                        <button onclick="autoDeployDatabaseMCP('${configPath}', '${serverPath}', '${serverName}')" style="background: var(--scikiq-light-blue); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                            <i class="fas fa-rocket"></i> Auto-Deploy to Claude Desktop
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Manual Setup Instructions -->
+                            <details style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 1rem; margin-bottom: 2rem;">
+                                <summary style="cursor: pointer; font-weight: 600; color: var(--anthropic-orange); margin-bottom: 1rem;">
+                                    <i class="fas fa-tools"></i> Manual Setup Instructions
+                                </summary>
+
+                            <!-- Step 2 -->
+                            <div style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--anthropic-orange); padding: 1.5rem; margin-bottom: 1rem; border-radius: 8px;">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="background: var(--anthropic-orange); width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">2</div>
+                                    <div style="flex: 1;">
+                                        <h4 style="margin: 0 0 0.5rem; color: var(--anthropic-orange);">Add to Claude Desktop Configuration</h4>
+                                        <p style="margin: 0 0 1rem; color: rgba(255, 255, 255, 0.8);">
+                                            Add this configuration to your Claude Desktop settings:
+                                        </p>
+                                        <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1rem; position: relative; font-family: 'Fira Code', monospace;">
+<code style="color: rgba(255, 255, 255, 0.9);">{
+  "mcpServers": {
+    "${serverName}": {
+      "command": "${pythonPath}",
+      "args": [
+        "${normalizedServerPath}\\run_mcp_server.py",
+        "--config-file",
+        "${normalizedConfigPath}"
+      ]
+    }
+  }
+}</code>
+                                            <button onclick="copyDatabaseConfig('${configPath}', '${serverPath}', '${serverName}', '${pythonPath}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(255, 255, 255, 0.1); border: none; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3 -->
+                            <div style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--anthropic-purple); padding: 1.5rem; margin-bottom: 1rem; border-radius: 8px;">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="background: var(--anthropic-purple); width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">3</div>
+                                    <div style="flex: 1;">
+                                        <h4 style="margin: 0 0 0.5rem; color: var(--anthropic-purple);">Restart Claude Desktop</h4>
+                                        <p style="margin: 0; color: rgba(255, 255, 255, 0.8);">
+                                            Restart Claude Desktop application to load the new MCP server.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 4 -->
+                            <div style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--success-green); padding: 1.5rem; margin-bottom: 2rem; border-radius: 8px;">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="background: var(--success-green); width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">4</div>
+                                    <div style="flex: 1;">
+                                        <h4 style="margin: 0 0 0.5rem; color: var(--success-green);">Test Database Connection</h4>
+                                        <p style="margin: 0; color: rgba(255, 255, 255, 0.8);">
+                                            Ask Claude to list your databases or run a simple query to test the connection.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                                </div>
+                            </details>
+
+                            <!-- Configuration Summary -->
+                            <div style="margin-top: 2rem; border-top: 2px solid rgba(255, 255, 255, 0.1); padding-top: 2rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                    <h4 style="margin: 0; color: var(--scikiq-green);">
+                                        <i class="fas fa-file-alt"></i> Generated Configuration
+                                    </h4>
+                                </div>
+                                <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1.5rem; max-height: 300px; overflow-y: auto;">
+                                    <pre style="margin: 0; color: rgba(255, 255, 255, 0.9); font-family: 'Fira Code', monospace; font-size: 0.9rem;" id="databaseConfigPreview">Loading configuration...</pre>
+                                </div>
+                                <div style="margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;">
+                                    <i class="fas fa-map-marker-alt"></i> Configuration saved to: ${configPath}
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="window.open('${configPath}', '_blank')" style="padding: 1rem; background: linear-gradient(135deg, var(--scikiq-green), #059669); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                                    <i class="fas fa-external-link-alt"></i> Open Config File
+                                </button>
+                                <button onclick="this.closest('[style*=fixed]').remove()" style="padding: 1rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                                    <i class="fas fa-check"></i> Done
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Load the actual configuration
+            loadDatabaseConfig(configPath);
+        }
+
+        async function loadDatabaseConfig(configPath) {
+            try {
+                const response = await fetch(`/api/get-database-config?path=${encodeURIComponent(configPath)}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const preview = document.getElementById('databaseConfigPreview');
+                    if (preview) {
+                        preview.textContent = result.config_content;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading database config:', error);
+            }
+        }
+
+        function copyDatabaseConfig(configPath, serverPath, serverName, pythonPath) {
+            // Ensure proper Windows path formatting
+            const normalizedConfigPath = configPath.replace(/\//g, '\\');
+            const normalizedServerPath = serverPath.replace(/\//g, '\\');
+            
+            const config = `{
+  "mcpServers": {
+    "${serverName}": {
+      "command": "${pythonPath}",
+      "args": [
+        "${normalizedServerPath}\\run_mcp_server.py",
+        "--config-file",
+        "${normalizedConfigPath}"
+      ]
+    }
+  }
+}`;
+            
+            navigator.clipboard.writeText(config).then(() => {
+                // Visual feedback
+                const button = event.target;
+                const originalContent = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                button.style.background = 'var(--success-green)';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.style.background = 'rgba(255, 255, 255, 0.1)';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy to clipboard. Please copy manually.');
+            });
+        }
+
+        async function autoDeployDatabaseMCP(configPath, serverPath, serverName) {
+            try {
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<div class="loading-spinner"></div> Deploying...';
+                button.disabled = true;
+                
+                const response = await fetch('/api/auto-deploy-database-mcp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        config_path: configPath,
+                        server_path: serverPath,
+                        server_name: serverName
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    button.innerHTML = '<i class="fas fa-check"></i> Deployed Successfully!';
+                    button.style.background = 'var(--success-green)';
+                    
+                    // Show success message
+                    setTimeout(() => {
+                        alert('Database MCP server deployed successfully! Please restart Claude Desktop to use the new server.');
+                    }, 500);
+                } else {
+                    throw new Error(result.error || 'Deployment failed');
+                }
+                
+            } catch (error) {
+                console.error('Auto-deployment error:', error);
+                alert('Auto-deployment failed: ' + error.message + '. Please use manual setup instructions.');
+                
+                const button = event.target;
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
         }
 
         function renderSwaggerEndpointsTree(apis, swaggerUrl) {
