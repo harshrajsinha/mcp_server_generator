@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "scikiq-dbhandler": {
+      "command": "python",
+      "args": ["-m", "scikiq_dbutils.mcp_server.main"],
+      "env": {
+        "DBHANDLER_MASTER_PASSWORD": "${DBHANDLER_MASTER_PASSWORD}",
+        "LOG_LEVEL": "INFO"
+      },
+      "alwaysAllow": [
+        "db_list_connections",
+        "db_get_all_tables", 
+        "db_get_table_columns",
+        "db_get_table_details"
+      ],
+      "disabled": false,
+      "initializationOptions": {
+        "serverName": "ScikiQ Database Handler",
+        "version": "1.0.0"
+      }
+    }
+  }
+}

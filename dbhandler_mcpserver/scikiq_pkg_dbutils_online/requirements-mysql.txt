@@ -1,0 +1,11 @@
+# MySQL/MariaDB Database Requirements
+# For connecting to MySQL and MariaDB databases
+
+# MySQL driver (choose one)
+mysqlclient>=2.1.0      # Recommended: C-based, faster
+# PyMySQL>=1.0.2         # Alternative: Pure Python, easier to install
+
+# Core dependencies (if not already installed)
+pandas>=1.5.0
+sqlalchemy>=1.4.0
+pypika>=0.48.9

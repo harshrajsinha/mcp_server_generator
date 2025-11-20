@@ -11,6 +11,7 @@ import os
 import json
 import yaml
 import platform
+import time
 from datetime import datetime
 
 # Load environment variables from .env file
@@ -1833,60 +1834,117 @@ Respond in JSON:
                     yield "[LOG] Starting AWS Deployment...\n"
                     print("[DEPLOY-AWS] Generator started")
                     
-                    server_files = {
-                        'app.py': 'print("Hello MCP")',
-                        'requirements.txt': 'flask\nmcp'
-                    }
+                    # Get server type and paths
+                    server_type = data.get('server_type')  # 'api', 'database', 'codebase', 'swagger'
+                    server_path = data.get('server_path')
+                    config_path = data.get('config_path')
+                    domain = data.get('domain') or data.get('awsDomain')
                     
-                    yield "[LOG] Prepared server files\n"
+                    # Prepare server files based on type
+                    if server_type and server_path:
+                        yield f"[LOG] Preparing {server_type} MCP server files from {server_path}\n"
+                        server_files = {}  # Will be prepared in deploy_to_aws
+                    else:
+                        # Legacy: simple server files
+                        server_files = {
+                            'app.py': 'print("Hello MCP")',
+                            'requirements.txt': 'flask\nmcp'
+                        }
+                        yield "[LOG] Prepared server files\n"
                     
                     result = deployer.deploy_to_aws(
                         aws_access_key=data.get('access_key'),
                         aws_secret_key=data.get('secret_key'),
                         region=data.get('region', 'us-east-1'),
                         instance_type=data.get('instance_type', 't2.micro'),
-                        server_files=server_files
+                        server_files=server_files,
+                        server_type=server_type,
+                        server_path=server_path,
+                        config_path=config_path,
+                        domain=domain
                     )
                     
                     yield "[LOG] Deployment method called\n"
                     
-                    # Read all logs from the queue to ensure permission suggestions are included
-                    max_iterations = 200  # Increased to capture all logs including permission suggestions
+                    # Read all logs from the queue
+                    # Route 53 setup happens synchronously in deploy_to_aws, so logs should be in queue
+                    max_iterations = 300  # Increased to ensure we capture all logs
                     iteration = 0
                     empty_iterations = 0
                     max_empty_iterations = 5  # Stop after 5 consecutive empty reads
+                    result_received = False
                     
+                    # First, read logs while deployment is running
                     while iteration < max_iterations:
                         try:
-                            log = deployer.logs.get(timeout=0.5)
+                            log = deployer.logs.get(timeout=0.2)
                             yield f"{log}\n"
                             empty_iterations = 0  # Reset empty counter
                             iteration += 1
                         except:
                             empty_iterations += 1
                             iteration += 1
-                            # If we've had several empty reads and got a result, we're done
-                            if empty_iterations >= max_empty_iterations and result is not None:
-                                break
+                            
+                            # If we got a result, continue reading for a bit more to catch Route 53 logs
+                            if result is not None:
+                                if not result_received:
+                                    result_received = True
+                                    # Give a moment for Route 53 logs to be queued
+                                    time.sleep(0.3)
+                                    empty_iterations = 0  # Reset to continue reading
+                                    continue
+                                
+                                # After result, wait a bit more for any remaining logs
+                                if empty_iterations < max_empty_iterations:
+                                    time.sleep(0.2)  # Small delay to catch delayed logs
+                                    continue
+                            
+                            # If we've had several empty reads, check if we should continue
                             if empty_iterations >= max_empty_iterations:
-                                # Continue a bit more to catch any delayed logs
-                                if iteration < max_iterations - 10:
+                                if result is not None:
+                                    # Got result and no more logs, we're done
+                                    break
+                                elif iteration < max_iterations - 20:
+                                    # No result yet, continue waiting
                                     continue
                                 else:
+                                    # Timeout waiting for result
                                     break
                             continue
                     
-                    # Final check for any remaining logs
-                    try:
-                        while True:
-                            log = deployer.logs.get(timeout=0.1)
-                            yield f"{log}\n"
-                    except:
-                        pass  # Queue is empty
-                            
+                    # After reading initial logs, if we have a result, read any remaining logs
                     if result:
+                        # Read any remaining logs (Route 53 setup logs should be here)
+                        additional_logs_timeout = 2  # Wait up to 2 seconds for additional logs
+                        start_time = time.time()
+                        logs_read = 0
+                        while time.time() - start_time < additional_logs_timeout and logs_read < 20:
+                            try:
+                                log = deployer.logs.get(timeout=0.1)
+                                yield f"{log}\n"
+                                logs_read += 1
+                                start_time = time.time()  # Reset timeout on successful read
+                            except:
+                                if logs_read > 0:
+                                    # Got some logs, wait a bit more
+                                    time.sleep(0.1)
+                                    continue
+                                break
+                        
                         yield f"[SUCCESS] Deployment Complete! Public IP: {result.get('public_ip')}\n"
+                        if result.get('domain'):
+                            yield f"[INFO] Domain configured: {result.get('domain')}\n"
+                            yield f"[INFO] DNS propagation may take 5-10 minutes. Server will be available at https://{result.get('domain')}\n"
+                        else:
+                            yield f"[INFO] Server accessible at http://{result.get('public_ip')} after initialization (5-10 minutes)\n"
                     else:
+                        # Read any remaining error logs
+                        try:
+                            for _ in range(10):
+                                log = deployer.logs.get(timeout=0.1)
+                                yield f"{log}\n"
+                        except:
+                            pass
                         yield "[ERROR] Deployment Failed.\n"
                 except Exception as gen_error:
                     print(f"[DEPLOY-AWS] Generator error: {gen_error}")

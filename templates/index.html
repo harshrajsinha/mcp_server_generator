@@ -2691,6 +2691,11 @@
                                                 <option value="c5.xlarge">c5.xlarge (4 vCPU, 8GB RAM) - Compute optimized</option>
                                             </select>
                                         </div>
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label>Domain Name (Optional)</label>
+                                            <input type="text" id="dbAwsDomain" placeholder="mcp.example.com" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
+                                            <small style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; display: block; margin-top: 0.5rem;">Leave empty to use IP address only. Requires Route 53 hosted zone.</small>
+                                        </div>
                                         <button onclick="deployDatabaseOnline('aws', '${configPath}', '${serverPath}', '${serverName}')" style="background: linear-gradient(135deg, #FF9900, #CC7A00); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
                                             <i class="fas fa-cloud-upload-alt"></i> Deploy to AWS EC2
                                         </button>
@@ -6307,7 +6312,8 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         server_type: 'database',
                         config_path: configPath,
                         server_path: serverPath,
-                        server_name: serverName
+                        server_name: serverName,
+                        domain: document.getElementById('dbAwsDomain')?.value || ''
                     };
                 } else if (platform === 'azure') {
                     endpoint = '/api/deploy/azure';

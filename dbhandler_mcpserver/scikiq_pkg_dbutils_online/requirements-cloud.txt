@@ -1,0 +1,25 @@
+# Cloud Database Requirements
+# For connecting to major cloud database services
+
+# Amazon Web Services
+boto3>=1.26.0                    # AWS SDK
+redshift-connector>=2.0.0        # Amazon Redshift (alternative to psycopg2)
+# awswrangler>=2.20.0            # AWS Data Wrangler (optional)
+
+# Google Cloud Platform  
+google-cloud-bigquery>=3.4.0     # BigQuery
+google-auth>=2.15.0              # GCP authentication
+google-oauth2-tool>=0.0.3        # OAuth2 tools
+# google-cloud-storage>=2.7.0    # Cloud Storage (optional)
+
+# Snowflake
+snowflake-connector-python>=3.0.0
+
+# Microsoft Azure
+# azure-identity>=1.12.0         # Azure authentication
+# azure-storage-blob>=12.14.0    # Blob Storage (optional)
+
+# Core dependencies (if not already installed)
+pandas>=1.5.0
+sqlalchemy>=1.4.0
+pypika>=0.48.9

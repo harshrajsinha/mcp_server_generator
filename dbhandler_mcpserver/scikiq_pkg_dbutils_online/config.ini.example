@@ -1,0 +1,87 @@
+# Example configuration for SciKiq DB Utils MCP Server
+# Copy this to config.ini and customize for your databases
+
+# MySQL Example
+[mysql_production]
+database_type = MYSQL
+host = mysql.company.com
+port = 3306
+database = production_db
+username = readonly_user
+password = ${MYSQL_PASSWORD}
+connectivity_mechanism = SSL
+ssl_cert_path = /path/to/client-cert.pem
+ssl_key_path = /path/to/client-key.pem
+ssl_ca_path = /path/to/ca-cert.pem
+
+# PostgreSQL Example
+[postgres_analytics]
+database_type = POSTGRES
+host = analytics.company.com
+port = 5432
+database = data_warehouse
+username = analyst
+password = ${POSTGRES_PASSWORD}
+connectivity_mechanism = SSL
+
+# DuckDB with S3 Data Lake Example
+[duckdb_s3_datalake]
+database_type = DUCKDB
+database_path = :memory:
+s3_bucket = company-data-lake
+s3_access_key_id = ${AWS_ACCESS_KEY_ID}
+s3_secret_access_key = ${AWS_SECRET_ACCESS_KEY}
+s3_region = us-east-1
+enable_s3 = true
+s3_prefix = analytics/tables/
+
+# Oracle Example
+[oracle_erp]
+database_type = ORACLE
+host = oracle.company.com
+port = 1521
+database = PROD
+username = readonly_user
+password = ${ORACLE_PASSWORD}
+
+# SQL Server Example
+[sqlserver_crm]
+database_type = SQLSERVER
+host = sqlserver.company.com
+port = 1433
+database = CRM_Database
+username = domain\readonly_user
+password = ${SQLSERVER_PASSWORD}
+
+# MongoDB Example
+[mongodb_logs]
+database_type = MONGODB
+host = mongo.company.com
+port = 27017
+database = application_logs
+username = log_reader
+password = ${MONGO_PASSWORD}
+
+# Snowflake Example
+[snowflake_warehouse]
+database_type = SNOWFLAKE
+host = your-account.snowflakecomputing.com
+database = ANALYTICS_DB
+username = analyst_user
+password = ${SNOWFLAKE_PASSWORD}
+warehouse = COMPUTE_WH
+schema = PUBLIC
+
+# BigQuery Example
+[bigquery_analytics]
+database_type = BIGQUERY
+project_id = your-gcp-project
+dataset = analytics
+service_account_path = /path/to/service-account.json
+
+# Security Best Practices:
+# 1. Use environment variables for passwords (${VAR_NAME} syntax)
+# 2. Set up read-only database users
+# 3. Enable SSL/TLS connections where possible
+# 4. Use service accounts with minimal permissions
+# 5. Regularly rotate credentials

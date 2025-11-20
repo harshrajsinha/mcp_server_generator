@@ -1,0 +1,44 @@
+# ScikiQ Database MCP Server - Essential Requirements
+# Minimal set of packages required to run the MCP server
+
+# Core dependencies
+pandas>=1.5.0
+sqlalchemy>=1.4.0
+pypika>=0.48.9
+requests>=2.25.0
+pyyaml>=6.0
+python-json-logger>=2.0.0
+colorama>=0.4.4
+psutil>=5.8.0
+
+# Database drivers (install as needed)
+# Uncomment the drivers you need:
+
+# MySQL/MariaDB
+# mysqlclient>=2.1.0
+
+# PostgreSQL 
+# psycopg2-binary>=2.9.0
+
+# Oracle Database
+# cx-Oracle>=8.3.0
+
+# Microsoft SQL Server
+# pymssql>=2.2.5
+
+# MongoDB
+# pymongo>=4.0.0
+# dnspython>=2.2.1
+
+# Snowflake
+# snowflake-connector-python>=3.0.0
+
+# Google BigQuery
+# google-cloud-bigquery>=3.4.0
+# google-auth>=2.15.0
+
+# SAP HANA
+# hdbcli>=2.16.0
+
+# Distributed computing
+# dask[dataframe]>=2023.1.0

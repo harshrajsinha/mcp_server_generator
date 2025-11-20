@@ -14,6 +14,13 @@ from azure.mgmt.network import NetworkManagementClient
 from azure.core.exceptions import ResourceExistsError
 import threading
 import queue
+import base64
+import json
+import tarfile
+import io
+import gzip
+from pathlib import Path
+import shutil
 
 class OnlineDeployer:
     def __init__(self):
@@ -24,7 +31,7 @@ class OnlineDeployer:
         entry = f"[{level}] {message}"
         print(entry)
         self.logs.put(entry)
-    
+
     def _get_iam_permission_suggestions(self, error_code, operation):
         """
         Generate IAM permission suggestions based on the error code and operation.
@@ -173,69 +180,463 @@ class OnlineDeployer:
     ]
 }'''
 
-    def generate_setup_script(self, server_files, python_version="3.10"):
+    def _prepare_server_files(self, server_type, server_path, config_path=None):
+        """
+        Prepare server files based on server type for deployment
+        
+        Args:
+            server_type: Type of server ('api', 'database', 'codebase')
+            server_path: Path to server files directory
+            config_path: Path to config file (for database servers)
+            
+        Returns:
+            Dictionary of files to deploy
+        """
+        server_files = {}
+        base_path = Path(server_path)
+        
+        if server_type == 'database':
+            # Database MCP server files
+            self.log(f"Preparing database MCP server files from {server_path}")
+            
+            # Copy config.ini
+            if config_path and Path(config_path).exists():
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    server_files['config.ini'] = f.read()
+                    self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes)")
+            else:
+                self.log("  - config.ini not found, will be created on server", "WARNING")
+            
+            # Copy run_mcp_server.py from dbhandler_mcpserver
+            dbhandler_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'run_mcp_server.py'
+            if dbhandler_path.exists():
+                with open(dbhandler_path, 'r', encoding='utf-8') as f:
+                    server_files['run_mcp_server.py'] = f.read()
+                    self.log(f"  - run_mcp_server.py ({len(server_files['run_mcp_server.py'])} bytes)")
+            else:
+                # Fallback: create a simple wrapper
+                server_files['run_mcp_server.py'] = self._generate_database_server_wrapper()
+                self.log("  - run_mcp_server.py (generated wrapper)")
+            
+            # Copy the entire scikiq_dbutils package directory
+            scikiq_pkg_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'scikiq_dbutils'
+            if scikiq_pkg_path.exists() and scikiq_pkg_path.is_dir():
+                # Create a tarball of the scikiq_dbutils package
+                tar_buffer = io.BytesIO()
+                with tarfile.open(fileobj=tar_buffer, mode='w:gz') as tar:
+                    tar.add(scikiq_pkg_path, arcname='scikiq_dbutils', recursive=True)
+                
+                tar_buffer.seek(0)
+                tar_data = tar_buffer.read()
+                server_files['scikiq_dbutils.tar.gz'] = base64.b64encode(tar_data).decode('ascii')
+                self.log(f"  - scikiq_dbutils.tar.gz ({len(tar_data)} bytes, {len(server_files['scikiq_dbutils.tar.gz'])} base64 chars)")
+            else:
+                self.log(f"  - scikiq_dbutils package not found at {scikiq_pkg_path}", "ERROR")
+            
+            # Copy requirements file
+            req_path = base_path / 'requirements.txt'
+            if not req_path.exists():
+                req_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'requirements.txt'
+            if req_path.exists():
+                with open(req_path, 'r', encoding='utf-8') as f:
+                    server_files['requirements.txt'] = f.read()
+                    self.log(f"  - requirements.txt ({len(server_files['requirements.txt'])} bytes)")
+            else:
+                server_files['requirements.txt'] = "mcp\nhttpx\npyyaml\npython-dotenv\n"
+                self.log("  - requirements.txt (default)")
+                
+        elif server_type in ['api', 'codebase', 'swagger']:
+            # API MCP server files
+            self.log(f"Preparing API MCP server files from {server_path}")
+            
+            # Copy mcp_server_loader.py
+            loader_path = base_path / 'mcp_server_loader.py'
+            if not loader_path.exists():
+                loader_path = Path(__file__).parent / 'generated_servers' / 'mcp_server_loader.py'
+            if loader_path.exists():
+                with open(loader_path, 'r', encoding='utf-8') as f:
+                    server_files['mcp_server_loader.py'] = f.read()
+            
+            # Copy all YAML tool files
+            yaml_files = list(base_path.glob('tools_*.yaml'))
+            if not yaml_files:
+                yaml_files = list(Path(__file__).parent / 'generated_servers').glob('tools_*.yaml')
+            
+            for yaml_file in yaml_files:
+                with open(yaml_file, 'r', encoding='utf-8') as f:
+                    server_files[yaml_file.name] = f.read()
+            
+            # Copy requirements
+            req_path = base_path / 'requirements.txt'
+            if not req_path.exists():
+                server_files['requirements.txt'] = "mcp\nhttpx\npyyaml\n"
+            else:
+                with open(req_path, 'r', encoding='utf-8') as f:
+                    server_files['requirements.txt'] = f.read()
+        
+        return server_files
+    
+    def _upload_files_to_s3(self, server_files, aws_access_key, aws_secret_key, region):
+        """
+        Upload server files to S3 and return bucket and prefix
+        
+        Args:
+            server_files: Dictionary of files to upload
+            aws_access_key: AWS access key
+            aws_secret_key: AWS secret key
+            region: AWS region
+            
+        Returns:
+            Tuple of (bucket_name, prefix) or (None, None) on failure
+        """
+        try:
+            import uuid
+            from datetime import datetime, timedelta
+            
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key,
+                region_name=region
+            )
+            
+            # Generate unique bucket name and prefix
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            unique_id = str(uuid.uuid4())[:8]
+            bucket_name = f"mcp-deployment-{timestamp}-{unique_id}"
+            prefix = f"mcp-server-files/{timestamp}"
+            
+            # Try to create bucket (may fail if name exists or no permissions)
+            try:
+                if region == 'us-east-1':
+                    s3_client.create_bucket(Bucket=bucket_name)
+                else:
+                    s3_client.create_bucket(
+                        Bucket=bucket_name,
+                        CreateBucketConfiguration={'LocationConstraint': region}
+                    )
+                self.log(f"Created S3 bucket: {bucket_name}", "INFO")
+            except ClientError as e:
+                error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+                if error_code == 'BucketAlreadyExists':
+                    # Try with different name
+                    bucket_name = f"mcp-deployment-{timestamp}-{unique_id}-alt"
+                    if region == 'us-east-1':
+                        s3_client.create_bucket(Bucket=bucket_name)
+                    else:
+                        s3_client.create_bucket(
+                            Bucket=bucket_name,
+                            CreateBucketConfiguration={'LocationConstraint': region}
+                        )
+                    self.log(f"Created S3 bucket with alternate name: {bucket_name}", "INFO")
+                elif error_code in ['AccessDenied', 'UnauthorizedOperation']:
+                    # Try to use an existing bucket or create with different naming
+                    self.log("Cannot create S3 bucket. Trying to use existing bucket...", "WARNING")
+                    # Try to find an existing bucket or use a default pattern
+                    try:
+                        buckets = s3_client.list_buckets()
+                        # Look for existing mcp-deployment bucket
+                        for bucket in buckets.get('Buckets', []):
+                            if 'mcp-deployment' in bucket['Name']:
+                                bucket_name = bucket['Name']
+                                self.log(f"Using existing bucket: {bucket_name}", "INFO")
+                                break
+                        else:
+                            # No existing bucket found, return error
+                            self.log("No suitable S3 bucket found and cannot create one.", "ERROR")
+                            self._get_iam_permission_suggestions('s3:CreateBucket', 'Create S3 bucket for file storage')
+                            return None, None
+                    except Exception as list_error:
+                        self.log(f"Cannot list buckets: {str(list_error)}", "ERROR")
+                        return None, None
+                else:
+                    self.log(f"Error creating S3 bucket: {str(e)}", "ERROR")
+                    return None, None
+            
+            # Upload files to S3
+            uploaded_count = 0
+            for filename, content in server_files.items():
+                if not content:
+                    continue
+                
+                try:
+                    s3_key = f"{prefix}/{filename}"
+                    
+                    # For tarball files, content is already base64 encoded
+                    if filename.endswith('.tar.gz'):
+                        # Decode base64 and upload binary
+                        file_data = base64.b64decode(content)
+                        s3_client.put_object(
+                            Bucket=bucket_name,
+                            Key=s3_key,
+                            Body=file_data,
+                            ContentType='application/gzip'
+                        )
+                    else:
+                        # Upload as text
+                        s3_client.put_object(
+                            Bucket=bucket_name,
+                            Key=s3_key,
+                            Body=content.encode('utf-8'),
+                            ContentType='text/plain'
+                        )
+                    
+                    uploaded_count += 1
+                    self.log(f"  Uploaded {filename} to s3://{bucket_name}/{s3_key}")
+                except Exception as e:
+                    self.log(f"  Failed to upload {filename}: {str(e)}", "ERROR")
+                    continue
+            
+            if uploaded_count == 0:
+                self.log("No files were uploaded to S3", "ERROR")
+                return None, None
+            
+            self.log(f"Successfully uploaded {uploaded_count} file(s) to S3 bucket: {bucket_name}", "SUCCESS")
+            
+            # Set bucket lifecycle to delete after 7 days
+            try:
+                s3_client.put_bucket_lifecycle_configuration(
+                    Bucket=bucket_name,
+                    LifecycleConfiguration={
+                        'Rules': [{
+                            'Id': 'DeleteOldFiles',
+                            'Status': 'Enabled',
+                            'Expiration': {'Days': 7}
+                        }]
+                    }
+                )
+            except Exception as e:
+                self.log(f"Warning: Could not set bucket lifecycle: {str(e)}", "WARNING")
+            
+            return bucket_name, prefix
+            
+        except Exception as e:
+            self.log(f"Error uploading files to S3: {str(e)}", "ERROR")
+            return None, None
+    
+    def _generate_database_server_wrapper(self):
+        """Generate a simple database MCP server wrapper"""
+        return '''#!/usr/bin/env python3
+"""
+Database MCP Server Wrapper
+"""
+import sys
+from pathlib import Path
+
+# Add the scikiq_dbutils package to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+if __name__ == "__main__":
+    from scikiq_dbutils.mcp_server.main import main
+    main()
+'''
+    
+    def generate_setup_script(self, server_files, python_version="3.10", server_type=None, domain=None, public_ip=None,
+                             s3_bucket=None, s3_prefix=None, aws_access_key=None, aws_secret_key=None, region=None):
         """
         Generate a bash script to set up the MCP server on a remote machine
+        
+        Args:
+            server_files: Dictionary of files to create (used if not using S3)
+            python_version: Python version to use
+            server_type: Type of MCP server ('api', 'database', 'codebase')
+            domain: Domain name for HTTPS setup
+            public_ip: Public IP of the instance (for Route 53)
+            s3_bucket: S3 bucket name (if files are in S3)
+            s3_prefix: S3 prefix/path (if files are in S3)
+            aws_access_key: AWS access key for S3 access
+            aws_secret_key: AWS secret key for S3 access
+            region: AWS region
         """
-        # Basic setup script
-        script = f"""#!/bin/bash
+        # Determine server startup command based on type
+        if server_type == 'database':
+            startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/run_mcp_server.py --config-file /opt/mcp-server/config.ini"
+        elif server_type in ['api', 'codebase', 'swagger']:
+            # Find YAML files
+            yaml_files = [f for f in server_files.keys() if f.endswith('.yaml')]
+            if yaml_files:
+                yaml_args = ' '.join([f"/opt/mcp-server/{f}" for f in yaml_files])
+                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py {yaml_args}"
+            else:
+                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py"
+        else:
+            # Default: look for app.py or mcp_server_loader.py
+            if 'app.py' in server_files:
+                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/app.py"
+            elif 'mcp_server_loader.py' in server_files:
+                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py"
+            else:
+                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/app.py"
+        
+        # Read the template file
+        template_path = Path(__file__).parent / 'templates' / 'ec2_setup_script.sh'
+        if not template_path.exists():
+            self.log(f"Template file not found at {template_path}, using fallback", "WARNING")
+            # Fallback to a simple script
+            return f"""#!/bin/bash
 set -e
-
-echo "Starting MCP Server Setup..."
-
-# Update system
-sudo apt-get update
-sudo apt-get install -y python3-pip python3-venv nginx certbot python3-certbot-nginx git
-
-# Create directory
-sudo mkdir -p /opt/mcp-server
-sudo chown -R $USER:$USER /opt/mcp-server
-
-# Setup Virtual Environment
+echo "MCP Server Setup"
 cd /opt/mcp-server
-python3 -m venv venv
-source venv/bin/activate
-
-# Upgrade pip
-pip install --upgrade pip
-
-# Install dependencies
-pip install flask mcp httpx pyyaml python-dotenv
-
-# Create server files
+{startup_command}
 """
-        # Add file creation commands
-        for filename, content in server_files.items():
-            # Escape single quotes for bash heredoc
-            safe_content = content.replace("'", "'\\''")
-            script += f"\ncat << 'EOF' > {filename}\n{safe_content}\nEOF\n"
+        
+        with open(template_path, 'r', encoding='utf-8') as f:
+            script_template = f.read()
+        
+        # If using S3, replace file creation section with S3 download
+        if s3_bucket and s3_prefix:
+            # Create S3 download section
+            # Note: For better security, consider using IAM instance profiles instead of embedding credentials
+            s3_download_section = f"""
+# Download files from S3
+echo "Downloading files from S3..."
 
-        script += """
-# Create Systemd Service
-cat << EOF | sudo tee /etc/systemd/system/mcp-server.service
-[Unit]
-Description=MCP Server
-After=network.target
+# Install boto3 and AWS CLI
+pip install boto3 awscli
 
-[Service]
-User=ubuntu
-WorkingDirectory=/opt/mcp-server
-Environment="PATH=/opt/mcp-server/venv/bin"
-ExecStart=/opt/mcp-server/venv/bin/python app.py
-Restart=always
+# Configure AWS credentials (temporary - consider using IAM instance profiles for production)
+export AWS_ACCESS_KEY_ID={aws_access_key}
+export AWS_SECRET_ACCESS_KEY={aws_secret_key}
+export AWS_DEFAULT_REGION={region}
 
-[Install]
-WantedBy=multi-user.target
-EOF
+# Download all files from S3
+echo "Syncing files from s3://{s3_bucket}/{s3_prefix}/..."
+aws s3 sync s3://{s3_bucket}/{s3_prefix}/ . --region {region} --no-progress
 
-# Reload and start service
-sudo systemctl daemon-reload
-sudo systemctl enable mcp-server
-sudo systemctl start mcp-server
+# Extract tarball if present
+if [ -f scikiq_dbutils.tar.gz ]; then
+    echo "Extracting scikiq_dbutils.tar.gz..."
+    tar -xzf scikiq_dbutils.tar.gz
+    rm scikiq_dbutils.tar.gz
+    echo "Successfully extracted scikiq_dbutils package"
+fi
 
-echo "MCP Server Setup Complete!"
+# Verify downloaded files
+echo ""
+echo "=== Verifying downloaded files ==="
+ls -lah
+file_count=$(ls -1 | wc -l)
+echo "File count: $file_count"
+
+# Make Python scripts executable
+chmod +x *.py 2>/dev/null || true
+echo "Files downloaded from S3 successfully"
 """
+            
+            # Replace the file creation section with S3 download
+            # Find the section that starts with "# Create server files" and ends before "# Make Python scripts executable"
+            import re
+            # Match from "# Create server files" to the end of the Python heredoc block
+            pattern = r'(# Create server files.*?PYTHON_EOF\s+if \[ \$\? -ne 0 \]; then\s+echo "ERROR: File creation failed!"\s+exit 1\s+fi)'
+            script_template = re.sub(pattern, s3_download_section, script_template, flags=re.DOTALL)
+        else:
+            # Use embedded files approach (for small files)
+            # Create JSON structure for file data
+            if not server_files:
+                file_data = {}
+            else:
+                file_data = {}
+                for filename, content in server_files.items():
+                    if not content:
+                        continue
+                    
+                    # Handle tarball files (already base64 encoded)
+                    if filename.endswith('.tar.gz'):
+                        file_data[filename] = {'type': 'tar.gz', 'content': content}
+                    else:
+                        # Encode regular files as base64
+                        content_b64 = base64.b64encode(content.encode('utf-8')).decode('ascii')
+                        file_data[filename] = {'type': 'text', 'content': content_b64}
+            
+            # Encode JSON as base64 to avoid any escaping issues
+            file_data_json = json.dumps(file_data)
+            file_data_json_b64 = base64.b64encode(file_data_json.encode('utf-8')).decode('ascii')
+            
+            # Replace placeholder with file data
+            script_template = script_template.replace('{{FILE_DATA_JSON_B64}}', file_data_json_b64)
+        
+        # Replace other placeholders
+        script = script_template.replace('{{STARTUP_COMMAND}}', startup_command)
+        script = script.replace('{{SERVER_TYPE}}', server_type or '')
+        
+        # Handle domain - if provided, set it, otherwise remove domain-related sections
+        if domain:
+            script = script.replace('{{DOMAIN}}', domain)
+        else:
+            # Remove the domain check and nginx setup if no domain
+            # The template already handles this with the if statement, so we just need to set empty
+            script = script.replace('if [ -n "$DOMAIN" ]; then', 'if [ -n "" ]; then')
+        
         return script
+    
+    def _setup_route53(self, route53_client, domain, public_ip):
+        """
+        Set up Route 53 DNS record for the domain
+        
+        Args:
+            route53_client: Boto3 Route 53 client
+            domain: Domain name (e.g., 'mcp.example.com')
+            public_ip: Public IP address of the EC2 instance
+        """
+        try:
+            self.log(f"Setting up Route 53 DNS for {domain} -> {public_ip}")
+            
+            # Extract domain and subdomain
+            parts = domain.split('.')
+            if len(parts) < 2:
+                self.log(f"Invalid domain format: {domain}", "ERROR")
+                return
+            
+            # Get hosted zone for the domain
+            # Try to find hosted zone for the root domain
+            root_domain = '.'.join(parts[-2:])  # e.g., 'example.com'
+            
+            # List hosted zones
+            zones_response = route53_client.list_hosted_zones()
+            hosted_zone_id = None
+            
+            for zone in zones_response.get('HostedZones', []):
+                zone_name = zone['Name'].rstrip('.')
+                if zone_name == root_domain or domain.endswith('.' + zone_name):
+                    hosted_zone_id = zone['Id'].split('/')[-1]
+                    break
+            
+            if not hosted_zone_id:
+                self.log(f"Could not find Route 53 hosted zone for {root_domain}", "WARNING")
+                self.log("Please create a hosted zone in Route 53 for your domain first.", "INFO")
+                return
+            
+            # Create or update A record
+            change_batch = {
+                'Changes': [{
+                    'Action': 'UPSERT',
+                    'ResourceRecordSet': {
+                        'Name': domain,
+                        'Type': 'A',
+                        'TTL': 300,
+                        'ResourceRecords': [{'Value': public_ip}]
+                    }
+                }]
+            }
+            
+            route53_client.change_resource_record_sets(
+                HostedZoneId=hosted_zone_id,
+                ChangeBatch=change_batch
+            )
+            
+            self.log(f"Route 53 DNS record created: {domain} -> {public_ip}", "SUCCESS")
+            self.log("DNS propagation may take a few minutes.", "INFO")
+            
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+            if error_code == 'NoSuchHostedZone':
+                self.log(f"Hosted zone not found for {domain}. Please create it in Route 53 first.", "WARNING")
+            elif error_code in ['AccessDenied', 'UnauthorizedOperation']:
+                self.log("Insufficient permissions for Route 53. Required: route53:ChangeResourceRecordSets", "WARNING")
+            else:
+                self.log(f"Route 53 error: {str(e)}", "WARNING")
+        except Exception as e:
+            self.log(f"Error setting up Route 53: {str(e)}", "WARNING")
 
     def deploy_to_remote(self, host, username, password=None, key_path=None, server_files=None):
         """
@@ -291,9 +692,21 @@ echo "MCP Server Setup Complete!"
         finally:
             ssh.close()
 
-    def deploy_to_aws(self, aws_access_key, aws_secret_key, region, instance_type, server_files):
+    def deploy_to_aws(self, aws_access_key, aws_secret_key, region, instance_type, server_files, 
+                     server_type=None, server_path=None, config_path=None, domain=None):
         """
         Deploy to AWS EC2
+        
+        Args:
+            aws_access_key: AWS access key
+            aws_secret_key: AWS secret key
+            region: AWS region
+            instance_type: EC2 instance type
+            server_files: Dictionary of server files (legacy, for simple deployments)
+            server_type: Type of MCP server ('api', 'database', 'codebase')
+            server_path: Path to server files on local machine
+            config_path: Path to config file (for database servers)
+            domain: Domain name for Route 53 setup
         """
         self.log(f"Connecting to AWS ({region})...")
         
@@ -330,8 +743,65 @@ echo "MCP Server Setup Complete!"
             
             self.log(f"Using Security Group: {security_group_id}")
             
-            setup_script = self.generate_setup_script(server_files)
-            user_data = setup_script # Cloud-init handles bash scripts
+            # Prepare server files based on server type
+            if server_type and server_path:
+                server_files = self._prepare_server_files(server_type, server_path, config_path)
+                self.log(f"Prepared {len(server_files)} files for {server_type} server")
+                # Log file names for debugging
+                for filename in server_files.keys():
+                    file_size = len(server_files[filename]) if server_files[filename] else 0
+                    self.log(f"  - {filename} ({file_size} bytes)")
+                if not server_files:
+                    self.log("Warning: No files prepared! Check server_path and config_path.", "WARNING")
+            
+            # Upload files to S3 if they're too large for user-data
+            s3_bucket = None
+            s3_prefix = None
+            total_size = sum(len(content) if content else 0 for content in server_files.values())
+            
+            if total_size > 10000:  # If files are larger than 10KB, use S3
+                self.log(f"Files are large ({total_size/1024:.2f} KB), uploading to S3...", "INFO")
+                s3_bucket, s3_prefix = self._upload_files_to_s3(
+                    server_files, aws_access_key, aws_secret_key, region
+                )
+                if not s3_bucket:
+                    self.log("Failed to upload files to S3. Deployment cannot continue.", "ERROR")
+                    return None
+            
+            setup_script = self.generate_setup_script(
+                server_files, 
+                server_type=server_type,
+                domain=domain,
+                public_ip=None,  # Will be set after instance launch
+                s3_bucket=s3_bucket,
+                s3_prefix=s3_prefix,
+                aws_access_key=aws_access_key,
+                aws_secret_key=aws_secret_key,
+                region=region
+            )
+            
+            # Check user-data size (AWS limit is 16KB uncompressed, but we can use gzip)
+            script_size = len(setup_script.encode('utf-8'))
+            self.log(f"User-data script size: {script_size} bytes ({script_size/1024:.2f} KB)")
+            
+            if script_size > 16384:
+                self.log(f"Warning: User-data script exceeds 16KB limit. Compressing...", "WARNING")
+                # Compress the script
+                compressed = gzip.compress(setup_script.encode('utf-8'))
+                compressed_size = len(compressed)
+                self.log(f"Compressed size: {compressed_size} bytes ({compressed_size/1024:.2f} KB)")
+                
+                if compressed_size > 16384:
+                    self.log(f"ERROR: Compressed user-data ({compressed_size} bytes) still exceeds 16KB limit!", "ERROR")
+                    self.log("This should not happen if files are uploaded to S3. Please check the setup script.", "ERROR")
+                    return None
+                
+                user_data = base64.b64encode(compressed).decode('ascii')
+                # Cloud-init will auto-detect gzip compression
+                user_data = f"#!/bin/bash\n# Compressed user-data\nbase64 -d << 'COMPRESSED_EOF' | gunzip | bash\n{user_data}\nCOMPRESSED_EOF"
+                self.log(f"Final user-data size: {len(user_data)} bytes ({len(user_data)/1024:.2f} KB)")
+            else:
+                user_data = setup_script # Cloud-init handles bash scripts
             
             self.log("Launching EC2 instance...")
             
@@ -361,9 +831,34 @@ echo "MCP Server Setup Complete!"
             
             public_ip = instance.public_ip_address
             self.log(f"Instance running at {public_ip}", "SUCCESS")
-            self.log("Deployment script is running in background. Please wait 5-10 minutes for initialization.", "INFO")
             
-            return {"public_ip": public_ip, "instance_id": instance.id}
+            # Set up Route 53 DNS if domain is provided
+            if domain:
+                self.log(f"Setting up Route 53 DNS for domain: {domain}", "INFO")
+                try:
+                    route53_client = boto3.client(
+                        'route53',
+                        aws_access_key_id=aws_access_key,
+                        aws_secret_access_key=aws_secret_key
+                    )
+                    self._setup_route53(route53_client, domain, public_ip)
+                except Exception as e:
+                    self.log(f"Warning: Could not set up Route 53 DNS: {str(e)}", "WARNING")
+                    self.log("You can manually set up DNS later.", "INFO")
+            else:
+                self.log("No domain provided. Skipping Route 53 DNS setup.", "INFO")
+                self.log("You can access the server directly via IP address.", "INFO")
+            
+            self.log("Deployment script is running in background. Please wait 5-10 minutes for initialization.", "INFO")
+            if domain:
+                self.log(f"Once DNS propagates (5-10 minutes), your server will be available at https://{domain}", "INFO")
+            else:
+                self.log(f"Server will be accessible at http://{public_ip} after initialization completes.", "INFO")
+            
+            # Give a moment for all logs to be queued
+            time.sleep(0.5)
+            
+            return {"public_ip": public_ip, "instance_id": instance.id, "domain": domain}
 
         except ClientError as e:
             error_code = e.response.get('Error', {}).get('Code', 'Unknown')

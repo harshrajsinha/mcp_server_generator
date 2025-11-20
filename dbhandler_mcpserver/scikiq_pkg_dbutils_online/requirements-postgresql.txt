@@ -1,0 +1,14 @@
+# PostgreSQL Database Requirements  
+# For connecting to PostgreSQL databases
+
+# PostgreSQL driver
+psycopg2-binary>=2.9.0  # Recommended: includes binary dependencies
+# psycopg2>=2.9.0        # Alternative: requires separate PostgreSQL client libraries
+
+# Distributed computing (optional, for large datasets)
+dask[dataframe]>=2023.1.0
+
+# Core dependencies (if not already installed)
+pandas>=1.5.0
+sqlalchemy>=1.4.0
+pypika>=0.48.9
