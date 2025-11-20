@@ -31,6 +31,7 @@
             color: #fff;
             min-height: 100vh;
             overflow-x: hidden;
+            padding-top: 80px;
         }
 
         .navbar {
@@ -38,6 +39,8 @@
             backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding: 1rem 0;
+            z-index: 1000;
+            height: 80px;
         }
 
         .navbar-brand {
@@ -53,8 +56,7 @@
             display: grid;
             grid-template-columns: 320px 1fr 380px;
             gap: 0;
-            height: calc(100vh - 70px);
-            margin-top: 70px;
+            height: calc(100vh - 80px);
             position: relative;
         }
 
@@ -958,7 +960,7 @@
         /* Welcome Screen Styles */
         .welcome-screen {
             position: fixed;
-            top: 70px;
+            top: 80px;
             left: 0;
             right: 0;
             bottom: 0;
@@ -966,7 +968,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: 999;
             padding: 2rem;
             overflow-y: auto;
         }
@@ -1105,7 +1107,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 2000;
+            z-index: 15000;
             padding: 2rem;
         }
 
@@ -1261,6 +1263,23 @@
 
         .btn-secondary-custom:hover {
             background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-success-custom {
+            background: linear-gradient(135deg, var(--success-green), #059669);
+            color: white;
+            border: 1px solid var(--success-green);
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn-success-custom:hover {
+            background: linear-gradient(135deg, #059669, var(--success-green));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         }
 
         .loading-spinner {
@@ -1465,6 +1484,51 @@
                         <div class="method-card-cta">
                             <i class="fas fa-arrow-right"></i> Configure Databases
                         </div>
+                    </div>
+                </div>
+
+                <!-- Installation Information Banner -->
+                <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(0, 163, 224, 0.1)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; padding: 2rem; margin: 2rem 0; text-align: center;">
+                    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                        <i class="fas fa-cloud-download-alt" style="font-size: 2.5rem; color: var(--scikiq-light-blue); margin-right: 1rem;"></i>
+                        <div>
+                            <h3 style="margin: 0; color: var(--scikiq-light-blue); font-family: 'Space Grotesk', sans-serif;">
+                                🌐 Hosted Installation Service
+                            </h3>
+                            <p style="margin: 0.5rem 0 0; color: rgba(255, 255, 255, 0.8); font-size: 1.1rem;">
+                                Generate and install MCP servers directly on your local machine
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
+                        <div style="background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 8px;">
+                            <i class="fas fa-cog" style="color: var(--scikiq-green); font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                            <div style="font-weight: 600; color: white;">Auto Setup</div>
+                            <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">Virtual environment & dependencies</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 8px;">
+                            <i class="fas fa-download" style="color: var(--scikiq-green); font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                            <div style="font-weight: 600; color: white;">One-Click Install</div>
+                            <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">Download & run installer script</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 8px;">
+                            <i class="fas fa-link" style="color: var(--scikiq-green); font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                            <div style="font-weight: 600; color: white;">Claude Integration</div>
+                            <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">Automatic Claude Desktop config</div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3B82F6; padding: 1rem; margin: 1rem 0; border-radius: 8px; text-align: left;">
+                        <div style="font-weight: 600; color: #3B82F6; margin-bottom: 0.5rem;">
+                            <i class="fas fa-info-circle"></i> How it works:
+                        </div>
+                        <ol style="margin: 0; color: rgba(255, 255, 255, 0.8); line-height: 1.6;">
+                            <li>Choose your MCP server type above (Swagger, Codebase, or Database)</li>
+                            <li>Import/scan APIs and run "Bulk Analyze" to evaluate them</li>
+                            <li>Click "Install Locally" from the analysis results</li>
+                            <li>Run the generated installer script on your machine</li>
+                        </ol>
                     </div>
                 </div>
             </div>
@@ -4547,9 +4611,14 @@
             summaryHTML += `
                     </div>
 
-                    <button onclick="convertHighConfidenceAPIs()" style="width: 100%; margin-top: 1.5rem; padding: 1rem; background: linear-gradient(135deg, var(--success-green), #059669); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
-                        <i class="fas fa-magic"></i> Convert All ${apis.length} High-Confidence APIs to MCP Tools
-                    </button>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
+                        <button onclick="convertHighConfidenceAPIs()" style="padding: 1rem; background: linear-gradient(135deg, var(--success-green), #059669); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                            <i class="fas fa-magic"></i> Convert ${apis.length} APIs to MCP Tools
+                        </button>
+                        <button onclick="installLocallyAfterAnalysis()" style="padding: 1rem; background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                            <i class="fas fa-cloud-download-alt"></i> Install Locally
+                        </button>
+                    </div>
                 </div>
             `;
 
@@ -4572,6 +4641,12 @@
             if (!window.highConfidenceAPIs || window.highConfidenceAPIs.length === 0) {
                 alert('No high-confidence APIs found. Please run bulk analysis first.');
                 return;
+            }
+
+            // Close the bulk analysis modal first
+            const bulkAnalysisModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10000"]');
+            if (bulkAnalysisModal) {
+                bulkAnalysisModal.remove();
             }
 
             const btn = document.getElementById('convertHighBtn');
@@ -5299,6 +5374,381 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     btn.style.background = '';
                 }, 2000);
             });
+        }
+
+        // ==================== CLIENT INSTALLATION FUNCTIONS ====================
+
+        function installSwaggerMCP() {
+            const swaggerUrl = document.getElementById('swaggerUrl').value;
+            const baseUrl = document.getElementById('baseUrl').value;
+            const authType = document.getElementById('authType').value;
+            const authToken = document.getElementById('authToken').value;
+            const authUser = document.getElementById('authUser').value;
+            const authPass = document.getElementById('authPass').value;
+            const apiName = document.getElementById('apiName').value;
+
+            if (!swaggerUrl) {
+                alert('Please provide a Swagger/OpenAPI URL');
+                return;
+            }
+
+            const serverConfig = {
+                swagger_url: swaggerUrl,
+                base_url: baseUrl,
+                auth_type: authType,
+                auth_token: authToken,
+                auth_user: authUser,
+                auth_pass: authPass,
+                api_name: apiName
+            };
+
+            showInstallationModal('swagger', 'Swagger API MCP Server', serverConfig);
+        }
+
+        function installCodebaseMCP() {
+            const projectPath = document.getElementById('projectPath').value;
+            const sourceFile = document.getElementById('sourceFile').value;
+            const apiServerUrl = document.getElementById('apiServerUrl').value;
+
+            if (!projectPath) {
+                alert('Please provide a project path');
+                return;
+            }
+
+            const serverConfig = {
+                project_path: projectPath,
+                source_file: sourceFile,
+                api_server_url: apiServerUrl
+            };
+
+            showInstallationModal('codebase', 'Codebase MCP Server', serverConfig);
+        }
+
+        function installDatabaseMCP() {
+            const serverName = document.getElementById('dbServerName').value;
+            const serverPath = document.getElementById('dbServerPath').value;
+            
+            if (!serverName || !serverPath) {
+                alert('Please provide server name and path');
+                return;
+            }
+
+            // Collect database connections
+            const connections = [];
+            const connectionElements = document.querySelectorAll('.database-connection');
+            
+            for (let connectionEl of connectionElements) {
+                const connection = {};
+                const inputs = connectionEl.querySelectorAll('input, select');
+                for (let input of inputs) {
+                    if (input.name && input.value) {
+                        connection[input.name] = input.value;
+                    }
+                }
+                if (connection.connection_name && connection.db_type) {
+                    connections.push(connection);
+                }
+            }
+
+            if (connections.length === 0) {
+                alert('Please add at least one database connection');
+                return;
+            }
+
+            const serverConfig = {
+                server_name: serverName,
+                server_path: serverPath,
+                connections: connections
+            };
+
+            showInstallationModal('database', 'Database MCP Server', serverConfig);
+        }
+
+        function installLocallyAfterAnalysis() {
+            if (!window.highConfidenceAPIs || window.highConfidenceAPIs.length === 0) {
+                alert('No analyzed APIs found. Please run bulk analysis first.');
+                return;
+            }
+
+            // Debug logging
+            console.log('installLocallyAfterAnalysis called');
+            console.log('projectSourceType:', typeof projectSourceType !== 'undefined' ? projectSourceType : 'undefined');
+            console.log('selectedSwaggerConfig:', typeof selectedSwaggerConfig !== 'undefined' ? selectedSwaggerConfig : 'undefined');
+            console.log('selectedProjectConfig:', typeof selectedProjectConfig !== 'undefined' ? selectedProjectConfig : 'undefined');
+
+            // Close the bulk analysis modal first
+            const bulkAnalysisModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10000"]');
+            if (bulkAnalysisModal) {
+                bulkAnalysisModal.remove();
+            }
+
+            // Determine server type and config based on project source
+            let serverType, serverDisplayName, serverConfig;
+
+            // Check if projectSourceType is defined and determine type
+            const sourceType = (typeof projectSourceType !== 'undefined') ? projectSourceType : 'codebase';
+
+            if (sourceType === 'swagger') {
+                serverType = 'swagger';
+                serverDisplayName = 'Analyzed Swagger MCP Server';
+                
+                // Get Swagger configuration with fallbacks
+                const baseUrlInput = document.getElementById('baseUrl');
+                const apiNameInput = document.getElementById('apiName');
+                
+                serverConfig = {
+                    analyzed_apis: window.highConfidenceAPIs,
+                    api_count: window.highConfidenceAPIs.length,
+                    swagger_url: (typeof selectedSwaggerConfig !== 'undefined' && selectedSwaggerConfig.swagger_url) || '',
+                    base_url: baseUrlInput ? baseUrlInput.value : ((typeof selectedSwaggerConfig !== 'undefined' && selectedSwaggerConfig.api_base_url) || ''),
+                    api_name: apiNameInput ? apiNameInput.value : 'Analyzed API Service'
+                };
+            } else {
+                serverType = 'codebase';
+                serverDisplayName = 'Analyzed Codebase MCP Server';
+                
+                serverConfig = {
+                    analyzed_apis: window.highConfidenceAPIs,
+                    api_count: window.highConfidenceAPIs.length,
+                    project_path: (typeof selectedProjectConfig !== 'undefined' && selectedProjectConfig.project_path) || '',
+                    source_file: (typeof selectedProjectConfig !== 'undefined' && selectedProjectConfig.source_file) || '',
+                    api_server_url: (typeof selectedProjectConfig !== 'undefined' && selectedProjectConfig.api_base_url) || 'http://localhost:9321'
+                };
+            }
+
+            console.log('Final serverConfig:', serverConfig);
+            showInstallationModal(serverType, serverDisplayName, serverConfig);
+        }
+
+        function showInstallationModal(serverType, serverDisplayName, serverConfig) {
+            // Store the server config globally for the installer generation
+            window.currentServerConfig = serverConfig;
+            
+            const modalHTML = `
+                <div class="input-modal" id="installationModal">
+                    <div class="input-modal-content" style="max-width: 700px;">
+                        <h3><i class="fas fa-cloud-download-alt"></i> Install ${serverDisplayName} Locally</h3>
+                        <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
+                            This will generate an installer script that you can run on your machine to automatically set up the MCP server with a virtual environment.
+                        </p>
+
+                        <div class="input-group">
+                            <label>Installation Directory</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" id="installationPath" placeholder="C:/MCP_Servers or /home/user/mcp_servers" value="${getDefaultInstallPath()}" style="flex: 1;" />
+                                <button type="button" onclick="browseInstallationPath()" style="background: var(--scikiq-light-blue); border: none; color: white; padding: 0.75rem 1rem; border-radius: 6px; cursor: pointer;">
+                                    <i class="fas fa-folder-open"></i> Browse
+                                </button>
+                            </div>
+                            <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                Directory where the MCP server will be installed
+                            </small>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Server Name</label>
+                            <input type="text" id="clientServerName" placeholder="my_mcp_server" value="${generateServerName(serverType)}" />
+                            <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                Unique name for this MCP server
+                            </small>
+                        </div>
+
+                        <!-- Installation Features -->
+                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid var(--success-green); padding: 1rem; margin: 1.5rem 0; border-radius: 8px;">
+                            <h4 style="margin: 0 0 0.8rem; color: var(--success-green);">
+                                <i class="fas fa-check-circle"></i> What will be installed:
+                            </h4>
+                            <ul style="margin: 0; padding-left: 1.5rem; color: rgba(255, 255, 255, 0.8);">
+                                <li>Python virtual environment with MCP dependencies</li>
+                                <li>MCP server code and configuration files</li>
+                                <li>Automatic Claude Desktop configuration</li>
+                                <li>Convenience run scripts</li>
+                            </ul>
+                        </div>
+
+                        <!-- Requirements -->
+                        <div style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3B82F6; padding: 1rem; margin: 1.5rem 0; border-radius: 8px;">
+                            <h4 style="margin: 0 0 0.8rem; color: #3B82F6;">
+                                <i class="fas fa-info-circle"></i> Requirements:
+                            </h4>
+                            <ul style="margin: 0; padding-left: 1.5rem; color: rgba(255, 255, 255, 0.8);">
+                                <li>Python 3.8 or higher</li>
+                                <li>Internet connection for package downloads</li>
+                                <li>Write permissions to installation directory</li>
+                                <li>Claude Desktop (for automatic configuration)</li>
+                            </ul>
+                        </div>
+
+                        <div class="input-buttons">
+                            <button class="btn-secondary-custom" onclick="closeInstallationModal()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                            <button class="btn-success-custom" onclick="generateInstaller('${serverType}')">
+                                <i class="fas fa-download"></i> Download Installer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Store server config for later use
+            window.currentServerConfig = serverConfig;
+        }
+
+        function closeInstallationModal() {
+            const modal = document.getElementById('installationModal');
+            if (modal) modal.remove();
+        }
+
+        function getDefaultInstallPath() {
+            // Detect OS and provide appropriate default path
+            const isWindows = navigator.platform.indexOf('Win') !== -1;
+            if (isWindows) {
+                return 'C:\\MCP_Servers';
+            } else {
+                return '/home/user/mcp_servers';
+            }
+        }
+
+        function generateServerName(serverType) {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+            return `${serverType}_mcp_${timestamp}`;
+        }
+
+        function browseInstallationPath() {
+            // Note: Web browsers cannot directly browse local directories
+            // This would need to be implemented with a file input or server-side helper
+            alert('Note: Please manually enter the installation path. Web browsers cannot directly browse local directories for security reasons.');
+        }
+
+        async function generateInstaller(serverType) {
+            try {
+                const installationPath = document.getElementById('installationPath').value;
+                const serverName = document.getElementById('clientServerName').value;
+
+                if (!installationPath || !serverName) {
+                    alert('Please provide installation path and server name');
+                    return;
+                }
+
+                // Debug logging
+                console.log('generateInstaller called with:', {
+                    serverType,
+                    installationPath,
+                    serverName,
+                    currentServerConfig: window.currentServerConfig
+                });
+
+                if (!window.currentServerConfig) {
+                    throw new Error('Server configuration not found. Please try again.');
+                }
+
+                // Show loading
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<div class="loading-spinner"></div> Generating...';
+                button.disabled = true;
+
+                // Generate installer
+                const response = await fetch('/api/generate-installer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        installation_path: installationPath,
+                        server_name: serverName,
+                        server_type: serverType,
+                        server_config: window.currentServerConfig
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server response error:', response.status, errorText);
+                    throw new Error(`Server error (${response.status}): ${errorText}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Close modal
+                    closeInstallationModal();
+                    
+                    // Show download success modal
+                    showInstallerDownloadModal(result);
+                } else {
+                    throw new Error(result.error || 'Failed to generate installer');
+                }
+
+            } catch (error) {
+                console.error('Error generating installer:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                // Reset button
+                const button = event.target;
+                if (button) {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            }
+        }
+
+        function showInstallerDownloadModal(result) {
+            const modalHTML = `
+                <div class="input-modal" id="downloadModal">
+                    <div class="input-modal-content" style="max-width: 800px;">
+                        <h3><i class="fas fa-check-circle" style="color: var(--success-green);"></i> Installer Generated Successfully!</h3>
+                        
+                        <div style="background: rgba(16, 185, 129, 0.1); border: 2px solid var(--success-green); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+                            <div style="text-align: center; margin-bottom: 1rem;">
+                                <button onclick="downloadInstaller('${result.installer_filename}')" 
+                                        style="background: linear-gradient(135deg, var(--success-green), #059669); color: white; border: none; padding: 1rem 2rem; border-radius: 10px; font-size: 1.1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                    <i class="fas fa-download"></i> Download Installer (${result.installer_filename})
+                                </button>
+                            </div>
+                            <p style="text-align: center; color: rgba(255, 255, 255, 0.7); margin: 0;">
+                                Click to download the installer script to your computer
+                            </p>
+                        </div>
+
+                        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0;">
+                            <h4 style="margin: 0 0 1rem; color: var(--scikiq-light-blue);">
+                                <i class="fas fa-list-ol"></i> Installation Steps:
+                            </h4>
+                            <ol style="margin: 0; padding-left: 1.5rem; color: rgba(255, 255, 255, 0.8); line-height: 1.6;">
+                                ${result.instructions.steps.map(step => `<li>${step}</li>`).join('')}
+                            </ol>
+                        </div>
+
+                        <div style="background: rgba(251, 191, 36, 0.1); border-left: 4px solid #F59E0B; padding: 1rem; margin: 1.5rem 0; border-radius: 8px;">
+                            <h4 style="margin: 0 0 0.8rem; color: #F59E0B;">
+                                <i class="fas fa-exclamation-triangle"></i> Troubleshooting:
+                            </h4>
+                            <ul style="margin: 0; padding-left: 1.5rem; color: rgba(255, 255, 255, 0.8);">
+                                ${result.instructions.troubleshooting.map(tip => `<li>${tip}</li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <div class="input-buttons">
+                            <button class="btn-primary-custom" onclick="closeDownloadModal()">
+                                <i class="fas fa-check"></i> Got It!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function downloadInstaller(filename) {
+            window.open(`/download-installer/${filename}`, '_blank');
+        }
+
+        function closeDownloadModal() {
+            const modal = document.getElementById('downloadModal');
+            if (modal) modal.remove();
         }
     </script>
 </body>

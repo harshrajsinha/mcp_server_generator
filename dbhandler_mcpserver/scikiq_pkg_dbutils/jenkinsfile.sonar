@@ -1,0 +1,40 @@
+pipeline {
+    agent any
+    tools {
+      nodejs 'nodejs'
+    }
+    environment {
+        REPOSITORY_URI = "$GIT_URL"
+    }
+
+    stages {    
+        
+        stage('SonarQube Analysis') {
+            environment {
+              scannerHome = tool 'sonar-scanner';
+            }
+            steps {
+                script {
+                    def repoName = env.REPOSITORY_URI.tokenize('/').last()
+                    env.REPO_NAME = repoName
+                    echo "Extracted Repository Name: ${env.REPO_NAME}"
+                }
+                withSonarQubeEnv(credentialsId: 'sonarqube-cred', installationName: 'sonarqube-server-scikiq') {
+                   sh "${scannerHome}/bin/sonar-scanner \
+                      -Dsonar.projectKey=${env.REPO_NAME} \
+                      -Dsonar.projectName=${env.REPO_NAME} \
+                      -Dsonar.sources=."
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: false
+                }
+            }
+        }
+    }
+}
+

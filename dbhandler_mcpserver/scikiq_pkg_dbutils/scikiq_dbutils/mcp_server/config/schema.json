@@ -1,0 +1,327 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ScikiQ Database Handler MCP Configuration",
+  "description": "Configuration schema for ScikiQ Database Handler Claude connector",
+  "type": "object",
+  "properties": {
+    "connections": {
+      "type": "array",
+      "description": "List of database connections",
+      "items": {
+        "type": "object",
+        "properties": {
+          "connection_id": {
+            "type": "string",
+            "description": "Unique identifier for this connection",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "db_type": {
+            "type": "string",
+            "description": "Database type",
+            "enum": [
+              "MYSQL",
+              "POSTGRES", 
+              "ORACLE",
+              "ORACLE-EBS",
+              "ORACLE-FUSION",
+              "SQLSERVER",
+              "MONGODB",
+              "SNOWFLAKE",
+              "BIGQUERY",
+              "REDSHIFT",
+              "ATHENA",
+              "SAPHANA",
+              "VERTICA",
+              "DB2",
+              "TERADATA",
+              "NETEZZA",
+              "HIVE",
+              "CHROMEDB"
+            ]
+          },
+          "hostname": {
+            "type": "string",
+            "description": "Database hostname or IP address",
+            "minLength": 1
+          },
+          "port": {
+            "type": "integer",
+            "description": "Database port number",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "database": {
+            "type": "string",
+            "description": "Database name",
+            "minLength": 1
+          },
+          "username": {
+            "type": "string", 
+            "description": "Database username",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "Database password (will be encrypted)",
+            "format": "password",
+            "minLength": 1
+          },
+          "password_encrypted": {
+            "type": "integer",
+            "description": "Password encryption flag (0=plain, 1=encrypted)",
+            "enum": [0, 1],
+            "default": 0
+          },
+          "schema": {
+            "type": "string",
+            "description": "Database schema (optional)"
+          },
+          "service_name": {
+            "type": "string",
+            "description": "Oracle service name (optional)"
+          },
+          "ssl": {
+            "type": "boolean",
+            "description": "Use SSL/TLS connection",
+            "default": true
+          },
+          "ssl_mode": {
+            "type": "string", 
+            "description": "SSL mode (PostgreSQL/MySQL)",
+            "enum": ["disable", "allow", "prefer", "require", "verify-ca", "verify-full"]
+          },
+          "ssl_cert": {
+            "type": "string",
+            "description": "Path to SSL certificate file"
+          },
+          "ssl_key": {
+            "type": "string",
+            "description": "Path to SSL private key file"
+          },
+          "ssl_ca": {
+            "type": "string", 
+            "description": "Path to SSL CA certificate file"
+          },
+          "ssh_host": {
+            "type": "string",
+            "description": "SSH tunnel host"
+          },
+          "ssh_port": {
+            "type": "integer",
+            "description": "SSH tunnel port",
+            "default": 22,
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "ssh_username": {
+            "type": "string",
+            "description": "SSH username"
+          },
+          "ssh_key_file": {
+            "type": "string", 
+            "description": "Path to SSH private key file"
+          },
+          "connection_timeout": {
+            "type": "integer",
+            "description": "Connection timeout in seconds",
+            "default": 30,
+            "minimum": 5,
+            "maximum": 300
+          },
+          "query_timeout": {
+            "type": "integer",
+            "description": "Query timeout in seconds", 
+            "default": 300,
+            "minimum": 10,
+            "maximum": 3600
+          },
+          "max_connections": {
+            "type": "integer",
+            "description": "Maximum number of connections in pool",
+            "default": 5,
+            "minimum": 1,
+            "maximum": 50
+          },
+          "connectivity_mechanism": {
+            "type": "string",
+            "description": "Connection mechanism",
+            "enum": ["D", "S", "SSH"],
+            "default": "D"
+          }
+        },
+        "required": ["connection_id", "db_type", "hostname", "database", "username", "password"],
+        "additionalProperties": false
+      }
+    },
+    "security": {
+      "type": "object",
+      "description": "Security settings",
+      "properties": {
+        "master_password": {
+          "type": "string",
+          "description": "Master password for encryption",
+          "format": "password",
+          "minLength": 8
+        },
+        "rate_limit": {
+          "type": "object",
+          "description": "Rate limiting configuration",
+          "properties": {
+            "max_requests": {
+              "type": "integer",
+              "description": "Maximum requests per window",
+              "default": 100,
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "window_minutes": {
+              "type": "integer", 
+              "description": "Time window in minutes",
+              "default": 60,
+              "minimum": 1,
+              "maximum": 1440
+            },
+            "burst_limit": {
+              "type": "integer",
+              "description": "Burst limit for immediate requests",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "allowed_hosts": {
+          "type": "array",
+          "description": "Whitelist of allowed database hosts",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9.-]+$"
+          }
+        },
+        "blocked_hosts": {
+          "type": "array",
+          "description": "Blacklist of blocked database hosts", 
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9.-]+$"
+          }
+        },
+        "allow_private_networks": {
+          "type": "boolean",
+          "description": "Allow connections to private network ranges",
+          "default": false
+        },
+        "require_ssl_remote": {
+          "type": "boolean",
+          "description": "Require SSL for remote connections",
+          "default": true
+        },
+        "sql_injection_protection": {
+          "type": "boolean", 
+          "description": "Enable SQL injection protection",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "logging": {
+      "type": "object",
+      "description": "Logging configuration",
+      "properties": {
+        "level": {
+          "type": "string",
+          "description": "Logging level",
+          "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+          "default": "INFO"
+        },
+        "file": {
+          "type": "string",
+          "description": "Log file path"
+        },
+        "structured": {
+          "type": "boolean",
+          "description": "Use structured JSON logging",
+          "default": false
+        },
+        "security_audit": {
+          "type": "boolean",
+          "description": "Enable security audit logging",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "server": {
+      "type": "object",
+      "description": "MCP server configuration",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Server name",
+          "default": "ScikiQ Database MCP Server"
+        },
+        "version": {
+          "type": "string",
+          "description": "Server version",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "default": "1.0.0"
+        },
+        "max_concurrent_connections": {
+          "type": "integer",
+          "description": "Maximum concurrent database connections",
+          "default": 50,
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "connection_pool_size": {
+          "type": "integer", 
+          "description": "Connection pool size per database",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 20
+        },
+        "query_result_limit": {
+          "type": "integer",
+          "description": "Maximum rows returned per query",
+          "default": 10000,
+          "minimum": 1,
+          "maximum": 100000
+        }
+      },
+      "additionalProperties": false
+    },
+    "performance": {
+      "type": "object",
+      "description": "Performance monitoring settings",
+      "properties": {
+        "enable_metrics": {
+          "type": "boolean",
+          "description": "Enable performance metrics collection",
+          "default": true
+        },
+        "slow_query_threshold_ms": {
+          "type": "integer",
+          "description": "Slow query threshold in milliseconds",
+          "default": 5000,
+          "minimum": 100
+        },
+        "cache_enabled": {
+          "type": "boolean",
+          "description": "Enable query result caching",
+          "default": false
+        },
+        "cache_ttl_seconds": {
+          "type": "integer",
+          "description": "Cache TTL in seconds",
+          "default": 300,
+          "minimum": 30
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["connections"],
+  "additionalProperties": false
+}

@@ -1,0 +1,9 @@
+build/
+dist/
+*.pyc
+*.pem
+/.python-version
+venv/Lib/site-packages/setuptools-65.5.0.dist-info/WHEEL
+venv/
+*.xml
+*.iml

@@ -1,0 +1,284 @@
+# ScikiQ Database MCP Server - Requirements
+# 
+# This file contains all the Python packages required for the ScikiQ Database 
+# MCP Server and its database handlers.
+
+# Core Python libraries (usually included with Python)
+# asyncio - Built-in
+# json - Built-in  
+# logging - Built-in
+# sys - Built-in
+# os - Built-in
+# pathlib - Built-in (Python 3.4+)
+# argparse - Built-in
+# signal - Built-in
+# time - Built-in
+# threading - Built-in
+# collections - Built-in
+# dataclasses - Built-in (Python 3.7+)
+# enum - Built-in
+# re - Built-in
+# base64 - Built-in
+# uuid - Built-in
+# urllib.parse - Built-in
+# datetime - Built-in
+# io - Built-in
+# traceback - Built-in
+# gc - Built-in
+# abc - Built-in
+# subprocess - Built-in
+# math - Built-in
+# operator - Built-in
+# decimal - Built-in
+# typing - Built-in (Python 3.5+)
+
+# ======================================================================
+# CORE DEPENDENCIES
+# ======================================================================
+
+# Data manipulation and analysis
+# ScikiQ Database Handler MCP Connector Requirements
+# Core MCP and framework dependencies
+
+# MCP Core (Model Context Protocol)
+mcp>=0.1.0
+
+# Database Drivers - Core
+sqlalchemy>=2.0.0
+pymysql>=1.0.0
+psycopg2-binary>=2.9.0
+cx-Oracle>=8.3.0
+pyodbc>=4.0.0
+pymongo>=4.0.0
+
+# Database Drivers - Cloud & Enterprise  
+snowflake-connector-python>=3.0.0
+google-cloud-bigquery>=3.0.0
+redshift-connector>=2.0.0
+teradatasql>=17.0.0
+vertica-python>=1.3.0
+duckdb>=0.9.0
+
+# DuckDB Extensions & S3 Support
+boto3>=1.28.0
+s3fs>=2023.9.0
+
+# SAP Connectivity
+# pyrfc>=2.6.0
+pyhdb>=0.3.4
+
+# Security & Encryption
+cryptography>=41.0.0
+python-dotenv>=1.0.0
+bcrypt>=4.0.0
+
+# Data Processing & Analysis
+pandas>=2.0.0
+polars>=0.19.0
+numpy>=1.24.0
+python-dateutil>=2.8.0
+
+# Configuration & Validation
+pydantic>=2.0.0
+jsonschema>=4.17.0
+pyyaml>=6.0
+
+# Networking & SSH
+paramiko>=3.0.0
+sshtunnel>=0.4.0
+
+# HTTP & API clients
+requests>=2.31.0
+httpx>=0.24.0
+
+# Logging & Monitoring
+structlog>=23.1.0
+prometheus-client>=0.17.0
+
+# Development Tools (Optional)
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0
+coverage>=7.0.0
+
+# Performance & Caching  
+redis>=4.5.0
+# memcached>=1.6.0
+
+# Additional utilities
+click>=8.1.0
+rich>=13.0.0
+tabulate>=0.9.0
+pandas>=1.5.0
+numpy>=1.21.0
+
+# Database connectivity and SQL utilities
+sqlalchemy>=1.4.0
+pypika>=0.48.9
+
+# HTTP requests
+requests>=2.25.0
+
+# YAML configuration support
+pyyaml>=6.0
+
+# JSON logging
+python-json-logger>=2.0.0
+
+# Console colors
+colorama>=0.4.4
+
+# System and process utilities
+psutil>=5.8.0
+
+# ======================================================================
+# DATABASE-SPECIFIC DRIVERS
+# ======================================================================
+
+# MySQL/MariaDB
+mysqlclient>=2.1.0          # MySQLdb - MySQL driver
+# Alternative: PyMySQL>=1.0.2
+
+# PostgreSQL
+psycopg2-binary>=2.9.0      # PostgreSQL driver
+
+# Oracle Database  
+cx-Oracle>=8.3.0            # Oracle driver
+
+# Microsoft SQL Server
+pymssql>=2.2.5              # SQL Server driver
+# Alternative: pyodbc>=4.0.34
+
+# MongoDB
+pymongo>=4.0.0              # MongoDB driver
+dnspython>=2.2.1            # Required for MongoDB SRV connections
+
+# Snowflake
+snowflake-connector-python>=3.0.0
+
+# Google BigQuery
+google-cloud-bigquery>=3.4.0
+google-auth>=2.15.0
+google-oauth2-tool>=0.0.3
+
+# SAP HANA
+hdbcli>=2.16.0              # SAP HANA database client
+
+# Distributed computing (for large datasets)
+dask[dataframe]>=2023.1.0
+
+# ======================================================================
+# CLOUD PROVIDERS (Optional - install based on your needs)
+# ======================================================================
+
+# Amazon Web Services
+# boto3>=1.26.0              # AWS SDK (for Redshift, Athena, RDS)
+# redshift-connector>=2.0.0  # Amazon Redshift
+
+# Microsoft Azure  
+# azure-identity>=1.12.0     # Azure authentication
+# azure-storage-blob>=12.14.0 # Azure Blob Storage
+
+# Google Cloud Platform
+# google-cloud-storage>=2.7.0 # Google Cloud Storage
+
+# ======================================================================
+# ADDITIONAL DATABASE DRIVERS (Optional)
+# ======================================================================
+
+# Vertica
+# vertica-python>=1.1.1
+
+# Teradata
+# teradatasql>=17.0.0
+
+# IBM DB2
+# ibm-db>=3.1.4
+
+# Apache Hive
+# pyhive>=0.6.5
+# thrift>=0.16.0
+
+# ChromaDB (Vector database)
+# chromadb>=0.4.0
+
+# Apache Cassandra
+# cassandra-driver>=3.25.0
+
+# ClickHouse
+# clickhouse-driver>=0.2.5
+
+# ======================================================================
+# DEVELOPMENT AND TESTING (Optional)
+# ======================================================================
+
+# Testing framework
+# pytest>=7.0.0
+# pytest-asyncio>=0.20.0
+
+# Code formatting and linting
+# black>=22.0.0
+# flake8>=5.0.0
+
+# Type checking
+# mypy>=0.991
+
+# ======================================================================
+# PLATFORM-SPECIFIC NOTES
+# ======================================================================
+
+# Windows users may need:
+# - Microsoft Visual C++ 14.0 or greater for some packages
+# - Windows-specific drivers for databases
+
+# Linux users may need:
+# - Development headers for database clients
+# - sudo apt-get install python3-dev libpq-dev (Ubuntu/Debian)
+# - sudo yum install python3-devel postgresql-devel (RHEL/CentOS)
+
+# macOS users may need:
+# - Xcode command line tools
+# - Homebrew for some database clients
+
+# ======================================================================
+# INSTALLATION INSTRUCTIONS
+# ======================================================================
+
+# Basic installation (core MCP server only):
+# pip install -r requirements.txt
+
+# For specific databases, install the corresponding drivers:
+# pip install mysqlclient        # MySQL
+# pip install psycopg2-binary    # PostgreSQL  
+# pip install cx-Oracle          # Oracle
+# pip install pymssql            # SQL Server
+# pip install pymongo            # MongoDB
+# pip install snowflake-connector-python  # Snowflake
+# pip install google-cloud-bigquery       # BigQuery
+# pip install hdbcli             # SAP HANA
+
+# For cloud providers:
+# pip install boto3              # AWS
+# pip install azure-identity     # Azure
+# pip install google-cloud-storage # GCP
+
+# ======================================================================
+# VERSION COMPATIBILITY
+# ======================================================================
+
+# Python: 3.8+ required
+# - Some async features require Python 3.8+
+# - Dataclasses require Python 3.7+
+# - Type hints work best with Python 3.9+
+
+# Database versions tested:
+# - MySQL: 5.7, 8.0+
+# - PostgreSQL: 11, 12, 13, 14, 15
+# - Oracle: 19c, 21c
+# - SQL Server: 2017, 2019, 2022
+# - MongoDB: 4.4, 5.0, 6.0
+# - Snowflake: Current version
+# - BigQuery: Current version
+# - SAP HANA: 2.0+

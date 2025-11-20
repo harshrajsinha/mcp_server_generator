@@ -1,0 +1,28 @@
+pipeline {
+  agent any
+  stages {
+    stage('Sonarqube') {
+      environment {
+        scannerHome = tool 'SonarQubeScanner'
+      }
+      steps {
+        script {
+          def repoName = scm.getUserRemoteConfigs()[0].getUrl().tokenize('/').last().split('\\.')[0]
+          withSonarQubeEnv('sonarqube') {
+            sh """
+              ${scannerHome}/bin/sonar-scanner \
+              -Dsonar.projectKey=${repoName} \
+              -Dsonar.sources=. \
+              -Dsonar.host.url=http://14.97.185.148:60679 \
+              -Dsonar.login=4f4e8b4ae7259aff36bd30f69119b0d2f7f27e19 \
+              -Dsonar.projectVersion=dev_2.0.0
+            """
+          }
+        }
+        timeout(time: 10, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: false
+        }
+      }
+    }  
+  }
+}

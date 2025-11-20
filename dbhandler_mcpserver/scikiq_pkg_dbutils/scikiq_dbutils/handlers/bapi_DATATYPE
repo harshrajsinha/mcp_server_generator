@@ -1,0 +1,76 @@
+import pyrfc
+
+def get_bapi_metadata(conn, function_name):
+    """Retrieve metadata for a BAPI function.
+
+    Args:
+    conn (pyrfc.Connection): A PyRFC connection object representing the connection to the SAP system.
+    function_name (str): The name of the BAPI function.
+
+    Returns:
+    dict: A dictionary containing metadata for the BAPI function. The dictionary contains the following keys:
+    - input_parameters: A list of dictionaries containing metadata for the input parameters. Each dictionary contains the following keys:
+    - parameter_name: The name of the input parameter.
+    - data_type: The data type of the input parameter.
+    - length: The length of the input parameter.
+    - description: The description of the input parameter.
+    - output_parameters: A list of dictionaries containing metadata for the output parameters. Each dictionary contains the following keys:
+    - parameter_name: The name of the output parameter.
+    - data_type: The data type of the output parameter.
+    - length: The length of the output parameter.
+    - description: The description of the output parameter.
+    """
+    function_interface = conn.call("RFC_GET_FUNCTION_INTERFACE", FUNCNAME=function_name)
+    
+    import_params = function_interface["IMPORTS"]
+    export_params = function_interface["EXPORTS"]
+    input_parameters = []
+
+    for param in import_params:
+        param_name = param["PARAMETER"]
+        param_data_type = param["TYPE"]
+        param_length = param["LENG"]
+        param_description = param["PARAMTEXT"]
+        input_parameters.append({
+            "parameter_name": param_name,
+            "data_type": param_data_type,
+            "length": param_length,
+            "description": param_description
+        })
+        output_parameters = []
+    for param in export_params:
+        param_name = param["PARAMETER"]
+        param_data_type = param["TYPE"]
+        param_length = param["LENG"]
+        param_description = param["PARAMTEXT"]
+        output_parameters.append({
+            "parameter_name": param_name,
+            "data_type": param_data_type,
+            "length": param_length,
+            "description": param_description
+        })
+
+    return {"input_parameters": input_parameters, "output_parameters": output_parameters}
+
+def main():
+    conn = pyrfc.Connection(
+        ashost='103.178.248.126',
+        sysnr='00',
+        client='800',
+        user='DLABS',
+        passwd='Scikiq@123'        
+    )
+
+    try :
+        function_name = 'BAPI_USER_GETLIST'
+        bapi_metadata = get_bapi_metadata(conn, function_name)
+        print(f"Metadata for BAPI function {function_name}:")
+        print("Input parameters:")
+        for param in bapi_metadata["input_parameters"]:
+            print(f"\t{param['parameter_name']} ({param['data_type']}, {param['length']}): {param['description']}")
+    except Exception as e :
+        print(e)
+    finally :
+        conn.close()        
+
+main()        
