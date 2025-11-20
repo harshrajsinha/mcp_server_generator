@@ -16,8 +16,8 @@ def investigate_s3_bucket():
     # S3 configuration from your config.ini
     bucket_name = "allcargo"
     region_name = "ap-south-1"
-    access_key = "asass"
-    secret_key = "asaasas"
+    access_key = ""
+    secret_key = ""
     
     print("🔍 Investigating S3 bucket contents for DuckDB compatibility...")
     print(f"📦 Bucket: {bucket_name}")

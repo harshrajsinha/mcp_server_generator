@@ -37,8 +37,8 @@ Your `config.ini` DuckDB section is correctly configured:
 ```ini
 [Order Data]
 db_type=DUCKDB
-aws_access_key_id=asasas
-aws_secret_access_key=asasasa
+aws_access_key_id=
+aws_secret_access_key=
 region_name=ap-south-1
 bucket_name=allcargo
 ```
