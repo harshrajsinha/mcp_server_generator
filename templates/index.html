@@ -2654,6 +2654,26 @@
                                             <label>AWS Secret Key <span style="color: var(--anthropic-orange);">*</span></label>
                                             <input type="password" id="dbAwsSecretKey" placeholder="Secret access key" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
                                         </div>
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label>AWS Region <span style="color: var(--anthropic-orange);">*</span></label>
+                                            <select id="dbAwsRegion" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;">
+                                                <option value="us-east-1" selected>US East (N. Virginia) - us-east-1</option>
+                                                <option value="us-east-2">US East (Ohio) - us-east-2</option>
+                                                <option value="us-west-1">US West (N. California) - us-west-1</option>
+                                                <option value="us-west-2">US West (Oregon) - us-west-2</option>
+                                                <option value="eu-west-1">EU (Ireland) - eu-west-1</option>
+                                                <option value="eu-west-2">EU (London) - eu-west-2</option>
+                                                <option value="eu-west-3">EU (Paris) - eu-west-3</option>
+                                                <option value="eu-central-1">EU (Frankfurt) - eu-central-1</option>
+                                                <option value="ap-southeast-1">Asia Pacific (Singapore) - ap-southeast-1</option>
+                                                <option value="ap-southeast-2">Asia Pacific (Sydney) - ap-southeast-2</option>
+                                                <option value="ap-south-1">Asia Pacific (Mumbai) - ap-south-1</option>
+                                                <option value="ap-northeast-1">Asia Pacific (Tokyo) - ap-northeast-1</option>
+                                                <option value="ap-northeast-2">Asia Pacific (Seoul) - ap-northeast-2</option>
+                                                <option value="ca-central-1">Canada (Central) - ca-central-1</option>
+                                                <option value="sa-east-1">South America (São Paulo) - sa-east-1</option>
+                                            </select>
+                                        </div>
                                         <button onclick="deployDatabaseOnline('aws', '${configPath}', '${serverPath}', '${serverName}')" style="background: linear-gradient(135deg, #FF9900, #CC7A00); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
                                             <i class="fas fa-cloud-upload-alt"></i> Deploy to AWS EC2
                                         </button>
@@ -5978,12 +5998,23 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                                 <input type="password" id="awsSecretKey" placeholder="Secret access key" />
                             </div>
                             <div class="input-group">
-                                <label>AWS Region</label>
+                                <label>AWS Region <span style="color: var(--anthropic-orange);">*</span></label>
                                 <select id="awsRegion" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;">
-                                    <option value="us-east-1">US East (N. Virginia)</option>
-                                    <option value="us-west-2">US West (Oregon)</option>
-                                    <option value="eu-west-1">EU (Ireland)</option>
-                                    <option value="ap-south-1">Asia Pacific (Mumbai)</option>
+                                    <option value="us-east-1" selected>US East (N. Virginia) - us-east-1</option>
+                                    <option value="us-east-2">US East (Ohio) - us-east-2</option>
+                                    <option value="us-west-1">US West (N. California) - us-west-1</option>
+                                    <option value="us-west-2">US West (Oregon) - us-west-2</option>
+                                    <option value="eu-west-1">EU (Ireland) - eu-west-1</option>
+                                    <option value="eu-west-2">EU (London) - eu-west-2</option>
+                                    <option value="eu-west-3">EU (Paris) - eu-west-3</option>
+                                    <option value="eu-central-1">EU (Frankfurt) - eu-central-1</option>
+                                    <option value="ap-southeast-1">Asia Pacific (Singapore) - ap-southeast-1</option>
+                                    <option value="ap-southeast-2">Asia Pacific (Sydney) - ap-southeast-2</option>
+                                    <option value="ap-south-1">Asia Pacific (Mumbai) - ap-south-1</option>
+                                    <option value="ap-northeast-1">Asia Pacific (Tokyo) - ap-northeast-1</option>
+                                    <option value="ap-northeast-2">Asia Pacific (Seoul) - ap-northeast-2</option>
+                                    <option value="ca-central-1">Canada (Central) - ca-central-1</option>
+                                    <option value="sa-east-1">South America (São Paulo) - sa-east-1</option>
                                 </select>
                             </div>
                             <div class="input-group">
@@ -6245,7 +6276,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     payload = {
                         access_key: document.getElementById('dbAwsAccessKey').value,
                         secret_key: document.getElementById('dbAwsSecretKey').value,
-                        region: 'us-east-1',
+                        region: document.getElementById('dbAwsRegion').value || 'us-east-1',
                         instance_type: 't2.micro',
                         server_type: 'database',
                         config_path: configPath,
@@ -6303,7 +6334,29 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
 
                 function appendLog(message, type = 'info') {
                     const color = type === 'error' ? '#EF4444' : type === 'success' ? '#10B981' : '#E0E0E0';
-                    logContent.innerHTML += `<div style="color: ${color}; margin-bottom: 0.3rem;">${message}</div>`;
+                    
+                    // Check if this message contains a permission suggestion block (has multiple lines with formatting)
+                    const hasMultipleLines = message.includes('\n');
+                    const isPermissionSuggestion = message.includes('Missing Permission') || 
+                                                   message.includes('Required IAM Permissions') || 
+                                                   message.includes('How to Fix:') ||
+                                                   message.includes('Example IAM Policy:') ||
+                                                   (message.includes('=') && message.split('=').length > 10);
+                    
+                    if (hasMultipleLines && isPermissionSuggestion && type === 'error') {
+                        // This is a multi-line permission suggestion - format it as a special block
+                        const formattedMessage = message
+                            .replace(/=/g, '─')
+                            .replace(/⚠️/g, '⚠️');
+                        
+                        logContent.innerHTML += `<div style="color: ${color}; margin: 1.5rem 0; padding: 1.5rem; background: rgba(239, 68, 68, 0.15); border: 2px solid ${color}; border-radius: 8px; white-space: pre-wrap; font-family: 'Fira Code', 'Courier New', monospace; font-size: 0.9rem; line-height: 1.8; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); word-wrap: break-word;">${formattedMessage}</div>`;
+                    } else if (hasMultipleLines) {
+                        // Multi-line message - preserve line breaks
+                        logContent.innerHTML += `<div style="color: ${color}; margin-bottom: 0.5rem; white-space: pre-wrap; font-family: 'Fira Code', monospace; word-wrap: break-word;">${message}</div>`;
+                    } else {
+                        // Single line message
+                        logContent.innerHTML += `<div style="color: ${color}; margin-bottom: 0.3rem; white-space: pre-wrap; word-wrap: break-word;">${message}</div>`;
+                    }
                     logContent.scrollTop = logContent.scrollHeight;
                 }
 
@@ -6340,16 +6393,56 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
 
+                    let buffer = '';
                     while (true) {
                         const { done, value } = await reader.read();
-                        if (done) break;
+                        if (done) {
+                            // Process any remaining buffer
+                            if (buffer.trim()) {
+                                const lines = buffer.split('\n').filter(l => l.trim());
+                                lines.forEach(line => {
+                                    const logType = line.includes('[ERROR]') ? 'error' : line.includes('[SUCCESS]') ? 'success' : 'info';
+                                    const cleanLine = line.replace(/^\[(ERROR|INFO|WARNING|SUCCESS|LOG)\]\s*/, '');
+                                    appendLog(cleanLine, logType);
+                                });
+                            }
+                            break;
+                        }
 
-                        const text = decoder.decode(value);
-                        const lines = text.split('\n');
+                        const text = decoder.decode(value, { stream: true });
+                        buffer += text;
+                        
+                        // Process complete lines (ending with \n)
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+                        
                         lines.forEach(line => {
                             if (line.trim()) {
                                 const logType = line.includes('[ERROR]') ? 'error' : line.includes('[SUCCESS]') ? 'success' : 'info';
-                                appendLog(`[${new Date().toLocaleTimeString()}] ${line}`, logType);
+                                // Extract the log level and content
+                                const match = line.match(/^\[(ERROR|INFO|WARNING|SUCCESS|LOG)\]\s*(.*)$/);
+                                if (match) {
+                                    const level = match[1];
+                                    const content = match[2];
+                                    
+                                    // Check if this is a permission suggestion (multi-line with special formatting)
+                                    const isPermissionSuggestion = content.includes('Missing Permission') || 
+                                                                   content.includes('Required IAM Permissions') ||
+                                                                   content.includes('How to Fix:') ||
+                                                                   (content.includes('=') && content.split('=').length > 5);
+                                    
+                                    if (isPermissionSuggestion && level === 'ERROR') {
+                                        // This is likely the start of a permission suggestion
+                                        // The full message might be in content if it's multi-line
+                                        appendLog(content, logType);
+                                    } else {
+                                        // Regular log entry
+                                        appendLog(`[${new Date().toLocaleTimeString()}] ${content}`, logType);
+                                    }
+                                } else {
+                                    // Line doesn't match expected format, display as-is
+                                    appendLog(line, logType);
+                                }
                             }
                         });
                     }

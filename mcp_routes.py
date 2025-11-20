@@ -1850,17 +1850,39 @@ Respond in JSON:
                     
                     yield "[LOG] Deployment method called\n"
                     
-                    max_iterations = 100
+                    # Read all logs from the queue to ensure permission suggestions are included
+                    max_iterations = 200  # Increased to capture all logs including permission suggestions
                     iteration = 0
+                    empty_iterations = 0
+                    max_empty_iterations = 5  # Stop after 5 consecutive empty reads
+                    
                     while iteration < max_iterations:
                         try:
-                            log = deployer.logs.get(timeout=1)
+                            log = deployer.logs.get(timeout=0.5)
                             yield f"{log}\n"
-                            if "SUCCESS" in log or "ERROR" in log:
-                                break
-                        except:
+                            empty_iterations = 0  # Reset empty counter
                             iteration += 1
+                        except:
+                            empty_iterations += 1
+                            iteration += 1
+                            # If we've had several empty reads and got a result, we're done
+                            if empty_iterations >= max_empty_iterations and result is not None:
+                                break
+                            if empty_iterations >= max_empty_iterations:
+                                # Continue a bit more to catch any delayed logs
+                                if iteration < max_iterations - 10:
+                                    continue
+                                else:
+                                    break
                             continue
+                    
+                    # Final check for any remaining logs
+                    try:
+                        while True:
+                            log = deployer.logs.get(timeout=0.1)
+                            yield f"{log}\n"
+                    except:
+                        pass  # Queue is empty
                             
                     if result:
                         yield f"[SUCCESS] Deployment Complete! Public IP: {result.get('public_ip')}\n"
