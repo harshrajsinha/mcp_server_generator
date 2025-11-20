@@ -2674,6 +2674,23 @@
                                                 <option value="sa-east-1">South America (São Paulo) - sa-east-1</option>
                                             </select>
                                         </div>
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label>Instance Type <span style="color: var(--anthropic-orange);">*</span></label>
+                                            <select id="dbAwsInstanceType" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;">
+                                                <option value="t2.micro" selected>t2.micro (1 vCPU, 1GB RAM) - Free tier eligible</option>
+                                                <option value="t2.small">t2.small (1 vCPU, 2GB RAM)</option>
+                                                <option value="t2.medium">t2.medium (2 vCPU, 4GB RAM)</option>
+                                                <option value="t2.large">t2.large (2 vCPU, 8GB RAM)</option>
+                                                <option value="t3.micro">t3.micro (2 vCPU, 1GB RAM) - Burstable</option>
+                                                <option value="t3.small">t3.small (2 vCPU, 2GB RAM) - Burstable</option>
+                                                <option value="t3.medium">t3.medium (2 vCPU, 4GB RAM) - Burstable</option>
+                                                <option value="t3.large">t3.large (2 vCPU, 8GB RAM) - Burstable</option>
+                                                <option value="m5.large">m5.large (2 vCPU, 8GB RAM) - General purpose</option>
+                                                <option value="m5.xlarge">m5.xlarge (4 vCPU, 16GB RAM) - General purpose</option>
+                                                <option value="c5.large">c5.large (2 vCPU, 4GB RAM) - Compute optimized</option>
+                                                <option value="c5.xlarge">c5.xlarge (4 vCPU, 8GB RAM) - Compute optimized</option>
+                                            </select>
+                                        </div>
                                         <button onclick="deployDatabaseOnline('aws', '${configPath}', '${serverPath}', '${serverName}')" style="background: linear-gradient(135deg, #FF9900, #CC7A00); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
                                             <i class="fas fa-cloud-upload-alt"></i> Deploy to AWS EC2
                                         </button>
@@ -6018,11 +6035,20 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                                 </select>
                             </div>
                             <div class="input-group">
-                                <label>Instance Type</label>
+                                <label>Instance Type <span style="color: var(--anthropic-orange);">*</span></label>
                                 <select id="awsInstanceType" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;">
-                                    <option value="t2.micro">t2.micro (1 vCPU, 1GB RAM) - Free tier</option>
+                                    <option value="t2.micro" selected>t2.micro (1 vCPU, 1GB RAM) - Free tier eligible</option>
                                     <option value="t2.small">t2.small (1 vCPU, 2GB RAM)</option>
                                     <option value="t2.medium">t2.medium (2 vCPU, 4GB RAM)</option>
+                                    <option value="t2.large">t2.large (2 vCPU, 8GB RAM)</option>
+                                    <option value="t3.micro">t3.micro (2 vCPU, 1GB RAM) - Burstable</option>
+                                    <option value="t3.small">t3.small (2 vCPU, 2GB RAM) - Burstable</option>
+                                    <option value="t3.medium">t3.medium (2 vCPU, 4GB RAM) - Burstable</option>
+                                    <option value="t3.large">t3.large (2 vCPU, 8GB RAM) - Burstable</option>
+                                    <option value="m5.large">m5.large (2 vCPU, 8GB RAM) - General purpose</option>
+                                    <option value="m5.xlarge">m5.xlarge (4 vCPU, 16GB RAM) - General purpose</option>
+                                    <option value="c5.large">c5.large (2 vCPU, 4GB RAM) - Compute optimized</option>
+                                    <option value="c5.xlarge">c5.xlarge (4 vCPU, 8GB RAM) - Compute optimized</option>
                                 </select>
                             </div>
                             <div class="input-group">
@@ -6277,7 +6303,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         access_key: document.getElementById('dbAwsAccessKey').value,
                         secret_key: document.getElementById('dbAwsSecretKey').value,
                         region: document.getElementById('dbAwsRegion').value || 'us-east-1',
-                        instance_type: 't2.micro',
+                        instance_type: document.getElementById('dbAwsInstanceType').value || 't2.micro',
                         server_type: 'database',
                         config_path: configPath,
                         server_path: serverPath,
