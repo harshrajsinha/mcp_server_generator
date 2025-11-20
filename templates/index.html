@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCP Studio - SCIKIQ</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@600;700&family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --scikiq-blue: #003087;
@@ -222,10 +225,21 @@
             font-weight: 700;
         }
 
-        .method-get { background: #10B981; }
-        .method-post { background: #3B82F6; }
-        .method-put { background: #F59E0B; }
-        .method-delete { background: #EF4444; }
+        .method-get {
+            background: #10B981;
+        }
+
+        .method-post {
+            background: #3B82F6;
+        }
+
+        .method-put {
+            background: #F59E0B;
+        }
+
+        .method-delete {
+            background: #EF4444;
+        }
 
         /* Detection Reasoning Styles */
         .detection-section {
@@ -720,10 +734,21 @@
             margin-right: 0.5rem;
         }
 
-        .tree-endpoint-method.GET { background: #10B981; }
-        .tree-endpoint-method.POST { background: #3B82F6; }
-        .tree-endpoint-method.PUT { background: #F59E0B; }
-        .tree-endpoint-method.DELETE { background: #EF4444; }
+        .tree-endpoint-method.GET {
+            background: #10B981;
+        }
+
+        .tree-endpoint-method.POST {
+            background: #3B82F6;
+        }
+
+        .tree-endpoint-method.PUT {
+            background: #F59E0B;
+        }
+
+        .tree-endpoint-method.DELETE {
+            background: #EF4444;
+        }
 
         .tree-endpoint-route {
             font-size: 0.85rem;
@@ -806,10 +831,25 @@
             margin: 0.2rem;
         }
 
-        .badge-high { background: #10B981; color: white; }
-        .badge-medium { background: #F59E0B; color: white; }
-        .badge-low { background: #EF4444; color: white; }
-        .badge-info { background: #3B82F6; color: white; }
+        .badge-high {
+            background: #10B981;
+            color: white;
+        }
+
+        .badge-medium {
+            background: #F59E0B;
+            color: white;
+        }
+
+        .badge-low {
+            background: #EF4444;
+            color: white;
+        }
+
+        .badge-info {
+            background: #3B82F6;
+            color: white;
+        }
 
         .detection-signal-item {
             padding: 0.6rem;
@@ -1293,7 +1333,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Action Buttons */
@@ -1332,7 +1374,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Documentation Preview */
@@ -1346,10 +1390,29 @@
             line-height: 1.6;
         }
 
-        .doc-preview h1 { font-size: 1.3rem; color: var(--anthropic-orange); margin-bottom: 0.8rem; }
-        .doc-preview h2 { font-size: 1.1rem; color: var(--scikiq-light-blue); margin: 1rem 0 0.5rem; }
-        .doc-preview h3 { font-size: 1rem; color: var(--scikiq-green); margin: 0.8rem 0 0.4rem; }
-        .doc-preview code { background: rgba(0, 0, 0, 0.5); padding: 0.2rem 0.5rem; border-radius: 4px; }
+        .doc-preview h1 {
+            font-size: 1.3rem;
+            color: var(--anthropic-orange);
+            margin-bottom: 0.8rem;
+        }
+
+        .doc-preview h2 {
+            font-size: 1.1rem;
+            color: var(--scikiq-light-blue);
+            margin: 1rem 0 0.5rem;
+        }
+
+        .doc-preview h3 {
+            font-size: 1rem;
+            color: var(--scikiq-green);
+            margin: 0.8rem 0 0.4rem;
+        }
+
+        .doc-preview code {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
 
         /* Scrollbars */
         ::-webkit-scrollbar {
@@ -1371,6 +1434,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
@@ -1379,10 +1443,12 @@
                 <i class="fas fa-rocket"></i> SCIKIQ MCP Studio
             </a>
             <div class="ms-auto">
-                <a href="/about" class="btn btn-sm" style="background: var(--anthropic-orange); color: white; margin-right: 0.5rem;">
+                <a href="/about" class="btn btn-sm"
+                    style="background: var(--anthropic-orange); color: white; margin-right: 0.5rem;">
                     <i class="fas fa-info-circle"></i> About
                 </a>
-                <a href="https://modelcontextprotocol.io" target="_blank" class="btn btn-sm" style="background: var(--scikiq-light-blue); color: white;">
+                <a href="https://modelcontextprotocol.io" target="_blank" class="btn btn-sm"
+                    style="background: var(--scikiq-light-blue); color: white;">
                     <i class="fas fa-book"></i> MCP Docs
                 </a>
             </div>
@@ -1393,8 +1459,10 @@
     <div id="welcomeScreen" class="welcome-screen">
         <div class="welcome-content">
             <div class="welcome-header">
-                <i class="fas fa-rocket" style="font-size: 3rem; color: var(--scikiq-light-blue); margin-bottom: 1rem;"></i>
-                <h1 style="font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--scikiq-light-blue), var(--scikiq-green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                <i class="fas fa-rocket"
+                    style="font-size: 3rem; color: var(--scikiq-light-blue); margin-bottom: 1rem;"></i>
+                <h1
+                    style="font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--scikiq-light-blue), var(--scikiq-green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
                     Welcome to SCIKIQ MCP Studio
                 </h1>
                 <p style="font-size: 1.1rem; color: rgba(255, 255, 255, 0.7); max-width: 600px; margin: 0 auto;">
@@ -1403,7 +1471,8 @@
             </div>
 
             <div class="method-selection">
-                <h3 style="text-align: center; color: rgba(255, 255, 255, 0.9); margin-bottom: 2rem; font-size: 1.2rem;">
+                <h3
+                    style="text-align: center; color: rgba(255, 255, 255, 0.9); margin-bottom: 2rem; font-size: 1.2rem;">
                     How would you like to provide your APIs?
                 </h3>
 
@@ -1488,11 +1557,14 @@
                 </div>
 
                 <!-- Installation Information Banner -->
-                <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(0, 163, 224, 0.1)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; padding: 2rem; margin: 2rem 0; text-align: center;">
+                <div
+                    style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(0, 163, 224, 0.1)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; padding: 2rem; margin: 2rem 0; text-align: center;">
                     <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
-                        <i class="fas fa-cloud-download-alt" style="font-size: 2.5rem; color: var(--scikiq-light-blue); margin-right: 1rem;"></i>
+                        <i class="fas fa-cloud-download-alt"
+                            style="font-size: 2.5rem; color: var(--scikiq-light-blue); margin-right: 1rem;"></i>
                         <div>
-                            <h3 style="margin: 0; color: var(--scikiq-light-blue); font-family: 'Space Grotesk', sans-serif;">
+                            <h3
+                                style="margin: 0; color: var(--scikiq-light-blue); font-family: 'Space Grotesk', sans-serif;">
                                 🌐 Hosted Installation Service
                             </h3>
                             <p style="margin: 0.5rem 0 0; color: rgba(255, 255, 255, 0.8); font-size: 1.1rem;">
@@ -1500,26 +1572,34 @@
                             </p>
                         </div>
                     </div>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
+
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
                         <div style="background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 8px;">
-                            <i class="fas fa-cog" style="color: var(--scikiq-green); font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                            <i class="fas fa-cog"
+                                style="color: var(--scikiq-green); font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
                             <div style="font-weight: 600; color: white;">Auto Setup</div>
-                            <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">Virtual environment & dependencies</div>
+                            <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">Virtual environment &
+                                dependencies</div>
                         </div>
                         <div style="background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 8px;">
-                            <i class="fas fa-download" style="color: var(--scikiq-green); font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                            <i class="fas fa-download"
+                                style="color: var(--scikiq-green); font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
                             <div style="font-weight: 600; color: white;">One-Click Install</div>
-                            <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">Download & run installer script</div>
+                            <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">Download & run installer
+                                script</div>
                         </div>
                         <div style="background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 8px;">
-                            <i class="fas fa-link" style="color: var(--scikiq-green); font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                            <i class="fas fa-link"
+                                style="color: var(--scikiq-green); font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
                             <div style="font-weight: 600; color: white;">Claude Integration</div>
-                            <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">Automatic Claude Desktop config</div>
+                            <div style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">Automatic Claude Desktop
+                                config</div>
                         </div>
                     </div>
-                    
-                    <div style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3B82F6; padding: 1rem; margin: 1rem 0; border-radius: 8px; text-align: left;">
+
+                    <div
+                        style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3B82F6; padding: 1rem; margin: 1rem 0; border-radius: 8px; text-align: left;">
                         <div style="font-weight: 600; color: #3B82F6; margin-bottom: 0.5rem;">
                             <i class="fas fa-info-circle"></i> How it works:
                         </div>
@@ -1539,14 +1619,16 @@
         <!-- Left: File Browser -->
         <div class="file-browser">
             <div class="file-browser-header">
-                <h6 style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; margin: 0; color: var(--scikiq-light-blue);">
+                <h6
+                    style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; margin: 0; color: var(--scikiq-light-blue);">
                     <i class="fas fa-folder-open" style="margin-right: 0.5rem;"></i> API Files
                 </h6>
                 <div style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); margin-top: 0.3rem;">
                     <i class="fas fa-filter" style="margin-right: 0.3rem;"></i>
                     Showing Python, Config & API files only
                 </div>
-                <div style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.7rem; color: rgba(255, 255, 255, 0.5);">
+                <div
+                    style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.7rem; color: rgba(255, 255, 255, 0.5);">
                     <div style="margin-bottom: 0.3rem;">
                         <span style="color: #3776AB;">●</span> Python
                         <span style="color: #00A859; margin-left: 0.5rem;">●</span> JSON
@@ -1594,7 +1676,8 @@
                         <i class="fas fa-file-code" style="color: var(--scikiq-light-blue);"></i>
                         <span id="currentFile" style="font-weight: 600; margin-left: 0.5rem;">No file selected</span>
                     </div>
-                    <button class="btn btn-sm" style="background: var(--anthropic-orange); color: white;" onclick="copyCode()">
+                    <button class="btn btn-sm" style="background: var(--anthropic-orange); color: white;"
+                        onclick="copyCode()">
                         <i class="fas fa-copy"></i> Copy Code
                     </button>
                 </div>
@@ -1615,28 +1698,36 @@
                 </div>
 
                 <!-- Selection Controls -->
-                <div style="background: rgba(124, 58, 237, 0.1); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                <div
+                    style="background: rgba(124, 58, 237, 0.1); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.8rem;">
-                        <button onclick="selectAllAPIs()" class="action-btn" style="flex: 1; min-width: 140px; padding: 0.6rem 1rem; font-size: 0.9rem; background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2);">
+                        <button onclick="selectAllAPIs()" class="action-btn"
+                            style="flex: 1; min-width: 140px; padding: 0.6rem 1rem; font-size: 0.9rem; background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2);">
                             <i class="fas fa-check-double"></i> Select All
                         </button>
-                        <button onclick="selectNoneAPIs()" class="action-btn" style="flex: 1; min-width: 140px; padding: 0.6rem 1rem; font-size: 0.9rem; background: rgba(255, 255, 255, 0.1);">
+                        <button onclick="selectNoneAPIs()" class="action-btn"
+                            style="flex: 1; min-width: 140px; padding: 0.6rem 1rem; font-size: 0.9rem; background: rgba(255, 255, 255, 0.1);">
                             <i class="fas fa-times"></i> Select None
                         </button>
-                        <button onclick="selectHighConfidenceAPIs()" class="action-btn" style="flex: 1; min-width: 140px; padding: 0.6rem 1rem; font-size: 0.9rem; background: linear-gradient(135deg, var(--success-green), #059669);">
+                        <button onclick="selectHighConfidenceAPIs()" class="action-btn"
+                            style="flex: 1; min-width: 140px; padding: 0.6rem 1rem; font-size: 0.9rem; background: linear-gradient(135deg, var(--success-green), #059669);">
                             <i class="fas fa-star"></i> 80%+ Only
                         </button>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 1rem; padding: 0.5rem; background: rgba(0, 0, 0, 0.2); border-radius: 6px;">
+                    <div
+                        style="display: flex; align-items: center; gap: 1rem; padding: 0.5rem; background: rgba(0, 0, 0, 0.2); border-radius: 6px;">
                         <span style="color: rgba(255, 255, 255, 0.9); font-weight: 600;">
                             <i class="fas fa-check-square" style="color: var(--success-green);"></i> Selected:
                         </span>
-                        <span id="selectedCount" style="color: var(--scikiq-light-blue); font-weight: 700; font-size: 1.1rem;">0</span>
+                        <span id="selectedCount"
+                            style="color: var(--scikiq-light-blue); font-weight: 700; font-size: 1.1rem;">0</span>
                         <span style="color: rgba(255, 255, 255, 0.6);">APIs</span>
-                        <button onclick="analyzeSelectedAPIs()" id="analyzeSelectedBtn" disabled class="action-btn" style="margin-left: auto; padding: 0.5rem 1rem; font-size: 0.85rem; background: linear-gradient(135deg, #7C3AED, #9333EA);">
+                        <button onclick="analyzeSelectedAPIs()" id="analyzeSelectedBtn" disabled class="action-btn"
+                            style="margin-left: auto; padding: 0.5rem 1rem; font-size: 0.85rem; background: linear-gradient(135deg, #7C3AED, #9333EA);">
                             <i class="fas fa-microscope"></i> Analyze Selected
                         </button>
-                        <button onclick="convertSelectedAPIs()" id="convertSelectedBtn" disabled class="action-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: linear-gradient(135deg, var(--anthropic-orange), #B45309);">
+                        <button onclick="convertSelectedAPIs()" id="convertSelectedBtn" disabled class="action-btn"
+                            style="padding: 0.5rem 1rem; font-size: 0.85rem; background: linear-gradient(135deg, var(--anthropic-orange), #B45309);">
                             <i class="fas fa-magic"></i> Convert Selected
                         </button>
                     </div>
@@ -1740,8 +1831,10 @@
                     <i class="fas fa-search"></i> Scan Project
                 </button>
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <label for="confidenceThreshold" style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); min-width: 90px;">Min Score:</label>
-                    <select id="confidenceThreshold" onchange="updateBulkAnalyzeButton()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; padding: 0.4rem 0.6rem; font-size: 0.85rem; min-width: 80px;">
+                    <label for="confidenceThreshold"
+                        style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); min-width: 90px;">Min Score:</label>
+                    <select id="confidenceThreshold" onchange="updateBulkAnalyzeButton()"
+                        style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; padding: 0.4rem 0.6rem; font-size: 0.85rem; min-width: 80px;">
                         <option value="60">60%</option>
                         <option value="70">70%</option>
                         <option value="80" selected>80%</option>
@@ -1750,8 +1843,10 @@
                     </select>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                    <label for="maxApisToAnalyze" style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); min-width: 90px;">Max APIs:</label>
-                    <select id="maxApisToAnalyze" onchange="updateBulkAnalyzeButton()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; padding: 0.4rem 0.6rem; font-size: 0.85rem; min-width: 80px;">
+                    <label for="maxApisToAnalyze"
+                        style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.8); min-width: 90px;">Max APIs:</label>
+                    <select id="maxApisToAnalyze" onchange="updateBulkAnalyzeButton()"
+                        style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; padding: 0.4rem 0.6rem; font-size: 0.85rem; min-width: 80px;">
                         <option value="3" selected>3 APIs</option>
                         <option value="5">5 APIs</option>
                         <option value="10">10 APIs</option>
@@ -1760,10 +1855,12 @@
                         <option value="all">All APIs</option>
                     </select>
                 </div>
-                <button class="action-btn" onclick="bulkAnalyzeAPIs()" id="bulkAnalyzeBtn" disabled style="background: linear-gradient(135deg, #7C3AED, #9333EA);">
+                <button class="action-btn" onclick="bulkAnalyzeAPIs()" id="bulkAnalyzeBtn" disabled
+                    style="background: linear-gradient(135deg, #7C3AED, #9333EA);">
                     <i class="fas fa-chart-line"></i> Bulk Analyze (80%+)
                 </button>
-                <button class="action-btn" onclick="convertHighConfidenceAPIs()" id="convertHighBtn" disabled style="background: linear-gradient(135deg, var(--success-green), #059669);">
+                <button class="action-btn" onclick="convertHighConfidenceAPIs()" id="convertHighBtn" disabled
+                    style="background: linear-gradient(135deg, var(--success-green), #059669);">
                     <i class="fas fa-magic"></i> Convert Top APIs
                 </button>
                 <button class="action-btn" onclick="generateMCP()" id="generateBtn" disabled>
@@ -1772,8 +1869,13 @@
                 <button class="action-btn" onclick="downloadDocs()" id="docsBtn" disabled>
                     <i class="fas fa-download"></i> Download Docs
                 </button>
-                <button class="action-btn" onclick="testWithClaude()" id="testBtn" disabled style="background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2);">
+                <button class="action-btn" onclick="testWithClaude()" id="testBtn" disabled
+                    style="background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2);">
                     <i class="fas fa-robot"></i> Test with Claude
+                </button>
+                <button class="action-btn" onclick="showPublishOnlineModal()" id="publishOnlineBtn" disabled
+                    style="background: linear-gradient(135deg, #7C3AED, #9333EA);">
+                    <i class="fas fa-cloud-upload-alt"></i> Publish Online
                 </button>
             </div>
 
@@ -1981,7 +2083,7 @@
             document.body.insertAdjacentHTML('beforeend', modalHTML);
 
             // Add event listener for auth type change
-            document.getElementById('authType').addEventListener('change', function() {
+            document.getElementById('authType').addEventListener('change', function () {
                 const authType = this.value;
                 const tokenGroup = document.getElementById('authTokenGroup');
                 const userGroup = document.getElementById('authUserGroup');
@@ -2111,9 +2213,9 @@
                     </div>
                 </div>
             `;
-            
+
             document.body.insertAdjacentHTML('beforeend', modalHTML);
-            
+
             // Add initial database connection
             addDatabaseConnection();
         }
@@ -2128,7 +2230,7 @@
         function addDatabaseConnection() {
             dbConnectionCounter++;
             const connectionId = 'db_connection_' + dbConnectionCounter;
-            
+
             const connectionHTML = `
                 <div class="database-connection" id="${connectionId}" style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; position: relative;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -2167,7 +2269,7 @@
                     </div>
                 </div>
             `;
-            
+
             document.getElementById('databaseConnections').insertAdjacentHTML('beforeend', connectionHTML);
             updateDatabaseTypeFields(connectionId, 'MYSQL'); // Default to MySQL
         }
@@ -2182,7 +2284,7 @@
         function updateDatabaseTypeFields(connectionId, dbType) {
             const fieldsContainer = document.getElementById(connectionId + '_fields');
             let fieldsHTML = '';
-            
+
             // Common fields for most databases
             const commonFields = `
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
@@ -2210,9 +2312,9 @@
                     <input type="password" name="password" placeholder="password" />
                 </div>
             `;
-            
+
             fieldsHTML = commonFields;
-            
+
             // Add database-specific fields
             if (dbType === 'MONGODB') {
                 fieldsHTML += `
@@ -2252,7 +2354,7 @@
                     </div>
                 `;
             }
-            
+
             // Add SSL/Security options for applicable databases
             if (['POSTGRES', 'MYSQL', 'SQLSERVER'].includes(dbType)) {
                 fieldsHTML += `
@@ -2274,9 +2376,9 @@
                     </details>
                 `;
             }
-            
+
             fieldsContainer.innerHTML = fieldsHTML;
-            
+
             // Initialize DuckDB fields if it's DuckDB
             if (dbType === 'DUCKDB') {
                 setTimeout(() => updateDuckDBConnectionType(connectionId, 'local'), 100);
@@ -2286,7 +2388,7 @@
         function updateDuckDBConnectionType(connectionId, connectionType) {
             const duckdbFieldsContainer = document.getElementById(connectionId + '_duckdb_fields');
             let fieldsHTML = '';
-            
+
             if (connectionType === 'local') {
                 fieldsHTML = `
                     <div class="input-group">
@@ -2340,7 +2442,7 @@
                     </div>
                 `;
             }
-            
+
             if (duckdbFieldsContainer) {
                 duckdbFieldsContainer.innerHTML = fieldsHTML;
             }
@@ -2381,19 +2483,19 @@
                 // Collect server configuration
                 const serverName = document.getElementById('dbServerName').value;
                 const serverPath = document.getElementById('dbServerPath').value;
-                
+
                 if (!serverName || !serverPath) {
                     alert('Please provide server name and path');
                     return;
                 }
-                
+
                 // Collect database connections
                 const connections = [];
                 const connectionElements = document.querySelectorAll('.database-connection');
-                
+
                 for (let connectionEl of connectionElements) {
                     const connection = {};
-                    
+
                     // Get all input fields in this connection
                     const inputs = connectionEl.querySelectorAll('input, select');
                     for (let input of inputs) {
@@ -2401,27 +2503,27 @@
                             connection[input.name] = input.value;
                         }
                     }
-                    
+
                     // Validate required fields
                     if (!connection.connection_name || !connection.db_type) {
                         alert('Please fill in all required fields for all connections');
                         return;
                     }
-                    
+
                     connections.push(connection);
                 }
-                
+
                 if (connections.length === 0) {
                     alert('Please add at least one database connection');
                     return;
                 }
-                
+
                 // Show loading
                 const button = event.target;
                 const originalText = button.innerHTML;
                 button.innerHTML = '<div class="loading-spinner"></div> Generating...';
                 button.disabled = true;
-                
+
                 // Send to backend to generate config.ini and deploy
                 const response = await fetch('/api/generate-database-mcp', {
                     method: 'POST',
@@ -2434,19 +2536,19 @@
                         connections: connections
                     })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     // Close the modal
                     closeDatabaseModal();
-                    
+
                     // Show success modal with deployment information
                     showDatabaseMCPSetupModal(result);
                 } else {
                     throw new Error(result.error || 'Failed to generate database MCP server');
                 }
-                
+
             } catch (error) {
                 console.error('Error generating database MCP:', error);
                 alert('Error: ' + error.message);
@@ -2465,11 +2567,11 @@
             const serverPath = result.server_path;
             const pythonPath = result.python_path || 'python';
             const serverName = result.server_name;
-            
+
             // Ensure proper Windows path formatting for display
             const normalizedConfigPath = configPath.replace(/\//g, '\\');
             const normalizedServerPath = serverPath.replace(/\//g, '\\');
-            
+
             const modalHTML = `
                 <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem;">
                     <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
@@ -2486,18 +2588,108 @@
                         </div>
 
                         <div style="padding: 2rem;">
-                            
-                            <!-- Auto-Deployment Option -->
-                            <div style="background: rgba(0, 163, 224, 0.1); border-left: 4px solid var(--scikiq-light-blue); padding: 1.5rem; margin-bottom: 2rem; border-radius: 8px;">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="background: var(--scikiq-light-blue); width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">1</div>
-                                    <div style="flex: 1;">
-                                        <h4 style="margin: 0 0 0.5rem; color: var(--scikiq-light-blue);">Automatic Deployment (Recommended)</h4>
+
+                            <!-- Deployment Method Selection -->
+                            <div style="margin-bottom: 2rem;">
+                                <h4 style="color: var(--scikiq-light-blue); margin-bottom: 1rem;">
+                                    <i class="fas fa-rocket"></i> Choose Deployment Method
+                                </h4>
+                                
+                                <!-- Deployment Method Tabs -->
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                                    <button onclick="switchDeploymentMethod('local')" class="deploy-method-btn" data-method="local" style="padding: 1.5rem; background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2); border: 3px solid var(--scikiq-light-blue); border-radius: 12px; color: white; cursor: pointer; transition: all 0.3s; text-align: left;">
+                                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                                            <i class="fas fa-desktop" style="font-size: 1.5rem;"></i>
+                                            <strong style="font-size: 1.1rem;">Local Installation</strong>
+                                        </div>
+                                        <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">Install on this machine's Claude Desktop</p>
+                                    </button>
+                                    
+                                    <button onclick="switchDeploymentMethod('online')" class="deploy-method-btn" data-method="online" style="padding: 1.5rem; background: rgba(124, 58, 237, 0.2); border: 3px solid transparent; border-radius: 12px; color: white; cursor: pointer; transition: all 0.3s; text-align: left;">
+                                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                                            <i class="fas fa-cloud" style="font-size: 1.5rem;"></i>
+                                            <strong style="font-size: 1.1rem;">Online Deployment</strong>
+                                        </div>
+                                        <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">Deploy to AWS, Azure, or Remote Server</p>
+                                    </button>
+                                </div>
+
+                                <!-- Local Deployment Content -->
+                                <div id="local-deployment-content" class="deployment-content" style="display: block;">
+                                    <div style="background: rgba(0, 163, 224, 0.1); border-left: 4px solid var(--scikiq-light-blue); padding: 1.5rem; border-radius: 8px;">
+                                        <h5 style="margin: 0 0 0.5rem; color: var(--scikiq-light-blue);">
+                                            <i class="fas fa-magic"></i> Automatic Deployment (Recommended)
+                                        </h5>
                                         <p style="margin: 0 0 1rem; color: rgba(255, 255, 255, 0.8);">
                                             We can automatically add this server to your Claude Desktop configuration.
                                         </p>
                                         <button onclick="autoDeployDatabaseMCP('${configPath}', '${serverPath}', '${serverName}')" style="background: var(--scikiq-light-blue); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
                                             <i class="fas fa-rocket"></i> Auto-Deploy to Claude Desktop
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Online Deployment Content -->
+                                <div id="online-deployment-content" class="deployment-content" style="display: none;">
+                                    <!-- Online Deployment Tabs -->
+                                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+                                        <button onclick="switchOnlineDeployTab('aws')" class="online-deploy-tab active" data-tab="aws" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid var(--anthropic-orange); color: var(--anthropic-orange); cursor: pointer; transition: all 0.3s; font-weight: 600;">
+                                            <i class="fab fa-aws"></i> AWS EC2
+                                        </button>
+                                        <button onclick="switchOnlineDeployTab('azure')" class="online-deploy-tab" data-tab="azure" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.3s; font-weight: 600;">
+                                            <i class="fab fa-microsoft"></i> Azure VM
+                                        </button>
+                                        <button onclick="switchOnlineDeployTab('remote')" class="online-deploy-tab" data-tab="remote" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.3s; font-weight: 600;">
+                                            <i class="fas fa-server"></i> Remote SSH
+                                        </button>
+                                    </div>
+
+                                    <!-- AWS Tab Content -->
+                                    <div id="aws-online-tab" class="online-tab-content" style="display: block;">
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label>AWS Access Key <span style="color: var(--anthropic-orange);">*</span></label>
+                                            <input type="text" id="dbAwsAccessKey" placeholder="AKIA..." style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
+                                        </div>
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label>AWS Secret Key <span style="color: var(--anthropic-orange);">*</span></label>
+                                            <input type="password" id="dbAwsSecretKey" placeholder="Secret access key" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
+                                        </div>
+                                        <button onclick="deployDatabaseOnline('aws', '${configPath}', '${serverPath}', '${serverName}')" style="background: linear-gradient(135deg, #FF9900, #CC7A00); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
+                                            <i class="fas fa-cloud-upload-alt"></i> Deploy to AWS EC2
+                                        </button>
+                                    </div>
+
+                                    <!-- Azure Tab Content -->
+                                    <div id="azure-online-tab" class="online-tab-content" style="display: none;">
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label>Subscription ID <span style="color: var(--anthropic-orange);">*</span></label>
+                                            <input type="text" id="dbAzureSubscriptionId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
+                                        </div>
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label>Client ID <span style="color: var(--anthropic-orange);">*</span></label>
+                                            <input type="text" id="dbAzureClientId" placeholder="Application (client) ID" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
+                                        </div>
+                                        <button onclick="deployDatabaseOnline('azure', '${configPath}', '${serverPath}', '${serverName}')" style="background: linear-gradient(135deg, #0078D4, #005A9E); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
+                                            <i class="fas fa-cloud-upload-alt"></i> Deploy to Azure VM
+                                        </button>
+                                    </div>
+
+                                    <!-- Remote Tab Content -->
+                                    <div id="remote-online-tab" class="online-tab-content" style="display: none;">
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label>Host/IP Address <span style="color: var(--anthropic-orange);">*</span></label>
+                                            <input type="text" id="dbRemoteHost" placeholder="192.168.1.100 or server.example.com" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
+                                        </div>
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label>Username <span style="color: var(--anthropic-orange);">*</span></label>
+                                            <input type="text" id="dbRemoteUsername" placeholder="ubuntu" value="ubuntu" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
+                                        </div>
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label>Password</label>
+                                            <input type="password" id="dbRemotePassword" placeholder="Server password" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
+                                        </div>
+                                        <button onclick="deployDatabaseOnline('remote', '${configPath}', '${serverPath}', '${serverName}')" style="background: linear-gradient(135deg, var(--scikiq-green), #059669); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
+                                            <i class="fas fa-cloud-upload-alt"></i> Deploy to Remote Server
                                         </button>
                                     </div>
                                 </div>
@@ -2608,7 +2800,7 @@
             try {
                 const response = await fetch(`/api/get-database-config?path=${encodeURIComponent(configPath)}`);
                 const result = await response.json();
-                
+
                 if (result.success) {
                     const preview = document.getElementById('databaseConfigPreview');
                     if (preview) {
@@ -2624,7 +2816,7 @@
             // Ensure proper Windows path formatting
             const normalizedConfigPath = configPath.replace(/\//g, '\\');
             const normalizedServerPath = serverPath.replace(/\//g, '\\');
-            
+
             const config = `{
   "mcpServers": {
     "${serverName}": {
@@ -2637,14 +2829,14 @@
     }
   }
 }`;
-            
+
             navigator.clipboard.writeText(config).then(() => {
                 // Visual feedback
                 const button = event.target;
                 const originalContent = button.innerHTML;
                 button.innerHTML = '<i class="fas fa-check"></i> Copied!';
                 button.style.background = 'var(--success-green)';
-                
+
                 setTimeout(() => {
                     button.innerHTML = originalContent;
                     button.style.background = 'rgba(255, 255, 255, 0.1)';
@@ -2661,7 +2853,7 @@
                 const originalText = button.innerHTML;
                 button.innerHTML = '<div class="loading-spinner"></div> Deploying...';
                 button.disabled = true;
-                
+
                 const response = await fetch('/api/auto-deploy-database-mcp', {
                     method: 'POST',
                     headers: {
@@ -2673,13 +2865,13 @@
                         server_name: serverName
                     })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     button.innerHTML = '<i class="fas fa-check"></i> Deployed Successfully!';
                     button.style.background = 'var(--success-green)';
-                    
+
                     // Show success message
                     setTimeout(() => {
                         alert('Database MCP server deployed successfully! Please restart Claude Desktop to use the new server.');
@@ -2687,11 +2879,11 @@
                 } else {
                     throw new Error(result.error || 'Deployment failed');
                 }
-                
+
             } catch (error) {
                 console.error('Auto-deployment error:', error);
                 alert('Auto-deployment failed: ' + error.message + '. Please use manual setup instructions.');
-                
+
                 const button = event.target;
                 button.innerHTML = originalText;
                 button.disabled = false;
@@ -2818,7 +3010,7 @@
             // Create header for codebase source
             const projectType = intelligence?.project_type || 'Python API';
             const frameworks = intelligence?.frameworks?.join(', ') || 'Unknown';
-            
+
             const header = document.createElement('div');
             header.className = 'file-tree-item directory';
             header.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
@@ -2835,7 +3027,7 @@
             const domainGroups = {};
             apis.forEach((api, index) => {
                 const domain = api.business_domain || 'general';
-                
+
                 if (!domainGroups[domain]) {
                     domainGroups[domain] = [];
                 }
@@ -2898,7 +3090,7 @@
 
                     const method = api.methods[0];
                     const methodColor = methodColors[method] || '#9CA3AF';
-                    
+
                     // Show file name as badge
                     const fileName = api.file_name || '';
                     const fileBadge = fileName ? `<span style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.6rem; margin-left: 0.3rem; font-family: 'Fira Code', monospace;">${fileName}</span>` : '';
@@ -3012,7 +3204,7 @@
                     document.getElementById('bulkAnalyzeBtn').disabled = false;
                     document.getElementById('generateBtn').disabled = false;
                     document.getElementById('docsBtn').disabled = false;
-                    
+
                     // Update bulk analyze button text with count
                     updateBulkAnalyzeButton();
 
@@ -3118,7 +3310,7 @@
                     document.getElementById('bulkAnalyzeBtn').disabled = false;
                     document.getElementById('generateBtn').disabled = false;
                     document.getElementById('docsBtn').disabled = false;
-                    
+
                     // Update bulk analyze button text with count
                     updateBulkAnalyzeButton();
 
@@ -3164,7 +3356,7 @@
                 // Display URLs in tree format (like Swagger), not file tree
                 if (projectData.api_definitions) {
                     renderAPIs(projectData.api_definitions);
-                    
+
                     // Render URL tree grouped by business domain (like Swagger tags)
                     renderCodebaseEndpointsTree(projectData.api_definitions, projectData.intelligence);
                 }
@@ -3177,7 +3369,7 @@
                 document.getElementById('generateBtn').disabled = false;
                 document.getElementById('docsBtn').disabled = false;
                 document.getElementById('bulkAnalyzeBtn').disabled = false;
-                
+
                 // Update bulk analyze button text with count
                 updateBulkAnalyzeButton();
 
@@ -4365,12 +4557,12 @@
             const maxApisSelection = document.getElementById('maxApisToAnalyze').value;
             const btn = document.getElementById('bulkAnalyzeBtn');
             const icon = '<i class="fas fa-chart-line"></i>';
-            
+
             // Calculate number of APIs that will be analyzed
             let apiCount = 0;
             if (projectData && projectData.api_definitions) {
                 let apisToAnalyze;
-                
+
                 if (projectSourceType === 'swagger') {
                     apisToAnalyze = projectData.api_definitions;
                 } else {
@@ -4395,12 +4587,12 @@
                         return isBusinessAPI && !isFrameworkAPI;
                     });
                 }
-                
+
                 // Apply max APIs limit
                 const maxApis = maxApisSelection === 'all' ? apisToAnalyze.length : parseInt(maxApisSelection);
                 apiCount = Math.min(apisToAnalyze.length, maxApis);
             }
-            
+
             const countText = apiCount > 0 ? ` (${apiCount} APIs)` : '';
             btn.innerHTML = `${icon} Bulk Analyze ${threshold}%+${countText}`;
         }
@@ -4424,7 +4616,7 @@
                 // Just exclude framework/MCP tool routes from THIS app
                 apisToAnalyze = projectData.api_definitions.filter(api => {
                     const route = api.route.toLowerCase();
-                    
+
                     // Exclude MCP Studio's own framework routes
                     const isFrameworkAPI = (
                         route.includes('/api/scan') ||
@@ -4437,7 +4629,7 @@
                         route.includes('/about') ||
                         route === '/'
                     );
-                    
+
                     // Include all user APIs that aren't our framework APIs
                     return !isFrameworkAPI;
                 });
@@ -4449,7 +4641,7 @@
             }
 
             const totalAPIs = apisToAnalyze.length;
-            
+
             // Get selected max APIs from UI
             const maxApisSelection = document.getElementById('maxApisToAnalyze').value;
             const maxAPIs = maxApisSelection === 'all' ? totalAPIs : parseInt(maxApisSelection);
@@ -4481,7 +4673,7 @@
 
                 // Get dynamic confidence threshold
                 const selectedThreshold = parseInt(document.getElementById('confidenceThreshold').value);
-                
+
                 const response = await fetch('/api/bulk-analyze-apis', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -4665,11 +4857,11 @@
                     const baseUrlInput = document.getElementById('baseUrl');
                     baseUrl = baseUrlInput ? baseUrlInput.value : '';
                 }
-                
+
                 // Get server name from input field
                 const serverNameInput = document.getElementById('apiName');
                 const serverName = serverNameInput ? serverNameInput.value : 'scikiq-mcp-autoAPI';
-                
+
                 const response = await fetch('/api/batch-convert-to-mcp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -4686,7 +4878,7 @@
                 if (result.success) {
                     // Store yaml_path for later auto-deploy
                     window.lastGeneratedYamlPath = result.yaml_path;
-                    
+
                     // Show detailed setup modal instead of simple alert
                     showMCPSetupModal(result);
 
@@ -5001,7 +5193,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
         function generateServerNameSuggestion() {
             const apiNameInput = document.getElementById('apiName');
             const serverNameInput = document.getElementById('mcpServerName');
-            
+
             if (apiNameInput && apiNameInput.value && serverNameInput) {
                 // Convert API name to valid server name format
                 let suggestion = apiNameInput.value.toLowerCase()
@@ -5009,7 +5201,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     .replace(/\s+/g, '-') // Replace spaces with hyphens
                     .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
                     .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-                
+
                 if (suggestion.length > 0) {
                     serverNameInput.value = suggestion;
                     validateServerNameInput(serverNameInput);
@@ -5020,9 +5212,9 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
         function generateSuggestedServerName() {
             const serverNameInput = document.getElementById('mcpServerName');
             const apiNameInput = document.getElementById('apiName');
-            
+
             let suggestions = [];
-            
+
             // Try to generate from API name first
             if (apiNameInput && apiNameInput.value) {
                 let suggestion = apiNameInput.value.toLowerCase()
@@ -5032,7 +5224,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     .replace(/^-+|-+$/g, '');
                 if (suggestion) suggestions.push(suggestion);
             }
-            
+
             // Add some generic suggestions
             suggestions.push(
                 'my-api-server',
@@ -5040,7 +5232,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                 'custom-api-tools',
                 'api-connector'
             );
-            
+
             // Use the first valid suggestion
             for (let suggestion of suggestions) {
                 const validation = validateServerName(suggestion);
@@ -5057,39 +5249,39 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
                 return { valid: false, message: 'Server name can only contain letters, numbers, hyphens, and underscores' };
             }
-            
+
             // Check length
             if (name.length < 2) {
                 return { valid: false, message: 'Server name must be at least 2 characters long' };
             }
-            
+
             if (name.length > 50) {
                 return { valid: false, message: 'Server name must be 50 characters or less' };
             }
-            
+
             // Check that it doesn't start with hyphen
             if (name.startsWith('-') || name.startsWith('_')) {
                 return { valid: false, message: 'Server name cannot start with hyphen or underscore' };
             }
-            
+
             return { valid: true };
         }
 
         function validateServerNameInput(input) {
             const feedback = document.getElementById('serverNameFeedback');
             const name = input.value.trim();
-            
+
             // Update manual configuration display
             updateManualConfigDisplay(name);
-            
+
             if (!name) {
                 feedback.innerHTML = '';
                 input.style.borderColor = 'rgba(255, 255, 255, 0.3)';
                 return;
             }
-            
+
             const validation = validateServerName(name);
-            
+
             if (validation.valid) {
                 feedback.innerHTML = '<i class="fas fa-check-circle" style="color: #10B981;"></i> <span style="color: #10B981;">Valid server name</span>';
                 input.style.borderColor = '#10B981';
@@ -5109,7 +5301,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
         function copyManualConfig(serverPath) {
             const serverNameInput = document.getElementById('mcpServerName');
             const serverName = serverNameInput ? serverNameInput.value.trim() : 'scikiq-mcp-autoAPI';
-            
+
             const config = {
                 "mcpServers": {}
             };
@@ -5117,7 +5309,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                 "command": "python",
                 "args": [serverPath.replace(/\\\\/g, '\\\\')]
             };
-            
+
             const configText = JSON.stringify(config, null, 2);
             copyToClipboard(configText);
         }
@@ -5150,7 +5342,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             try {
                 // Include yaml_path if available from last conversion
                 const yamlPath = window.lastGeneratedYamlPath || null;
-                
+
                 const response = await fetch('/api/auto-deploy-mcp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -5427,7 +5619,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
         function installDatabaseMCP() {
             const serverName = document.getElementById('dbServerName').value;
             const serverPath = document.getElementById('dbServerPath').value;
-            
+
             if (!serverName || !serverPath) {
                 alert('Please provide server name and path');
                 return;
@@ -5436,7 +5628,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             // Collect database connections
             const connections = [];
             const connectionElements = document.querySelectorAll('.database-connection');
-            
+
             for (let connectionEl of connectionElements) {
                 const connection = {};
                 const inputs = connectionEl.querySelectorAll('input, select');
@@ -5491,11 +5683,11 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             if (sourceType === 'swagger') {
                 serverType = 'swagger';
                 serverDisplayName = 'Analyzed Swagger MCP Server';
-                
+
                 // Get Swagger configuration with fallbacks
                 const baseUrlInput = document.getElementById('baseUrl');
                 const apiNameInput = document.getElementById('apiName');
-                
+
                 serverConfig = {
                     analyzed_apis: window.highConfidenceAPIs,
                     api_count: window.highConfidenceAPIs.length,
@@ -5506,7 +5698,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             } else {
                 serverType = 'codebase';
                 serverDisplayName = 'Analyzed Codebase MCP Server';
-                
+
                 serverConfig = {
                     analyzed_apis: window.highConfidenceAPIs,
                     api_count: window.highConfidenceAPIs.length,
@@ -5523,7 +5715,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
         function showInstallationModal(serverType, serverDisplayName, serverConfig) {
             // Store the server config globally for the installer generation
             window.currentServerConfig = serverConfig;
-            
+
             const modalHTML = `
                 <div class="input-modal" id="installationModal">
                     <div class="input-modal-content" style="max-width: 700px;">
@@ -5675,7 +5867,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                 if (result.success) {
                     // Close modal
                     closeInstallationModal();
-                    
+
                     // Show download success modal
                     showInstallerDownloadModal(result);
                 } else {
@@ -5746,10 +5938,445 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             window.open(`/download-installer/${filename}`, '_blank');
         }
 
+
         function closeDownloadModal() {
             const modal = document.getElementById('downloadModal');
             if (modal) modal.remove();
         }
+
+        // Online Publishing Functions
+        function showPublishOnlineModal() {
+            const modalHTML = `
+                <div class="input-modal" id="publishOnlineModal">
+                    <div class="input-modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+                        <h3><i class="fas fa-cloud-upload-alt"></i> Publish MCP Server Online</h3>
+                        <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
+                            Deploy your MCP server to the cloud or remote machine
+                        </p>
+
+                        <!-- Deployment Type Tabs -->
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+                            <button onclick="switchDeploymentTab('aws')" class="deployment-tab active" data-tab="aws" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.3s;">
+                                <i class="fab fa-aws"></i> AWS EC2
+                            </button>
+                            <button onclick="switchDeploymentTab('azure')" class="deployment-tab" data-tab="azure" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.3s;">
+                                <i class="fab fa-microsoft"></i> Azure VM
+                            </button>
+                            <button onclick="switchDeploymentTab('remote')" class="deployment-tab" data-tab="remote" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.3s;">
+                                <i class="fas fa-server"></i> Remote SSH
+                            </button>
+                        </div>
+
+                        <!-- AWS Tab -->
+                        <div id="aws-deploy-tab" class="deployment-tab-content" style="display: block;">
+                            <div class="input-group">
+                                <label>AWS Access Key <span style="color: var(--anthropic-orange);">*</span></label>
+                                <input type="text" id="awsAccessKey" placeholder="AKIA..." />
+                            </div>
+                            <div class="input-group">
+                                <label>AWS Secret Key <span style="color: var(--anthropic-orange);">*</span></label>
+                                <input type="password" id="awsSecretKey" placeholder="Secret access key" />
+                            </div>
+                            <div class="input-group">
+                                <label>AWS Region</label>
+                                <select id="awsRegion" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;">
+                                    <option value="us-east-1">US East (N. Virginia)</option>
+                                    <option value="us-west-2">US West (Oregon)</option>
+                                    <option value="eu-west-1">EU (Ireland)</option>
+                                    <option value="ap-south-1">Asia Pacific (Mumbai)</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Instance Type</label>
+                                <select id="awsInstanceType" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;">
+                                    <option value="t2.micro">t2.micro (1 vCPU, 1GB RAM) - Free tier</option>
+                                    <option value="t2.small">t2.small (1 vCPU, 2GB RAM)</option>
+                                    <option value="t2.medium">t2.medium (2 vCPU, 4GB RAM)</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Domain Name (Optional)</label>
+                                <input type="text" id="awsDomain" placeholder="api.yourdomain.com" />
+                                <small style="color: rgba(255, 255, 255, 0.5);">Leave empty to use public IP</small>
+                            </div>
+                        </div>
+
+                        <!-- Azure Tab -->
+                        <div id="azure-deploy-tab" class="deployment-tab-content" style="display: none;">
+                            <div class="input-group">
+                                <label>Subscription ID <span style="color: var(--anthropic-orange);">*</span></label>
+                                <input type="text" id="azureSubscriptionId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                            </div>
+                            <div class="input-group">
+                                <label>Client ID <span style="color: var(--anthropic-orange);">*</span></label>
+                                <input type="text" id="azureClientId" placeholder="Application (client) ID" />
+                            </div>
+                            <div class="input-group">
+                                <label>Client Secret <span style="color: var(--anthropic-orange);">*</span></label>
+                                <input type="password" id="azureClientSecret" placeholder="Client secret value" />
+                            </div>
+                            <div class="input-group">
+                                <label>Tenant ID <span style="color: var(--anthropic-orange);">*</span></label>
+                                <input type="text" id="azureTenantId" placeholder="Azure AD tenant ID" />
+                            </div>
+                            <div class="input-group">
+                                <label>Resource Group</label>
+                                <input type="text" id="azureResourceGroup" placeholder="mcp-server-rg" value="mcp-server-rg" />
+                            </div>
+                            <div class="input-group">
+                                <label>Location</label>
+                                <select id="azureLocation" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;">
+                                    <option value="eastus">East US</option>
+                                    <option value="westus2">West US 2</option>
+                                    <option value="westeurope">West Europe</option>
+                                    <option value="centralindia">Central India</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Remote Tab -->
+                        <div id="remote-deploy-tab" class="deployment-tab-content" style="display: none;">
+                            <div class="input-group">
+                                <label>Host/IP Address <span style="color: var(--anthropic-orange);">*</span></label>
+                                <input type="text" id="remoteHost" placeholder="192.168.1.100 or server.example.com" />
+                            </div>
+                            <div class="input-group">
+                                <label>Username <span style="color: var(--anthropic-orange);">*</span></label>
+                                <input type="text" id="remoteUsername" placeholder="ubuntu" value="ubuntu" />
+                            </div>
+                            <div class="input-group">
+                                <label>Authentication Method</label>
+                                <select id="remoteAuthMethod" onchange="toggleAuthFields()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;">
+                                    <option value="password">Password</option>
+                                    <option value="key">SSH Key</option>
+                                </select>
+                            </div>
+                            <div class="input-group" id="remotePasswordField">
+                                <label>Password</label>
+                                <input type="password" id="remotePassword" placeholder="Server password" />
+                            </div>
+                            <div class="input-group" id="remoteKeyField" style="display: none;">
+                                <label>SSH Key Path</label>
+                                <input type="text" id="remoteKeyPath" placeholder="/path/to/private/key" />
+                                <small style="color: rgba(255, 255, 255, 0.5);">Path to your private SSH key file</small>
+                            </div>
+                        </div>
+
+                        <!-- Deployment Log -->
+                        <div id="deploymentLog" style="display: none; margin: 1.5rem 0; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 1rem; max-height: 300px; overflow-y: auto; font-family: 'Fira Code', monospace; font-size: 0.85rem; color: #e0e0e0;"></div>
+
+                        <!-- Buttons -->
+                        <div class="input-buttons">
+                            <button class="btn-secondary-custom" onclick="closePublishOnlineModal()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                            <button class="btn-primary-custom" onclick="startDeployment()" id="deployBtn">
+                                <i class="fas fa-rocket"></i> Deploy Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Add styles for active tab
+            const style = document.createElement('style');
+            style.textContent = `
+                .deployment-tab.active {
+                    color: var(--anthropic-orange) !important;
+                    border-bottom-color: var(--anthropic-orange) !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function switchDeploymentTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.deployment-tab').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.tab === tab) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Update tab content
+            document.querySelectorAll('.deployment-tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            document.getElementById(`${tab}-deploy-tab`).style.display = 'block';
+        }
+
+        function toggleAuthFields() {
+            const method = document.getElementById('remoteAuthMethod').value;
+            document.getElementById('remotePasswordField').style.display = method === 'password' ? 'block' : 'none';
+            document.getElementById('remoteKeyField').style.display = method === 'key' ? 'block' : 'none';
+        }
+
+        async function startDeployment() {
+            const activeTab = document.querySelector('.deployment-tab.active').dataset.tab;
+            const logDiv = document.getElementById('deploymentLog');
+            const deployBtn = document.getElementById('deployBtn');
+
+            logDiv.style.display = 'block';
+            logDiv.innerHTML = '';
+            deployBtn.disabled = true;
+            deployBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deploying...';
+
+            try {
+                let endpoint, payload;
+
+                if (activeTab === 'aws') {
+                    endpoint = '/api/deploy/aws';
+                    payload = {
+                        access_key: document.getElementById('awsAccessKey').value,
+                        secret_key: document.getElementById('awsSecretKey').value,
+                        region: document.getElementById('awsRegion').value,
+                        instance_type: document.getElementById('awsInstanceType').value,
+                        domain: document.getElementById('awsDomain').value
+                    };
+                } else if (activeTab === 'azure') {
+                    endpoint = '/api/deploy/azure';
+                    payload = {
+                        subscription_id: document.getElementById('azureSubscriptionId').value,
+                        client_id: document.getElementById('azureClientId').value,
+                        client_secret: document.getElementById('azureClientSecret').value,
+                        tenant_id: document.getElementById('azureTenantId').value,
+                        resource_group: document.getElementById('azureResourceGroup').value,
+                        location: document.getElementById('azureLocation').value
+                    };
+                } else if (activeTab === 'remote') {
+                    endpoint = '/api/deploy/remote';
+                    const authMethod = document.getElementById('remoteAuthMethod').value;
+                    payload = {
+                        host: document.getElementById('remoteHost').value,
+                        username: document.getElementById('remoteUsername').value,
+                        password: authMethod === 'password' ? document.getElementById('remotePassword').value : null,
+                        key_path: authMethod === 'key' ? document.getElementById('remoteKeyPath').value : null
+                    };
+                }
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const text = decoder.decode(value);
+                    logDiv.innerHTML += text;
+                    logDiv.scrollTop = logDiv.scrollHeight;
+                }
+
+                deployBtn.innerHTML = '<i class="fas fa-check"></i> Deployment Complete';
+                deployBtn.style.background = 'linear-gradient(135deg, var(--success-green), #059669)';
+
+            } catch (error) {
+                logDiv.innerHTML += `\n[ERROR] ${error.message}\n`;
+                deployBtn.disabled = false;
+                deployBtn.innerHTML = '<i class="fas fa-rocket"></i> Retry Deployment';
+                deployBtn.style.background = '';
+            }
+        }
+
+        function closePublishOnlineModal() {
+            const modal = document.getElementById('publishOnlineModal');
+            if (modal) modal.remove();
+        }
+
+        // Database Deployment Method Switching
+        function switchDeploymentMethod(method) {
+            // Update button styles
+            document.querySelectorAll('.deploy-method-btn').forEach(btn => {
+                if (btn.dataset.method === method) {
+                    btn.style.background = 'linear-gradient(135deg, var(--scikiq-light-blue), #0891B2)';
+                    btn.style.border = '3px solid var(--scikiq-light-blue)';
+                } else {
+                    btn.style.background = 'rgba(124, 58, 237, 0.2)';
+                    btn.style.border = '3px solid transparent';
+                }
+            });
+
+            // Show/hide content
+            if (method === 'local') {
+                document.getElementById('local-deployment-content').style.display = 'block';
+                document.getElementById('online-deployment-content').style.display = 'none';
+            } else {
+                document.getElementById('local-deployment-content').style.display = 'none';
+                document.getElementById('online-deployment-content').style.display = 'block';
+            }
+        }
+
+        function switchOnlineDeployTab(tab) {
+            // Update tab styles
+            document.querySelectorAll('.online-deploy-tab').forEach(btn => {
+                if (btn.dataset.tab === tab) {
+                    btn.style.borderBottomColor = 'var(--anthropic-orange)';
+                    btn.style.color = 'var(--anthropic-orange)';
+                } else {
+                    btn.style.borderBottomColor = 'transparent';
+                    btn.style.color = 'rgba(255, 255, 255, 0.6)';
+                }
+            });
+
+            // Show/hide tab content
+            document.querySelectorAll('.online-tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            document.getElementById(`${tab}-online-tab`).style.display = 'block';
+        }
+
+        async function deployDatabaseOnline(platform, configPath, serverPath, serverName) {
+            console.log(`[DEPLOY] Starting deployment to ${platform} for ${serverName}`);
+            console.log(`[DEPLOY] Config path: ${configPath}`);
+            console.log(`[DEPLOY] Server path: ${serverPath}`);
+
+            try {
+                let endpoint, payload;
+
+                // Prepare payload based on platform
+                if (platform === 'aws') {
+                    endpoint = '/api/deploy/aws';
+                    payload = {
+                        access_key: document.getElementById('dbAwsAccessKey').value,
+                        secret_key: document.getElementById('dbAwsSecretKey').value,
+                        region: 'us-east-1',
+                        instance_type: 't2.micro',
+                        server_type: 'database',
+                        config_path: configPath,
+                        server_path: serverPath,
+                        server_name: serverName
+                    };
+                } else if (platform === 'azure') {
+                    endpoint = '/api/deploy/azure';
+                    payload = {
+                        subscription_id: document.getElementById('dbAzureSubscriptionId').value,
+                        client_id: document.getElementById('dbAzureClientId').value,
+                        client_secret: '', // Simplified for now
+                        tenant_id: '',
+                        resource_group: 'mcp-server-rg',
+                        location: 'eastus',
+                        server_type: 'database',
+                        config_path: configPath,
+                        server_path: serverPath,
+                        server_name: serverName
+                    };
+                } else if (platform === 'remote') {
+                    endpoint = '/api/deploy/remote';
+                    payload = {
+                        host: document.getElementById('dbRemoteHost').value,
+                        username: document.getElementById('dbRemoteUsername').value,
+                        password: document.getElementById('dbRemotePassword').value,
+                        server_type: 'database',
+                        config_path: configPath,
+                        server_path: serverPath,
+                        server_name: serverName
+                    };
+                }
+
+                console.log(`[DEPLOY] Calling endpoint: ${endpoint}`);
+                console.log(`[DEPLOY] Payload:`, payload);
+
+                // Create a log display modal
+                const logHTML = `
+                    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 999999; padding: 2rem; display: flex; align-items: center; justify-content: center;" id="deployLogModal">
+                        <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 800px; width: 100%; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+                            <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                                <h3 style="margin: 0; color: var(--scikiq-light-blue);">
+                                    <i class="fas fa-cloud-upload-alt"></i> Deploying to ${platform.toUpperCase()}
+                                </h3>
+                            </div>
+                            <div id="deployLogContent" style="flex: 1; overflow-y: auto; padding: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.85rem; background: rgba(0, 0, 0, 0.5);"></div>
+                            <div style="padding: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: flex-end;">
+                                <button onclick="document.getElementById('deployLogModal').remove()" style="padding: 0.8rem 1.5rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; cursor: pointer;">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', logHTML);
+                const logContent = document.getElementById('deployLogContent');
+
+                function appendLog(message, type = 'info') {
+                    const color = type === 'error' ? '#EF4444' : type === 'success' ? '#10B981' : '#E0E0E0';
+                    logContent.innerHTML += `<div style="color: ${color}; margin-bottom: 0.3rem;">${message}</div>`;
+                    logContent.scrollTop = logContent.scrollHeight;
+                }
+
+                appendLog(`[${new Date().toLocaleTimeString()}] Starting deployment to ${platform.toUpperCase()}...`);
+                appendLog(`[${new Date().toLocaleTimeString()}] Connecting to API endpoint: ${endpoint}`);
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                console.log(`[DEPLOY] Response status: ${response.status}`);
+                console.log(`[DEPLOY] Response headers:`, response.headers);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error(`[DEPLOY] Error response:`, errorText);
+                    appendLog(`[${new Date().toLocaleTimeString()}] ERROR: ${response.status} - ${response.statusText}`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] Details: ${errorText}`, 'error');
+
+                    // Try to parse as JSON for better error display
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        appendLog(`[${new Date().toLocaleTimeString()}] ${errorJson.error || errorJson.message || 'Unknown error'}`, 'error');
+                    } catch (e) {
+                        appendLog(`[${new Date().toLocaleTimeString()}] Raw error: ${errorText}`, 'error');
+                    }
+                    return;
+                }
+
+                // Stream logs if response is text/plain
+                if (response.headers.get('content-type')?.includes('text/plain')) {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const text = decoder.decode(value);
+                        const lines = text.split('\n');
+                        lines.forEach(line => {
+                            if (line.trim()) {
+                                const logType = line.includes('[ERROR]') ? 'error' : line.includes('[SUCCESS]') ? 'success' : 'info';
+                                appendLog(`[${new Date().toLocaleTimeString()}] ${line}`, logType);
+                            }
+                        });
+                    }
+
+                    appendLog(`[${new Date().toLocaleTimeString()}] Deployment process completed`, 'success');
+                } else {
+                    const result = await response.json();
+                    if (result.error) {
+                        appendLog(`[${new Date().toLocaleTimeString()}] ERROR: ${result.error}`, 'error');
+                    } else {
+                        appendLog(`[${new Date().toLocaleTimeString()}] Deployment successful!`, 'success');
+                        appendLog(`[${new Date().toLocaleTimeString()}] Result: ${JSON.stringify(result)}`, 'success');
+                    }
+                }
+
+            } catch (error) {
+                console.error(`[DEPLOY] Exception:`, error);
+                const logContent = document.getElementById('deployLogContent');
+                if (logContent) {
+                    logContent.innerHTML += `<div style="color: #EF4444; margin-bottom: 0.3rem;">[${new Date().toLocaleTimeString()}] EXCEPTION: ${error.message}</div>`;
+                    logContent.innerHTML += `<div style="color: #EF4444; margin-bottom: 0.3rem;">[${new Date().toLocaleTimeString()}] Stack: ${error.stack}</div>`;
+                } else {
+                    alert(`Deployment error: ${error.message}\n\nCheck console for details.`);
+                }
+            }
+        }
     </script>
 </body>
+
 </html>

@@ -1811,6 +1811,171 @@ Respond in JSON:
                 'error': str(e)
             }), 500
 
+    # ==================== ONLINE DEPLOYMENT ROUTES ====================
+    
+    @app.route('/api/deploy/aws', methods=['POST'])
+    def deploy_aws():
+        """Deploy MCP server to AWS EC2"""
+        print("[DEPLOY-AWS] Endpoint called!")
+        try:
+            print("[DEPLOY-AWS] Importing OnlineDeployer...")
+            from online_deployment import OnlineDeployer
+            print("[DEPLOY-AWS] OnlineDeployer imported successfully")
+            
+            data = request.get_json()
+            print(f"[DEPLOY-AWS] Request data: {data.keys() if data else 'No data'}")
+            
+            deployer = OnlineDeployer()
+            print("[DEPLOY-AWS] OnlineDeployer instance created")
+            
+            def generate():
+                try:
+                    yield "[LOG] Starting AWS Deployment...\n"
+                    print("[DEPLOY-AWS] Generator started")
+                    
+                    server_files = {
+                        'app.py': 'print("Hello MCP")',
+                        'requirements.txt': 'flask\nmcp'
+                    }
+                    
+                    yield "[LOG] Prepared server files\n"
+                    
+                    result = deployer.deploy_to_aws(
+                        aws_access_key=data.get('access_key'),
+                        aws_secret_key=data.get('secret_key'),
+                        region=data.get('region', 'us-east-1'),
+                        instance_type=data.get('instance_type', 't2.micro'),
+                        server_files=server_files
+                    )
+                    
+                    yield "[LOG] Deployment method called\n"
+                    
+                    max_iterations = 100
+                    iteration = 0
+                    while iteration < max_iterations:
+                        try:
+                            log = deployer.logs.get(timeout=1)
+                            yield f"{log}\n"
+                            if "SUCCESS" in log or "ERROR" in log:
+                                break
+                        except:
+                            iteration += 1
+                            continue
+                            
+                    if result:
+                        yield f"[SUCCESS] Deployment Complete! Public IP: {result.get('public_ip')}\n"
+                    else:
+                        yield "[ERROR] Deployment Failed.\n"
+                except Exception as gen_error:
+                    print(f"[DEPLOY-AWS] Generator error: {gen_error}")
+                    yield f"[ERROR] Generator error: {str(gen_error)}\n"
+
+            print("[DEPLOY-AWS] Returning streaming response")
+            return Response(stream_with_context(generate()), mimetype='text/plain')
+
+        except ImportError as ie:
+            error_msg = f"Import error: {str(ie)}. Make sure online_deployment.py exists and dependencies are installed."
+            print(f"[DEPLOY-AWS] {error_msg}")
+            return jsonify({'error': error_msg}), 500
+        except Exception as e:
+            error_msg = f"Deployment error: {str(e)}"
+            print(f"[DEPLOY-AWS] {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': error_msg}), 500
+
+    @app.route('/api/deploy/azure', methods=['POST'])
+    def deploy_azure():
+        """Deploy MCP server to Azure VM"""
+        print("[DEPLOY-AZURE] Endpoint called!")
+        try:
+            from online_deployment import OnlineDeployer
+            data = request.get_json()
+            
+            deployer = OnlineDeployer()
+            
+            def generate():
+                yield "Starting Azure Deployment...\n"
+                
+                server_files = {
+                    'app.py': 'print("Hello MCP")',
+                    'requirements.txt': 'flask\nmcp'
+                }
+                
+                result = deployer.deploy_to_azure(
+                    subscription_id=data.get('subscription_id'),
+                    client_id=data.get('client_id'),
+                    client_secret=data.get('client_secret'),
+                    tenant_id=data.get('tenant_id'),
+                    resource_group=data.get('resource_group', 'mcp-server-rg'),
+                    location=data.get('location', 'eastus'),
+                    server_files=server_files
+                )
+                
+                max_iterations = 100
+                iteration = 0
+                while iteration < max_iterations:
+                    try:
+                        log = deployer.logs.get(timeout=1)
+                        yield f"{log}\n"
+                        if "SUCCESS" in log or "ERROR" in log:
+                            break
+                    except:
+                        iteration += 1
+                        continue
+
+            return Response(stream_with_context(generate()), mimetype='text/plain')
+
+        except Exception as e:
+            print(f"[DEPLOY-AZURE] Error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/deploy/remote', methods=['POST'])
+    def deploy_remote():
+        """Deploy MCP server to remote machine via SSH"""
+        print("[DEPLOY-REMOTE] Endpoint called!")
+        try:
+            from online_deployment import OnlineDeployer
+            data = request.get_json()
+            
+            deployer = OnlineDeployer()
+            
+            def generate():
+                yield "Starting Remote SSH Deployment...\n"
+                
+                server_files = {
+                    'app.py': 'print("Hello MCP")',
+                    'requirements.txt': 'flask\nmcp'
+                }
+                
+                result = deployer.deploy_to_remote(
+                    host=data.get('host'),
+                    username=data.get('username'),
+                    password=data.get('password', ''),
+                    ssh_key_path=data.get('ssh_key_path'),
+                    server_files=server_files
+                )
+                
+                max_iterations = 100
+                iteration = 0
+                while iteration < max_iterations:
+                    try:
+                        log = deployer.logs.get(timeout=1)
+                        yield f"{log}\n"
+                        if "SUCCESS" in log or "ERROR" in log:
+                            break
+                    except:
+                        iteration += 1
+                        continue
+
+            return Response(stream_with_context(generate()), mimetype='text/plain')
+
+        except Exception as e:
+            print(f"[DEPLOY-REMOTE] Error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
+    # ==================== HELPER FUNCTIONS ====================
+
     def generate_client_installer_script(installation_path, server_name, server_type, server_config):
         """Generate a cross-platform Python installer script"""
         
