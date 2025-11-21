@@ -1855,7 +1855,7 @@ Respond in JSON:
                     result = deployer.deploy_to_aws(
                         aws_access_key=data.get('access_key'),
                         aws_secret_key=data.get('secret_key'),
-                        region=data.get('region', 'us-east-1'),
+                        region=data.get('region', 'ap-south-1'),
                         instance_type=data.get('instance_type', 't2.micro'),
                         server_files=server_files,
                         server_type=server_type,

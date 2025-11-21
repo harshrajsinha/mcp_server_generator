@@ -180,7 +180,7 @@ class OnlineDeployer:
     ]
 }'''
 
-    def _prepare_server_files(self, server_type, server_path, config_path=None):
+    def _prepare_server_files(self, server_type, server_path, config_path=None, is_online_deployment=False):
         """
         Prepare server files based on server type for deployment
         
@@ -188,6 +188,7 @@ class OnlineDeployer:
             server_type: Type of server ('api', 'database', 'codebase')
             server_path: Path to server files directory
             config_path: Path to config file (for database servers)
+            is_online_deployment: True if deploying online (AWS), False for local deployment
             
         Returns:
             Dictionary of files to deploy
@@ -197,53 +198,108 @@ class OnlineDeployer:
         
         if server_type == 'database':
             # Database MCP server files
-            self.log(f"Preparing database MCP server files from {server_path}")
-            
-            # Copy config.ini
-            if config_path and Path(config_path).exists():
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    server_files['config.ini'] = f.read()
-                    self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes)")
-            else:
-                self.log("  - config.ini not found, will be created on server", "WARNING")
-            
-            # Copy run_mcp_server.py from dbhandler_mcpserver
-            dbhandler_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'run_mcp_server.py'
-            if dbhandler_path.exists():
-                with open(dbhandler_path, 'r', encoding='utf-8') as f:
-                    server_files['run_mcp_server.py'] = f.read()
-                    self.log(f"  - run_mcp_server.py ({len(server_files['run_mcp_server.py'])} bytes)")
-            else:
-                # Fallback: create a simple wrapper
-                server_files['run_mcp_server.py'] = self._generate_database_server_wrapper()
-                self.log("  - run_mcp_server.py (generated wrapper)")
-            
-            # Copy the entire scikiq_dbutils package directory
-            scikiq_pkg_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'scikiq_dbutils'
-            if scikiq_pkg_path.exists() and scikiq_pkg_path.is_dir():
-                # Create a tarball of the scikiq_dbutils package
-                tar_buffer = io.BytesIO()
-                with tarfile.open(fileobj=tar_buffer, mode='w:gz') as tar:
-                    tar.add(scikiq_pkg_path, arcname='scikiq_dbutils', recursive=True)
+            if is_online_deployment:
+                self.log(f"Preparing online database MCP server files from scikiq_pkg_dbutils_online")
+                # Use scikiq_pkg_dbutils_online for online deployments
+                online_pkg_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils_online'
                 
-                tar_buffer.seek(0)
-                tar_data = tar_buffer.read()
-                server_files['scikiq_dbutils.tar.gz'] = base64.b64encode(tar_data).decode('ascii')
-                self.log(f"  - scikiq_dbutils.tar.gz ({len(tar_data)} bytes, {len(server_files['scikiq_dbutils.tar.gz'])} base64 chars)")
+                # Copy config.ini
+                if config_path and Path(config_path).exists():
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        server_files['config.ini'] = f.read()
+                        self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes)")
+                else:
+                    # Try to find config.ini in online package
+                    config_online_path = online_pkg_path / 'config.ini'
+                    if config_online_path.exists():
+                        with open(config_online_path, 'r', encoding='utf-8') as f:
+                            server_files['config.ini'] = f.read()
+                            self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes) from online package")
+                    else:
+                        self.log("  - config.ini not found, will be created on server", "WARNING")
+                
+                # Copy remote_mcp_server_admin.py (main file for online deployment)
+                admin_server_path = online_pkg_path / 'remote_mcp_server_admin.py'
+                if admin_server_path.exists():
+                    with open(admin_server_path, 'r', encoding='utf-8') as f:
+                        server_files['remote_mcp_server_admin.py'] = f.read()
+                        self.log(f"  - remote_mcp_server_admin.py ({len(server_files['remote_mcp_server_admin.py'])} bytes)")
+                else:
+                    self.log(f"  - remote_mcp_server_admin.py not found at {admin_server_path}", "ERROR")
+                
+                # Copy the entire scikiq_dbutils package directory from online package
+                scikiq_pkg_path = online_pkg_path / 'scikiq_dbutils'
+                if scikiq_pkg_path.exists() and scikiq_pkg_path.is_dir():
+                    # Create a tarball of the scikiq_dbutils package
+                    tar_buffer = io.BytesIO()
+                    with tarfile.open(fileobj=tar_buffer, mode='w:gz') as tar:
+                        tar.add(scikiq_pkg_path, arcname='scikiq_dbutils', recursive=True)
+                    
+                    tar_buffer.seek(0)
+                    tar_data = tar_buffer.read()
+                    server_files['scikiq_dbutils.tar.gz'] = base64.b64encode(tar_data).decode('ascii')
+                    self.log(f"  - scikiq_dbutils.tar.gz ({len(tar_data)} bytes, {len(server_files['scikiq_dbutils.tar.gz'])} base64 chars)")
+                else:
+                    self.log(f"  - scikiq_dbutils package not found at {scikiq_pkg_path}", "ERROR")
+                
+                # Copy requirements file from online package
+                req_path = online_pkg_path / 'requirements.txt'
+                if req_path.exists():
+                    with open(req_path, 'r', encoding='utf-8') as f:
+                        server_files['requirements.txt'] = f.read()
+                        self.log(f"  - requirements.txt ({len(server_files['requirements.txt'])} bytes)")
+                else:
+                    server_files['requirements.txt'] = "mcp\nhttpx\npyyaml\npython-dotenv\nuvicorn[standard]\nstarlette\nclick\n"
+                    self.log("  - requirements.txt (default)")
             else:
-                self.log(f"  - scikiq_dbutils package not found at {scikiq_pkg_path}", "ERROR")
-            
-            # Copy requirements file
-            req_path = base_path / 'requirements.txt'
-            if not req_path.exists():
-                req_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'requirements.txt'
-            if req_path.exists():
-                with open(req_path, 'r', encoding='utf-8') as f:
-                    server_files['requirements.txt'] = f.read()
-                    self.log(f"  - requirements.txt ({len(server_files['requirements.txt'])} bytes)")
-            else:
-                server_files['requirements.txt'] = "mcp\nhttpx\npyyaml\npython-dotenv\n"
-                self.log("  - requirements.txt (default)")
+                # Local deployment - use scikiq_pkg_dbutils
+                self.log(f"Preparing local database MCP server files from {server_path}")
+                
+                # Copy config.ini
+                if config_path and Path(config_path).exists():
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        server_files['config.ini'] = f.read()
+                        self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes)")
+                else:
+                    self.log("  - config.ini not found, will be created on server", "WARNING")
+                
+                # Copy run_mcp_server.py from dbhandler_mcpserver
+                dbhandler_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'run_mcp_server.py'
+                if dbhandler_path.exists():
+                    with open(dbhandler_path, 'r', encoding='utf-8') as f:
+                        server_files['run_mcp_server.py'] = f.read()
+                        self.log(f"  - run_mcp_server.py ({len(server_files['run_mcp_server.py'])} bytes)")
+                else:
+                    # Fallback: create a simple wrapper
+                    server_files['run_mcp_server.py'] = self._generate_database_server_wrapper()
+                    self.log("  - run_mcp_server.py (generated wrapper)")
+                
+                # Copy the entire scikiq_dbutils package directory
+                scikiq_pkg_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'scikiq_dbutils'
+                if scikiq_pkg_path.exists() and scikiq_pkg_path.is_dir():
+                    # Create a tarball of the scikiq_dbutils package
+                    tar_buffer = io.BytesIO()
+                    with tarfile.open(fileobj=tar_buffer, mode='w:gz') as tar:
+                        tar.add(scikiq_pkg_path, arcname='scikiq_dbutils', recursive=True)
+                    
+                    tar_buffer.seek(0)
+                    tar_data = tar_buffer.read()
+                    server_files['scikiq_dbutils.tar.gz'] = base64.b64encode(tar_data).decode('ascii')
+                    self.log(f"  - scikiq_dbutils.tar.gz ({len(tar_data)} bytes, {len(server_files['scikiq_dbutils.tar.gz'])} base64 chars)")
+                else:
+                    self.log(f"  - scikiq_dbutils package not found at {scikiq_pkg_path}", "ERROR")
+                
+                # Copy requirements file
+                req_path = base_path / 'requirements.txt'
+                if not req_path.exists():
+                    req_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'requirements.txt'
+                if req_path.exists():
+                    with open(req_path, 'r', encoding='utf-8') as f:
+                        server_files['requirements.txt'] = f.read()
+                        self.log(f"  - requirements.txt ({len(server_files['requirements.txt'])} bytes)")
+                else:
+                    server_files['requirements.txt'] = "mcp\nhttpx\npyyaml\npython-dotenv\n"
+                    self.log("  - requirements.txt (default)")
                 
         elif server_type in ['api', 'codebase', 'swagger']:
             # API MCP server files
@@ -432,7 +488,8 @@ if __name__ == "__main__":
 '''
     
     def generate_setup_script(self, server_files, python_version="3.10", server_type=None, domain=None, public_ip=None,
-                             s3_bucket=None, s3_prefix=None, aws_access_key=None, aws_secret_key=None, region=None):
+                             s3_bucket=None, s3_prefix=None, aws_access_key=None, aws_secret_key=None, region=None,
+                             admin_username=None, admin_password=None):
         """
         Generate a bash script to set up the MCP server on a remote machine
         
@@ -447,10 +504,19 @@ if __name__ == "__main__":
             aws_access_key: AWS access key for S3 access
             aws_secret_key: AWS secret key for S3 access
             region: AWS region
+            admin_username: Admin username for OAuth (for database online deployments)
+            admin_password: Admin password for OAuth (for database online deployments)
         """
         # Determine server startup command based on type
         if server_type == 'database':
-            startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/run_mcp_server.py --config-file /opt/mcp-server/config.ini"
+            # Check if remote_mcp_server_admin.py exists (online deployment)
+            if 'remote_mcp_server_admin.py' in server_files:
+                # Online deployment: use remote_mcp_server_admin.py
+                # Use ExecStartPre for delay, or just start directly (systemd handles restarts)
+                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/remote_mcp_server_admin.py --host 0.0.0.0 --port 30210 --debug"
+            else:
+                # Local deployment: use run_mcp_server.py
+                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/run_mcp_server.py --config-file /opt/mcp-server/config.ini"
         elif server_type in ['api', 'codebase', 'swagger']:
             # Find YAML files
             yaml_files = [f for f in server_files.keys() if f.endswith('.yaml')]
@@ -485,50 +551,160 @@ cd /opt/mcp-server
         
         # If using S3, replace file creation section with S3 download
         if s3_bucket and s3_prefix:
-            # Create S3 download section
-            # Note: For better security, consider using IAM instance profiles instead of embedding credentials
+            # Install AWS CLI system-wide (before venv activation)
+            # Insert AWS CLI installation after package installation
+            aws_cli_install = """
+# Install AWS CLI (system-wide, needed for S3 download)
+echo "Installing AWS CLI..."
+sudo apt-get install -y awscli || {
+    # Fallback: install via pip if apt fails
+    sudo pip3 install awscli
+}
+echo "AWS CLI installed"
+"""
+            
+            # Insert AWS CLI installation after system packages are installed
+            import re
+            script_template = re.sub(
+                r'(sudo apt-get install -y python3 python3-pip python3-venv nginx certbot python3-certbot-nginx git)',
+                r'\1\n' + aws_cli_install.strip(),
+                script_template
+            )
+            
+            # Create S3 download section (happens after cd /opt/mcp-server)
             s3_download_section = f"""
 # Download files from S3
+echo "=========================================="
 echo "Downloading files from S3..."
-
-# Install boto3 and AWS CLI
-pip install boto3 awscli
+echo "Bucket: {s3_bucket}"
+echo "Prefix: {s3_prefix}"
+echo "Region: {region}"
+echo "=========================================="
 
 # Configure AWS credentials (temporary - consider using IAM instance profiles for production)
 export AWS_ACCESS_KEY_ID={aws_access_key}
 export AWS_SECRET_ACCESS_KEY={aws_secret_key}
 export AWS_DEFAULT_REGION={region}
 
-# Download all files from S3
-echo "Syncing files from s3://{s3_bucket}/{s3_prefix}/..."
-aws s3 sync s3://{s3_bucket}/{s3_prefix}/ . --region {region} --no-progress
-
-# Extract tarball if present
-if [ -f scikiq_dbutils.tar.gz ]; then
-    echo "Extracting scikiq_dbutils.tar.gz..."
-    tar -xzf scikiq_dbutils.tar.gz
-    rm scikiq_dbutils.tar.gz
-    echo "Successfully extracted scikiq_dbutils package"
+# Verify AWS CLI is installed and working
+echo "Verifying AWS CLI installation..."
+if ! command -v aws &> /dev/null; then
+    echo "ERROR: AWS CLI is not installed!"
+    echo "Attempting to install AWS CLI..."
+    sudo apt-get install -y awscli || sudo pip3 install awscli || {{
+        echo "ERROR: Failed to install AWS CLI"
+        exit 1
+    }}
 fi
 
-# Verify downloaded files
+echo "AWS CLI version:"
+aws --version || {{
+    echo "ERROR: AWS CLI is not working"
+    exit 1
+}}
+
+# Test AWS credentials
+echo "Testing AWS credentials..."
+aws sts get-caller-identity || {{
+    echo "ERROR: AWS credentials are invalid or insufficient permissions"
+    exit 1
+}}
+
+# Download all files from S3
 echo ""
-echo "=== Verifying downloaded files ==="
+echo "Downloading files from s3://{s3_bucket}/{s3_prefix}/..."
+echo "Current directory: $(pwd)"
+aws s3 sync s3://{s3_bucket}/{s3_prefix}/ . --region {region} --no-progress
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to download files from S3!"
+    echo "Attempting to list S3 bucket contents..."
+    aws s3 ls s3://{s3_bucket}/{s3_prefix}/ || echo "Cannot list S3 bucket"
+    exit 1
+fi
+
+# Verify files were downloaded
+echo ""
+echo "Files downloaded:"
 ls -lah
-file_count=$(ls -1 | wc -l)
-echo "File count: $file_count"
+
+# Extract any tarball files
+echo ""
+echo "Extracting tarball files..."
+for tar_file in *.tar.gz; do
+    if [ -f "$tar_file" ]; then
+        echo "Extracting $tar_file..."
+        tar -xzf "$tar_file" || {{
+            echo "ERROR: Failed to extract $tar_file"
+            exit 1
+        }}
+        rm "$tar_file"
+        echo "Successfully extracted $tar_file"
+    fi
+done
+
+# Verify final files
+echo ""
+echo "=========================================="
+echo "=== Verifying downloaded and extracted files ==="
+echo "=========================================="
+ls -lah
+echo ""
+file_count=$(find . -type f | wc -l)
+dir_count=$(find . -type d | wc -l)
+echo "Total files: $file_count"
+echo "Total directories: $dir_count"
+
+if [ $file_count -eq 0 ]; then
+    echo "ERROR: No files found after download and extraction!"
+    echo "S3 bucket contents:"
+    aws s3 ls s3://{s3_bucket}/{s3_prefix}/ --recursive || true
+    exit 1
+fi
 
 # Make Python scripts executable
+echo ""
+echo "Making Python scripts executable..."
+find . -name "*.py" -type f -exec chmod +x {{}} \\;
 chmod +x *.py 2>/dev/null || true
-echo "Files downloaded from S3 successfully"
+
+echo ""
+echo "=========================================="
+echo "Files downloaded from S3 successfully!"
+echo "=========================================="
 """
             
             # Replace the file creation section with S3 download
-            # Find the section that starts with "# Create server files" and ends before "# Make Python scripts executable"
-            import re
-            # Match from "# Create server files" to the end of the Python heredoc block
+            # Match from "# Create server files" to the end of the Python heredoc block and error check
             pattern = r'(# Create server files.*?PYTHON_EOF\s+if \[ \$\? -ne 0 \]; then\s+echo "ERROR: File creation failed!"\s+exit 1\s+fi)'
-            script_template = re.sub(pattern, s3_download_section, script_template, flags=re.DOTALL)
+            new_script = re.sub(pattern, s3_download_section, script_template, flags=re.DOTALL)
+            
+            # Verify replacement worked
+            if new_script == script_template:
+                self.log("WARNING: S3 download section replacement may have failed! Pattern not found.", "WARNING")
+                # Try alternative pattern matching
+                if '# Create server files' in script_template:
+                    # Manual replacement as fallback
+                    start_marker = '# Create server files'
+                    end_marker = 'if [ $? -ne 0 ]; then'
+                    start_idx = script_template.find(start_marker)
+                    end_idx = script_template.find(end_marker, start_idx)
+                    if start_idx != -1 and end_idx != -1:
+                        # Find the complete section including the error check
+                        error_section = 'if [ $? -ne 0 ]; then\necho "ERROR: File creation failed!"\nexit 1\nfi'
+                        end_idx = script_template.find(error_section, end_idx) + len(error_section)
+                        if end_idx > start_idx:
+                            script_template = script_template[:start_idx] + s3_download_section + script_template[end_idx:]
+                            self.log("S3 download section replaced using fallback method", "INFO")
+                        else:
+                            self.log("ERROR: Could not find end marker for file creation section", "ERROR")
+                    else:
+                        self.log("ERROR: Could not find file creation section markers", "ERROR")
+                else:
+                    self.log("ERROR: File creation section not found in template", "ERROR")
+            else:
+                script_template = new_script
+                self.log("S3 download section successfully replaced in setup script", "INFO")
         else:
             # Use embedded files approach (for small files)
             # Create JSON structure for file data
@@ -553,23 +729,190 @@ echo "Files downloaded from S3 successfully"
             file_data_json_b64 = base64.b64encode(file_data_json.encode('utf-8')).decode('ascii')
             
             # Replace placeholder with file data
-            script_template = script_template.replace('{{FILE_DATA_JSON_B64}}', file_data_json_b64)
+            if '{{FILE_DATA_JSON_B64}}' not in script_template:
+                self.log("WARNING: FILE_DATA_JSON_B64 placeholder not found in template!", "WARNING")
+            else:
+                script_template = script_template.replace('{{FILE_DATA_JSON_B64}}', file_data_json_b64)
+                self.log(f"Embedded {len(file_data)} file(s) in setup script ({len(file_data_json_b64)} bytes base64)", "INFO")
+        
+        # Generate admin user credentials if needed (for online database deployments)
+        if server_type == 'database' and 'remote_mcp_server_admin.py' in server_files:
+            import secrets
+            import string
+            if not admin_username:
+                admin_username = 'admin'
+            if not admin_password:
+                # Generate a secure random password
+                alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+                admin_password = ''.join(secrets.choice(alphabet) for i in range(16))
+            
+            # Add admin user creation command
+            admin_email = f"{admin_username}@mcp-server.local"
+            # Properly escape the password for shell command
+            import shlex
+            admin_creation_cmd = f"""
+# Create admin user for OAuth
+echo "Creating admin user for OAuth..."
+cd /opt/mcp-server
+source venv/bin/activate
+python3 remote_mcp_server_admin.py --create-admin {shlex.quote(admin_username)}:{shlex.quote(admin_password)}:{shlex.quote(admin_email)} || echo "Admin user may already exist"
+echo "Admin user created: {admin_username}"
+echo "Admin password: {admin_password}"
+echo "⚠️  IMPORTANT: Save these credentials securely!"
+"""
+        else:
+            admin_creation_cmd = ""
         
         # Replace other placeholders
         script = script_template.replace('{{STARTUP_COMMAND}}', startup_command)
         script = script.replace('{{SERVER_TYPE}}', server_type or '')
         
+        # Insert admin user creation before starting the service (if needed)
+        if admin_creation_cmd:
+            # Find the systemd service creation section and insert admin creation before it
+            import re
+            pattern = r'(# Create systemd service)'
+            script = re.sub(pattern, admin_creation_cmd + r'\1', script)
+        
         # Handle domain - if provided, set it, otherwise remove domain-related sections
         if domain:
+            # Replace DOMAIN variable assignment and all {{DOMAIN}} placeholders
+            script = script.replace('DOMAIN="{{DOMAIN}}"', f'DOMAIN="{domain}"')
             script = script.replace('{{DOMAIN}}', domain)
         else:
             # Remove the domain check and nginx setup if no domain
             # The template already handles this with the if statement, so we just need to set empty
+            script = script.replace('DOMAIN="{{DOMAIN}}"', 'DOMAIN=""')
             script = script.replace('if [ -n "$DOMAIN" ]; then', 'if [ -n "" ]; then')
+        
+        # Update nginx proxy port for online database deployments
+        # Server runs on 30210 internally, Nginx proxies from port 80 to 30210
+        if server_type == 'database' and 'remote_mcp_server_admin.py' in server_files:
+            script = script.replace('{{SERVER_PORT}}', '30210')
+            script = script.replace('echo "Server is running on port 8000"', 'echo "Server is running on port 30210 (internal), accessible via Nginx on port 80"')
+        else:
+            script = script.replace('{{SERVER_PORT}}', '8000')
         
         return script
     
-    def _setup_route53(self, route53_client, domain, public_ip):
+    def _check_and_register_domain(self, route53domains_client, root_domain):
+        """
+        Check if domain is registered and register it if not
+        
+        Args:
+            route53domains_client: Boto3 Route 53 Domains client
+            root_domain: Root domain name (e.g., 'example.com')
+            
+        Returns:
+            True if domain is registered or registration was initiated, False otherwise
+        """
+        try:
+            # Check if domain is already registered
+            try:
+                response = route53domains_client.get_domain_detail(DomainName=root_domain)
+                self.log(f"Domain {root_domain} is already registered in Route 53", "INFO")
+                return True
+            except ClientError as e:
+                if e.response.get('Error', {}).get('Code') == 'InvalidInput':
+                    # Domain not found, check availability
+                    pass
+                else:
+                    raise
+            
+            # Check domain availability
+            self.log(f"Checking availability for domain: {root_domain}", "INFO")
+            try:
+                availability_response = route53domains_client.check_domain_availability(DomainName=root_domain)
+                availability = availability_response.get('Availability', 'UNKNOWN')
+                
+                if availability == 'AVAILABLE':
+                    self.log(f"Domain {root_domain} is available for registration", "INFO")
+                    self.log("Note: Domain registration requires contact information and payment.", "INFO")
+                    self.log("To register automatically, please provide contact details in the deployment configuration.", "INFO")
+                    self.log("For now, please register the domain manually in Route 53 Console.", "WARNING")
+                    return False
+                elif availability == 'UNAVAILABLE':
+                    self.log(f"Domain {root_domain} is registered but not in your Route 53 account", "WARNING")
+                    self.log("Please transfer the domain to Route 53 or use the existing registrar's DNS.", "INFO")
+                    return False
+                else:
+                    self.log(f"Domain {root_domain} availability status: {availability}", "INFO")
+                    return False
+            except ClientError as e:
+                error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+                if error_code in ['AccessDenied', 'UnauthorizedOperation']:
+                    self.log("Insufficient permissions to check domain availability.", "WARNING")
+                    self.log("Required: route53domains:CheckDomainAvailability", "WARNING")
+                else:
+                    self.log(f"Error checking domain availability: {str(e)}", "WARNING")
+                return False
+                
+        except Exception as e:
+            self.log(f"Error checking domain registration: {str(e)}", "WARNING")
+            return False
+    
+    def _create_hosted_zone_if_needed(self, route53_client, root_domain):
+        """
+        Create a Route 53 hosted zone if it doesn't exist
+        
+        Args:
+            route53_client: Boto3 Route 53 client
+            root_domain: Root domain name (e.g., 'example.com')
+            
+        Returns:
+            Hosted zone ID if found or created, None otherwise
+        """
+        try:
+            # List hosted zones
+            zones_response = route53_client.list_hosted_zones()
+            hosted_zone_id = None
+            
+            for zone in zones_response.get('HostedZones', []):
+                zone_name = zone['Name'].rstrip('.')
+                if zone_name == root_domain:
+                    hosted_zone_id = zone['Id'].split('/')[-1]
+                    self.log(f"Found existing hosted zone for {root_domain}: {hosted_zone_id}", "INFO")
+                    break
+            
+            if not hosted_zone_id:
+                # Create hosted zone
+                self.log(f"Creating Route 53 hosted zone for {root_domain}...", "INFO")
+                try:
+                    response = route53_client.create_hosted_zone(
+                        Name=root_domain,
+                        CallerReference=str(int(time.time() * 1000))  # Unique reference
+                    )
+                    hosted_zone_id = response['HostedZone']['Id'].split('/')[-1]
+                    name_servers = response['DelegationSet']['NameServers']
+                    self.log(f"Hosted zone created: {hosted_zone_id}", "SUCCESS")
+                    self.log(f"Name servers: {', '.join(name_servers)}", "INFO")
+                    self.log("IMPORTANT: Update your domain's name servers at your registrar with the above name servers.", "WARNING")
+                    return hosted_zone_id
+                except ClientError as e:
+                    error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+                    if error_code in ['AccessDenied', 'UnauthorizedOperation']:
+                        self.log("Insufficient permissions to create hosted zone.", "WARNING")
+                        self.log("Required: route53:CreateHostedZone", "WARNING")
+                    elif error_code == 'HostedZoneAlreadyExists':
+                        # Try to find it again
+                        zones_response = route53_client.list_hosted_zones()
+                        for zone in zones_response.get('HostedZones', []):
+                            zone_name = zone['Name'].rstrip('.')
+                            if zone_name == root_domain:
+                                hosted_zone_id = zone['Id'].split('/')[-1]
+                                self.log(f"Found hosted zone after creation attempt: {hosted_zone_id}", "INFO")
+                                return hosted_zone_id
+                    else:
+                        self.log(f"Error creating hosted zone: {str(e)}", "WARNING")
+                    return None
+            else:
+                return hosted_zone_id
+                
+        except Exception as e:
+            self.log(f"Error checking/creating hosted zone: {str(e)}", "WARNING")
+            return None
+    
+    def _setup_route53(self, route53_client, domain, public_ip, aws_access_key=None, aws_secret_key=None):
         """
         Set up Route 53 DNS record for the domain
         
@@ -577,6 +920,8 @@ echo "Files downloaded from S3 successfully"
             route53_client: Boto3 Route 53 client
             domain: Domain name (e.g., 'mcp.example.com')
             public_ip: Public IP address of the EC2 instance
+            aws_access_key: AWS access key (for Route 53 Domains client)
+            aws_secret_key: AWS secret key (for Route 53 Domains client)
         """
         try:
             self.log(f"Setting up Route 53 DNS for {domain} -> {public_ip}")
@@ -587,22 +932,28 @@ echo "Files downloaded from S3 successfully"
                 self.log(f"Invalid domain format: {domain}", "ERROR")
                 return
             
-            # Get hosted zone for the domain
-            # Try to find hosted zone for the root domain
+            # Get root domain (e.g., 'example.com' from 'mcp.example.com')
             root_domain = '.'.join(parts[-2:])  # e.g., 'example.com'
             
-            # List hosted zones
-            zones_response = route53_client.list_hosted_zones()
-            hosted_zone_id = None
-            
-            for zone in zones_response.get('HostedZones', []):
-                zone_name = zone['Name'].rstrip('.')
-                if zone_name == root_domain or domain.endswith('.' + zone_name):
-                    hosted_zone_id = zone['Id'].split('/')[-1]
-                    break
+            # Check domain registration and create hosted zone if needed
+            # First, try to create hosted zone (this will work even if domain is registered elsewhere)
+            hosted_zone_id = self._create_hosted_zone_if_needed(route53_client, root_domain)
             
             if not hosted_zone_id:
-                self.log(f"Could not find Route 53 hosted zone for {root_domain}", "WARNING")
+                # If we can't create hosted zone, check if domain is registered
+                if aws_access_key and aws_secret_key:
+                    try:
+                        route53domains_client = boto3.client(
+                            'route53domains',
+                            region_name='us-east-1',  # Route 53 Domains only works in us-east-1
+                            aws_access_key_id=aws_access_key,
+                            aws_secret_access_key=aws_secret_key
+                        )
+                        self._check_and_register_domain(route53domains_client, root_domain)
+                    except Exception as e:
+                        self.log(f"Could not check domain registration: {str(e)}", "WARNING")
+                
+                self.log(f"Could not find or create Route 53 hosted zone for {root_domain}", "WARNING")
                 self.log("Please create a hosted zone in Route 53 for your domain first.", "INFO")
                 return
             
@@ -611,7 +962,7 @@ echo "Files downloaded from S3 successfully"
                 'Changes': [{
                     'Action': 'UPSERT',
                     'ResourceRecordSet': {
-                        'Name': domain,
+                        'Name': domain if domain.endswith('.') else domain + '.',
                         'Type': 'A',
                         'TTL': 300,
                         'ResourceRecords': [{'Value': public_ip}]
@@ -736,7 +1087,7 @@ echo "Files downloaded from S3 successfully"
             self.log(f"Using VPC: {vpc_id}, Subnet: {subnet_id}")
             
             # Create or get security group
-            security_group_id = self._get_or_create_security_group(ec2_client, vpc_id)
+            security_group_id = self._get_or_create_security_group(ec2_client, vpc_id, server_type=server_type, domain=domain)
             if not security_group_id:
                 self.log("Failed to create or find security group.", "ERROR")
                 return None
@@ -745,8 +1096,9 @@ echo "Files downloaded from S3 successfully"
             
             # Prepare server files based on server type
             if server_type and server_path:
-                server_files = self._prepare_server_files(server_type, server_path, config_path)
-                self.log(f"Prepared {len(server_files)} files for {server_type} server")
+                # For AWS deployment, it's an online deployment
+                server_files = self._prepare_server_files(server_type, server_path, config_path, is_online_deployment=True)
+                self.log(f"Prepared {len(server_files)} files for {server_type} server (online deployment)")
                 # Log file names for debugging
                 for filename in server_files.keys():
                     file_size = len(server_files[filename]) if server_files[filename] else 0
@@ -759,14 +1111,30 @@ echo "Files downloaded from S3 successfully"
             s3_prefix = None
             total_size = sum(len(content) if content else 0 for content in server_files.values())
             
-            if total_size > 10000:  # If files are larger than 10KB, use S3
-                self.log(f"Files are large ({total_size/1024:.2f} KB), uploading to S3...", "INFO")
+            # Always use S3 for database deployments (they have large tarballs)
+            # For other types, use S3 if files are larger than 10KB
+            use_s3 = (server_type == 'database') or (total_size > 10000)
+            
+            if use_s3:
+                self.log(f"Files are large ({total_size/1024:.2f} KB) or database deployment, uploading to S3...", "INFO")
                 s3_bucket, s3_prefix = self._upload_files_to_s3(
                     server_files, aws_access_key, aws_secret_key, region
                 )
                 if not s3_bucket:
                     self.log("Failed to upload files to S3. Deployment cannot continue.", "ERROR")
                     return None
+            
+            # Generate admin credentials for online database deployments
+            admin_username = None
+            admin_password = None
+            if server_type == 'database' and 'remote_mcp_server_admin.py' in server_files:
+                import secrets
+                import string
+                admin_username = 'admin'
+                # Generate a secure random password
+                alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+                admin_password = ''.join(secrets.choice(alphabet) for i in range(16))
+                self.log(f"Generated admin credentials: username={admin_username}, password={admin_password}", "INFO")
             
             setup_script = self.generate_setup_script(
                 server_files, 
@@ -777,39 +1145,59 @@ echo "Files downloaded from S3 successfully"
                 s3_prefix=s3_prefix,
                 aws_access_key=aws_access_key,
                 aws_secret_key=aws_secret_key,
-                region=region
+                region=region,
+                admin_username=admin_username,
+                admin_password=admin_password
             )
             
-            # Check user-data size (AWS limit is 16KB uncompressed, but we can use gzip)
+            # Check user-data size (AWS limit is 16KB for base64-encoded user-data)
+            # We need to compress and base64 encode, then check the final size
             script_size = len(setup_script.encode('utf-8'))
             self.log(f"User-data script size: {script_size} bytes ({script_size/1024:.2f} KB)")
             
-            if script_size > 16384:
-                self.log(f"Warning: User-data script exceeds 16KB limit. Compressing...", "WARNING")
-                # Compress the script
-                compressed = gzip.compress(setup_script.encode('utf-8'))
-                compressed_size = len(compressed)
-                self.log(f"Compressed size: {compressed_size} bytes ({compressed_size/1024:.2f} KB)")
-                
-                if compressed_size > 16384:
-                    self.log(f"ERROR: Compressed user-data ({compressed_size} bytes) still exceeds 16KB limit!", "ERROR")
-                    self.log("This should not happen if files are uploaded to S3. Please check the setup script.", "ERROR")
-                    return None
-                
-                user_data = base64.b64encode(compressed).decode('ascii')
-                # Cloud-init will auto-detect gzip compression
-                user_data = f"#!/bin/bash\n# Compressed user-data\nbase64 -d << 'COMPRESSED_EOF' | gunzip | bash\n{user_data}\nCOMPRESSED_EOF"
-                self.log(f"Final user-data size: {len(user_data)} bytes ({len(user_data)/1024:.2f} KB)")
-            else:
-                user_data = setup_script # Cloud-init handles bash scripts
+            # Always compress to reduce size
+            compressed = gzip.compress(setup_script.encode('utf-8'))
+            compressed_size = len(compressed)
+            self.log(f"Compressed size: {compressed_size} bytes ({compressed_size/1024:.2f} KB)")
             
-            self.log("Launching EC2 instance...")
+            # Base64 encode the compressed data
+            base64_encoded = base64.b64encode(compressed).decode('ascii')
+            base64_size = len(base64_encoded)
+            
+            # AWS user-data limit is 16KB for the final base64-encoded string
+            # Add overhead for the wrapper script (~100 bytes)
+            wrapper_overhead = len("#!/bin/bash\n# Compressed user-data\nbase64 -d << 'COMPRESSED_EOF' | gunzip | bash\n\nCOMPRESSED_EOF")
+            final_size = base64_size + wrapper_overhead
+            
+            self.log(f"Base64-encoded size: {base64_size} bytes ({base64_size/1024:.2f} KB)")
+            self.log(f"Final user-data size (with wrapper): {final_size} bytes ({final_size/1024:.2f} KB)")
+            
+            if final_size > 16384:
+                self.log(f"ERROR: User-data ({final_size} bytes) exceeds 16KB AWS limit!", "ERROR")
+                self.log("The setup script is too large. This should not happen if files are uploaded to S3.", "ERROR")
+                self.log("Please ensure S3 upload is working correctly.", "ERROR")
+                return None
+            
+            # Create the user-data with compression wrapper
+            # Cloud-init will auto-detect gzip compression when decompressed
+            user_data = f"#!/bin/bash\n# Compressed user-data\nbase64 -d << 'COMPRESSED_EOF' | gunzip | bash\n{base64_encoded}\nCOMPRESSED_EOF"
+            self.log(f"✓ User-data prepared: {len(user_data)} bytes ({len(user_data)/1024:.2f} KB) - within AWS limit", "SUCCESS")
+            
+            self.log("Launching EC2 instance...", "INFO")
+            self.log("This step includes:", "INFO")
+            self.log("  - Finding the latest Ubuntu AMI", "INFO")
+            self.log("  - Creating EC2 instance", "INFO")
+            self.log("  - Configuring instance settings", "INFO")
+            self.log("Please wait, this may take 30-60 seconds...", "INFO")
             
             # Find a basic Ubuntu AMI (simplified logic - in prod, search for latest)
             # This is a hardcoded Ubuntu 22.04 LTS AMI for us-east-1 as placeholder
             # In real implementation, we need to search for AMI based on region
+            self.log("Finding latest Ubuntu 22.04 LTS AMI...", "INFO")
             image_id = self._get_ubuntu_ami(ec2_client, region, aws_access_key, aws_secret_key)
+            self.log(f"Using AMI: {image_id}", "INFO")
             
+            self.log("Creating EC2 instance...", "INFO")
             instances = ec2_resource.create_instances(
                 ImageId=image_id,
                 MinCount=1,
@@ -825,12 +1213,109 @@ echo "Files downloaded from S3 successfully"
             )
             
             instance = instances[0]
-            self.log(f"Instance {instance.id} launched. Waiting for running state...")
-            instance.wait_until_running()
-            instance.reload()
+            self.log(f"Instance {instance.id} launched successfully", "SUCCESS")
+            self.log("Waiting for instance to reach running state...", "INFO")
+            self.log("This may take 1-2 minutes. Please wait...", "INFO")
             
-            public_ip = instance.public_ip_address
-            self.log(f"Instance running at {public_ip}", "SUCCESS")
+            # Wait for running state with progress updates
+            import threading
+            progress_stop = threading.Event()
+            
+            def log_progress():
+                """Log progress every 10 seconds while waiting"""
+                wait_count = 0
+                while not progress_stop.is_set():
+                    time.sleep(10)
+                    if not progress_stop.is_set():
+                        wait_count += 1
+                        self.log(f"Still waiting for instance to start... ({wait_count * 10} seconds elapsed)", "INFO")
+            
+            progress_thread = threading.Thread(target=log_progress, daemon=True)
+            progress_thread.start()
+            
+            try:
+                instance.wait_until_running()
+                progress_stop.set()
+                instance.reload()
+                
+                public_ip = instance.public_ip_address
+                self.log(f"✓ Instance is now running at {public_ip}", "SUCCESS")
+            except Exception as e:
+                progress_stop.set()
+                self.log(f"Error waiting for instance to start: {str(e)}", "ERROR")
+                raise
+            
+            # Wait for status checks to pass (system status and instance status)
+            self.log("Waiting for instance status checks to pass...", "INFO")
+            self.log("This ensures the instance is fully initialized and ready. This may take 2-5 minutes.", "INFO")
+            
+            try:
+                # Wait for system status check with progress updates
+                self.log("Checking system status...", "INFO")
+                progress_stop = threading.Event()
+                
+                def log_status_progress(check_type):
+                    """Log progress every 15 seconds during status checks"""
+                    wait_count = 0
+                    while not progress_stop.is_set():
+                        time.sleep(15)
+                        if not progress_stop.is_set():
+                            wait_count += 1
+                            self.log(f"Still waiting for {check_type} check... ({wait_count * 15} seconds elapsed)", "INFO")
+                
+                status_thread = threading.Thread(target=lambda: log_status_progress("system"), daemon=True)
+                status_thread.start()
+                
+                try:
+                    waiter = ec2_client.get_waiter('system_status_ok')
+                    waiter.wait(InstanceIds=[instance.id], WaiterConfig={'Delay': 15, 'MaxAttempts': 40})
+                    progress_stop.set()
+                    self.log("✓ System status check passed", "SUCCESS")
+                except Exception as e:
+                    progress_stop.set()
+                    raise
+                
+                # Wait for instance status check with progress updates
+                self.log("Checking instance status...", "INFO")
+                progress_stop = threading.Event()
+                status_thread = threading.Thread(target=lambda: log_status_progress("instance"), daemon=True)
+                status_thread.start()
+                
+                try:
+                    waiter = ec2_client.get_waiter('instance_status_ok')
+                    waiter.wait(InstanceIds=[instance.id], WaiterConfig={'Delay': 15, 'MaxAttempts': 40})
+                    progress_stop.set()
+                    self.log("✓ Instance status check passed", "SUCCESS")
+                except Exception as e:
+                    progress_stop.set()
+                    raise
+                
+                self.log(f"✓ Instance fully initialized and ready at {public_ip}", "SUCCESS")
+                self.log("Instance initialization complete. Setup script will now run on the instance.", "INFO")
+                
+            except Exception as e:
+                progress_stop.set()
+                self.log(f"Warning: Status check wait failed or timed out: {str(e)}", "WARNING")
+                self.log("Instance may still be initializing. Setup script is running in the background.", "INFO")
+                self.log("You can check the setup progress by SSH'ing into the instance and running:", "INFO")
+                self.log("  sudo cat /var/log/mcp-server-setup.log", "INFO")
+                self.log("  sudo cat /var/log/cloud-init-output.log", "INFO")
+            
+            # Verify instance still exists and is running
+            try:
+                instance.reload()
+                current_state = instance.state['Name']
+                if current_state != 'running':
+                    self.log(f"WARNING: Instance state is '{current_state}', expected 'running'", "WARNING")
+                    self.log(f"Instance may have been stopped or terminated. Check AWS Console.", "WARNING")
+                else:
+                    self.log(f"✓ Instance verified: {instance.id} is running in region {region}", "SUCCESS")
+                    self.log(f"  State: {current_state}", "INFO")
+                    self.log(f"  Public IP: {public_ip}", "INFO")
+                    self.log(f"  Region: {region}", "INFO")
+                    self.log(f"  Availability Zone: {instance.placement['AvailabilityZone']}", "INFO")
+            except Exception as e:
+                self.log(f"Warning: Could not verify instance state: {str(e)}", "WARNING")
             
             # Set up Route 53 DNS if domain is provided
             if domain:
@@ -841,7 +1326,7 @@ echo "Files downloaded from S3 successfully"
                         aws_access_key_id=aws_access_key,
                         aws_secret_access_key=aws_secret_key
                     )
-                    self._setup_route53(route53_client, domain, public_ip)
+                    self._setup_route53(route53_client, domain, public_ip, aws_access_key, aws_secret_key)
                 except Exception as e:
                     self.log(f"Warning: Could not set up Route 53 DNS: {str(e)}", "WARNING")
                     self.log("You can manually set up DNS later.", "INFO")
@@ -849,11 +1334,40 @@ echo "Files downloaded from S3 successfully"
                 self.log("No domain provided. Skipping Route 53 DNS setup.", "INFO")
                 self.log("You can access the server directly via IP address.", "INFO")
             
-            self.log("Deployment script is running in background. Please wait 5-10 minutes for initialization.", "INFO")
+            self.log("=" * 60, "INFO")
+            self.log("EC2 Instance Setup Complete", "SUCCESS")
+            self.log("=" * 60, "INFO")
+            self.log(f"Instance Details:", "INFO")
+            self.log(f"  Instance ID: {instance.id}", "INFO")
+            self.log(f"  Region: {region}", "INFO")
+            self.log(f"  Public IP: {public_ip}", "INFO")
+            if hasattr(instance, 'placement') and instance.placement:
+                self.log(f"  Availability Zone: {instance.placement.get('AvailabilityZone', 'N/A')}", "INFO")
+            self.log("", "INFO")
+            self.log(f"⚠️  IMPORTANT: Make sure you're viewing the correct region ({region}) in AWS Console!", "WARNING")
+            self.log("", "INFO")
+            self.log("The setup script is now running on the instance in the background.", "INFO")
+            self.log("This includes:", "INFO")
+            self.log("  - System updates and package installation", "INFO")
+            self.log("  - Python environment setup", "INFO")
+            self.log("  - MCP server code deployment", "INFO")
+            self.log("  - Service configuration and startup", "INFO")
+            self.log("", "INFO")
+            self.log("⏳ Please wait 5-10 minutes for the setup to complete.", "INFO")
+            self.log("", "INFO")
             if domain:
-                self.log(f"Once DNS propagates (5-10 minutes), your server will be available at https://{domain}", "INFO")
+                self.log(f"Once setup completes and DNS propagates (5-10 minutes):", "INFO")
+                self.log(f"  → Server will be available at: https://{domain}", "INFO")
+                self.log(f"  → Admin panel: https://{domain}/admin/login", "INFO")
             else:
-                self.log(f"Server will be accessible at http://{public_ip} after initialization completes.", "INFO")
+                self.log(f"Once setup completes (5-10 minutes):", "INFO")
+                self.log(f"  → Server will be accessible at: http://{public_ip}:30210", "INFO")
+                self.log(f"  → Admin panel: http://{public_ip}:30210/admin/login", "INFO")
+                self.log(f"  → Note: Configure a domain and redeploy to use HTTPS on port 80/443", "INFO")
+            self.log("", "INFO")
+            self.log("You can check the instance status in AWS Console:", "INFO")
+            self.log(f"  Instance ID: {instance.id}", "INFO")
+            self.log(f"  Public IP: {public_ip}", "INFO")
             
             # Give a moment for all logs to be queued
             time.sleep(0.5)
@@ -952,20 +1466,20 @@ echo "Files downloaded from S3 successfully"
                 'eu-central-1': 'ami-0c55b159cbfafe1f0',
                 'ap-southeast-1': 'ami-0c55b159cbfafe1f0',
                 'ap-southeast-2': 'ami-0c55b159cbfafe1f0',
-                'ap-south-1': 'ami-0c55b159cbfafe1f0',
+                'ap-south-1': 'ami-0c7217cdde317cfec',  # Default region - will be updated by SSM/EC2 search
                 'ap-northeast-1': 'ami-0c55b159cbfafe1f0',
                 'ap-northeast-2': 'ami-0c55b159cbfafe1f0',
                 'ca-central-1': 'ami-0c55b159cbfafe1f0',
                 'sa-east-1': 'ami-0c55b159cbfafe1f0',
             }
             
-            # Return region-specific AMI or default to us-east-1
-            return region_amis.get(region, region_amis['us-east-1'])
+            # Return region-specific AMI or default to ap-south-1
+            return region_amis.get(region, region_amis.get('ap-south-1', 'ami-0c7217cdde317cfec'))
             
         except Exception as e:
             self.log(f"Warning: Could not dynamically find AMI for region {region}. Using fallback. Error: {str(e)}", "WARNING")
-            # Return a safe default
-            return "ami-0c7217cdde317cfec"  # Ubuntu 22.04 us-east-1
+            # Return a safe default - ap-south-1 AMI (will be updated by SSM/EC2 search on next attempt)
+            return "ami-0c7217cdde317cfec"  # Ubuntu 22.04 fallback
     
     def _get_vpc_and_subnet(self, ec2_client):
         """
@@ -1043,10 +1557,16 @@ echo "Files downloaded from S3 successfully"
             
             return None, None
     
-    def _get_or_create_security_group(self, ec2_client, vpc_id):
+    def _get_or_create_security_group(self, ec2_client, vpc_id, server_type=None, domain=None):
         """
         Get or create a security group for MCP server with necessary ports open.
         Falls back to default security group or any available security group if creation fails.
+        
+        Args:
+            ec2_client: Boto3 EC2 client
+            vpc_id: VPC ID
+            server_type: Type of server ('database', 'api', etc.)
+            domain: Domain name if provided
         """
         sg_name = "mcp-server-sg"
         
@@ -1061,7 +1581,108 @@ echo "Files downloaded from S3 successfully"
             
             if existing_sgs['SecurityGroups']:
                 sg_id = existing_sgs['SecurityGroups'][0]['GroupId']
-                self.log(f"Using existing security group: {sg_id}")
+                self.log(f"Found existing security group: {sg_id}")
+                self.log("Updating security group rules to ensure correct ports are open...", "INFO")
+                
+                # Check current rules and update if needed
+                try:
+                    current_rules = ec2_client.describe_security_groups(GroupIds=[sg_id])
+                    existing_ports = set()
+                    for rule in current_rules['SecurityGroups'][0].get('IpPermissions', []):
+                        if rule.get('IpProtocol') == 'tcp':
+                            from_port = rule.get('FromPort')
+                            to_port = rule.get('ToPort')
+                            if from_port == to_port:
+                                existing_ports.add(from_port)
+                    
+                    # Determine which ports should be open
+                    required_ports = {22, 80, 443}
+                    if server_type == 'database':
+                        required_ports.add(30210)
+                    else:
+                        required_ports.add(8000)
+                    
+                    # Check if we need to add any missing ports or remove incorrect ones
+                    missing_ports = required_ports - existing_ports
+                    
+                    # Remove old incorrect ports (3000, 5000) if they exist
+                    old_ports_to_remove = {3000, 5000} & existing_ports
+                    
+                    if missing_ports or old_ports_to_remove:
+                        # Remove old incorrect ports first
+                        if old_ports_to_remove:
+                            self.log(f"Removing old incorrect ports: {old_ports_to_remove}", "INFO")
+                            for old_port in old_ports_to_remove:
+                                try:
+                                    ec2_client.revoke_security_group_ingress(
+                                        GroupId=sg_id,
+                                        IpPermissions=[{
+                                            'IpProtocol': 'tcp',
+                                            'FromPort': old_port,
+                                            'ToPort': old_port,
+                                            'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+                                        }]
+                                    )
+                                except Exception as revoke_error:
+                                    self.log(f"Warning: Could not remove port {old_port}: {str(revoke_error)}", "WARNING")
+                        
+                            # Add missing ports
+                            if missing_ports:
+                                self.log(f"Adding missing ports to security group: {missing_ports}", "INFO")
+                                additional_permissions = []
+                                
+                                # Always ensure ports 22, 80, 443 are open
+                                if 22 in missing_ports:
+                                    additional_permissions.append({
+                                        'IpProtocol': 'tcp',
+                                        'FromPort': 22,
+                                        'ToPort': 22,
+                                        'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'SSH access'}]
+                                    })
+                                if 80 in missing_ports:
+                                    additional_permissions.append({
+                                        'IpProtocol': 'tcp',
+                                        'FromPort': 80,
+                                        'ToPort': 80,
+                                        'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'HTTP access (Nginx)'}]
+                                    })
+                                if 443 in missing_ports:
+                                    additional_permissions.append({
+                                        'IpProtocol': 'tcp',
+                                        'FromPort': 443,
+                                        'ToPort': 443,
+                                        'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'HTTPS access (Nginx)'}]
+                                    })
+                                
+                                # Add server-specific ports
+                                if 30210 in missing_ports and server_type == 'database':
+                                    additional_permissions.append({
+                                        'IpProtocol': 'tcp',
+                                        'FromPort': 30210,
+                                        'ToPort': 30210,
+                                        'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'MCP Server direct access (database)'}]
+                                    })
+                                elif 8000 in missing_ports and server_type != 'database':
+                                    additional_permissions.append({
+                                        'IpProtocol': 'tcp',
+                                        'FromPort': 8000,
+                                        'ToPort': 8000,
+                                        'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'MCP Server direct access'}]
+                                    })
+                                
+                                if additional_permissions:
+                                    ec2_client.authorize_security_group_ingress(
+                                        GroupId=sg_id,
+                                        IpPermissions=additional_permissions
+                                    )
+                                    self.log(f"Updated security group with correct ports", "SUCCESS")
+                    else:
+                        self.log("Security group already has all required ports", "INFO")
+                        
+                except Exception as update_error:
+                    self.log(f"Warning: Could not update existing security group rules: {str(update_error)}", "WARNING")
+                    self.log("You may need to manually update the security group to open port 30210", "WARNING")
+                
                 return sg_id
             
             # Try to create new security group
@@ -1076,34 +1697,51 @@ echo "Files downloaded from S3 successfully"
                 
                 # Try to add inbound rules (may also fail due to permissions)
                 try:
+                    # Determine which ports to open based on server type
+                    # Always open: SSH (22), HTTP (80), HTTPS (443)
+                    ip_permissions = [
+                        {
+                            'IpProtocol': 'tcp',
+                            'FromPort': 22,
+                            'ToPort': 22,
+                            'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'SSH access'}]
+                        },
+                        {
+                            'IpProtocol': 'tcp',
+                            'FromPort': 80,
+                            'ToPort': 80,
+                            'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'HTTP access (Nginx)'}]
+                        },
+                        {
+                            'IpProtocol': 'tcp',
+                            'FromPort': 443,
+                            'ToPort': 443,
+                            'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'HTTPS access (Nginx)'}]
+                        }
+                    ]
+                    
+                    # For database servers, always open port 30210 for direct access
+                    # Even if domain is provided, port 30210 allows direct access if needed
+                    # Nginx on port 80/443 will handle domain routing
+                    if server_type == 'database':
+                        ip_permissions.append({
+                            'IpProtocol': 'tcp',
+                            'FromPort': 30210,
+                            'ToPort': 30210,
+                            'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'MCP Server direct access (database)'}]
+                        })
+                    else:
+                        # For other server types, open port 8000
+                        ip_permissions.append({
+                            'IpProtocol': 'tcp',
+                            'FromPort': 8000,
+                            'ToPort': 8000,
+                            'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'MCP Server direct access'}]
+                        })
+                    
                     ec2_client.authorize_security_group_ingress(
                         GroupId=sg_id,
-                        IpPermissions=[
-                            {
-                                'IpProtocol': 'tcp',
-                                'FromPort': 22,
-                                'ToPort': 22,
-                                'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'SSH access'}]
-                            },
-                            {
-                                'IpProtocol': 'tcp',
-                                'FromPort': 80,
-                                'ToPort': 80,
-                                'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'HTTP access'}]
-                            },
-                            {
-                                'IpProtocol': 'tcp',
-                                'FromPort': 443,
-                                'ToPort': 443,
-                                'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'HTTPS access'}]
-                            },
-                            {
-                                'IpProtocol': 'tcp',
-                                'FromPort': 5000,
-                                'ToPort': 5000,
-                                'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'Flask default port'}]
-                            }
-                        ]
+                        IpPermissions=ip_permissions
                     )
                     self.log(f"Added inbound rules to security group: {sg_id}")
                 except ClientError as ingress_error:
