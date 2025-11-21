@@ -203,10 +203,41 @@ class OnlineDeployer:
                 # Use scikiq_pkg_dbutils_online for online deployments
                 online_pkg_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils_online'
                 
-                # Copy config.ini
+                # Copy config.ini - only database sections, remove server config and examples
                 if config_path and Path(config_path).exists():
-                    with open(config_path, 'r', encoding='utf-8') as f:
-                        server_files['config.ini'] = f.read()
+                    import configparser
+                    try:
+                        config = configparser.ConfigParser()
+                        config.read(config_path, encoding='utf-8')
+                        
+                        # Filter to only database sections
+                        filtered_config = configparser.ConfigParser()
+                        for section in config.sections():
+                            # Only include sections that look like database connections
+                            # Exclude [Server Configuration] and other non-database sections
+                            section_lower = section.lower()
+                            if (not section_lower.startswith('server') and 
+                                not section_lower.startswith('general') and
+                                not section_lower.startswith('logging')):
+                                # Check if section has database-related keys
+                                section_keys = [key.lower() for key in config[section].keys()]
+                                if any(key in ['db_type', 'hostname', 'host', 'database', 'username', 'password'] 
+                                       for key in section_keys):
+                                    filtered_config.add_section(section)
+                                    for key, value in config[section].items():
+                                        filtered_config.set(section, key, value)
+                        
+                        # Write filtered config to string
+                        from io import StringIO
+                        config_string = StringIO()
+                        filtered_config.write(config_string)
+                        server_files['config.ini'] = config_string.getvalue()
+                        self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes, filtered to database sections only)")
+                    except Exception as e:
+                        # Fallback: use original file if parsing fails
+                        self.log(f"  - Warning: Could not filter config.ini: {e}. Using original file.", "WARNING")
+                        with open(config_path, 'r', encoding='utf-8') as f:
+                            server_files['config.ini'] = f.read()
                         self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes)")
                 else:
                     # Try to find config.ini in online package
@@ -255,10 +286,41 @@ class OnlineDeployer:
                 # Local deployment - use scikiq_pkg_dbutils
                 self.log(f"Preparing local database MCP server files from {server_path}")
                 
-                # Copy config.ini
+                # Copy config.ini - only database sections, remove server config and examples
                 if config_path and Path(config_path).exists():
-                    with open(config_path, 'r', encoding='utf-8') as f:
-                        server_files['config.ini'] = f.read()
+                    import configparser
+                    try:
+                        config = configparser.ConfigParser()
+                        config.read(config_path, encoding='utf-8')
+                        
+                        # Filter to only database sections
+                        filtered_config = configparser.ConfigParser()
+                        for section in config.sections():
+                            # Only include sections that look like database connections
+                            # Exclude [Server Configuration] and other non-database sections
+                            section_lower = section.lower()
+                            if (not section_lower.startswith('server') and 
+                                not section_lower.startswith('general') and
+                                not section_lower.startswith('logging')):
+                                # Check if section has database-related keys
+                                section_keys = [key.lower() for key in config[section].keys()]
+                                if any(key in ['db_type', 'hostname', 'host', 'database', 'username', 'password'] 
+                                       for key in section_keys):
+                                    filtered_config.add_section(section)
+                                    for key, value in config[section].items():
+                                        filtered_config.set(section, key, value)
+                        
+                        # Write filtered config to string
+                        from io import StringIO
+                        config_string = StringIO()
+                        filtered_config.write(config_string)
+                        server_files['config.ini'] = config_string.getvalue()
+                        self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes, filtered to database sections only)")
+                    except Exception as e:
+                        # Fallback: use original file if parsing fails
+                        self.log(f"  - Warning: Could not filter config.ini: {e}. Using original file.", "WARNING")
+                        with open(config_path, 'r', encoding='utf-8') as f:
+                            server_files['config.ini'] = f.read()
                         self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes)")
                 else:
                     self.log("  - config.ini not found, will be created on server", "WARNING")
@@ -513,7 +575,7 @@ if __name__ == "__main__":
             if 'remote_mcp_server_admin.py' in server_files:
                 # Online deployment: use remote_mcp_server_admin.py
                 # Use ExecStartPre for delay, or just start directly (systemd handles restarts)
-                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/remote_mcp_server_admin.py --host 0.0.0.0 --port 30210 --debug"
+                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/remote_mcp_server_admin.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db --debug"
             else:
                 # Local deployment: use run_mcp_server.py
                 startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/run_mcp_server.py --config-file /opt/mcp-server/config.ini"
@@ -752,13 +814,41 @@ echo "=========================================="
             import shlex
             admin_creation_cmd = f"""
 # Create admin user for OAuth
+echo ""
+echo "=========================================="
 echo "Creating admin user for OAuth..."
+echo "=========================================="
 cd /opt/mcp-server
 source venv/bin/activate
+
+# Ensure database directory has proper permissions
+echo "Setting up database directory permissions..."
+sudo mkdir -p /opt/mcp-server
+sudo chown -R ubuntu:ubuntu /opt/mcp-server
+chmod 755 /opt/mcp-server
+
+# Create database file with proper permissions
 python3 remote_mcp_server_admin.py --create-admin {shlex.quote(admin_username)}:{shlex.quote(admin_password)}:{shlex.quote(admin_email)} || echo "Admin user may already exist"
-echo "Admin user created: {admin_username}"
-echo "Admin password: {admin_password}"
+
+# Fix database file permissions (in case it was created)
+if [ -f "/opt/mcp-server/mcp_auth.db" ]; then
+    sudo chown ubuntu:ubuntu /opt/mcp-server/mcp_auth.db
+    chmod 664 /opt/mcp-server/mcp_auth.db
+    echo "✓ Database file permissions set"
+fi
+
+echo ""
+echo "=========================================="
+echo "OAuth Admin Credentials"
+echo "=========================================="
+echo "Username: {admin_username}"
+echo "Password: {admin_password}"
+echo "Email: {admin_email}"
+echo ""
 echo "⚠️  IMPORTANT: Save these credentials securely!"
+echo "You will need these to login to the admin panel."
+echo "=========================================="
+echo ""
 """
         else:
             admin_creation_cmd = ""
@@ -1135,6 +1225,17 @@ echo "⚠️  IMPORTANT: Save these credentials securely!"
                 alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
                 admin_password = ''.join(secrets.choice(alphabet) for i in range(16))
                 self.log(f"Generated admin credentials: username={admin_username}, password={admin_password}", "INFO")
+                # Log credentials prominently for user visibility
+                self.log("", "INFO")
+                self.log("=" * 60, "INFO")
+                self.log("OAuth Admin Credentials Generated", "INFO")
+                self.log("=" * 60, "INFO")
+                self.log(f"Username: {admin_username}", "INFO")
+                self.log(f"Password: {admin_password}", "INFO")
+                self.log("⚠️  IMPORTANT: Save these credentials securely!", "WARNING")
+                self.log("You will need these to login to the admin panel.", "INFO")
+                self.log("=" * 60, "INFO")
+                self.log("", "INFO")
             
             setup_script = self.generate_setup_script(
                 server_files, 
@@ -1261,7 +1362,10 @@ echo "⚠️  IMPORTANT: Save these credentials securely!"
                         time.sleep(15)
                         if not progress_stop.is_set():
                             wait_count += 1
-                            self.log(f"Still waiting for {check_type} check... ({wait_count * 15} seconds elapsed)", "INFO")
+                            elapsed = wait_count * 15
+                            self.log(f"⏳ Waiting for {check_type} status check... ({elapsed} seconds elapsed)", "INFO")
+                            if wait_count % 2 == 0:  # Every 30 seconds
+                                self.log(f"   {check_type.capitalize()} check ensures instance is fully ready.", "INFO")
                 
                 status_thread = threading.Thread(target=lambda: log_status_progress("system"), daemon=True)
                 status_thread.start()
