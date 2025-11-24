@@ -1868,22 +1868,25 @@ Respond in JSON:
                     
                     # Read all logs from the queue
                     # Route 53 setup happens synchronously in deploy_to_aws, so logs should be in queue
-                    max_iterations = 300  # Increased to ensure we capture all logs
+                    max_iterations = 500  # Increased to ensure we capture all logs including wait messages
                     iteration = 0
                     empty_iterations = 0
-                    max_empty_iterations = 5  # Stop after 5 consecutive empty reads
+                    max_empty_iterations = 10  # Increased to allow more time for wait messages
                     result_received = False
                     
                     # First, read logs while deployment is running
                     while iteration < max_iterations:
                         try:
-                            log = deployer.logs.get(timeout=0.2)
+                            log = deployer.logs.get(timeout=0.1)  # Reduced timeout for more frequent checks
                             yield f"{log}\n"
                             empty_iterations = 0  # Reset empty counter
                             iteration += 1
                         except:
                             empty_iterations += 1
                             iteration += 1
+                            # If no logs for a while but still waiting, continue
+                            if empty_iterations < max_empty_iterations:
+                                time.sleep(0.1)  # Small delay before next check
                             
                             # If we got a result, continue reading for a bit more to catch Route 53 logs
                             if result is not None:
@@ -1937,6 +1940,34 @@ Respond in JSON:
                             yield f"[INFO] DNS propagation may take 5-10 minutes. Server will be available at https://{result.get('domain')}\n"
                         else:
                             yield f"[INFO] Server accessible at http://{result.get('public_ip')} after initialization (5-10 minutes)\n"
+                        
+                        # Generate deployment details summary
+                        if result.get('deployment_summary'):
+                            summary = result.get('deployment_summary')
+                            yield "\n"
+                            yield "=" * 60 + "\n"
+                            yield "DEPLOYMENT DETAILS SUMMARY\n"
+                            yield "=" * 60 + "\n"
+                            yield f"Instance ID: {summary.get('instance_id')}\n"
+                            yield f"Region: {summary.get('region')}\n"
+                            yield f"Public IP: {summary.get('public_ip')}\n"
+                            if summary.get('domain'):
+                                yield f"Domain: {summary.get('domain')}\n"
+                            yield f"Instance Type: {summary.get('instance_type')}\n"
+                            yield "\n"
+                            yield "Access URLs:\n"
+                            for url_type, url in summary.get('access_urls', {}).items():
+                                yield f"  {url_type}: {url}\n"
+                            if summary.get('admin_credentials'):
+                                yield "\n"
+                                yield "Admin Credentials:\n"
+                                yield f"  Username: {summary.get('admin_credentials', {}).get('username')}\n"
+                                yield f"  Password: {summary.get('admin_credentials', {}).get('password')}\n"
+                                yield f"  Email: {summary.get('admin_credentials', {}).get('email')}\n"
+                            yield "\n"
+                            yield "=" * 60 + "\n"
+                            yield "Copy the above details for your records.\n"
+                            yield "=" * 60 + "\n"
                     else:
                         # Read any remaining error logs
                         try:

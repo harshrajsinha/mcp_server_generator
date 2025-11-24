@@ -266,9 +266,15 @@ fi
 if [ -n "$DOMAIN" ]; then
     echo "Setting up SSL certificate with Let's Encrypt for $DOMAIN..."
     
-    # Get server's public IP
-    server_ip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+    # Get server's public IP (try multiple methods)
+    server_ip=""
+    
+    # Try AWS metadata service
+    server_ip=$(curl -s --connect-timeout 2 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+    
+    # If AWS metadata not available, try other cloud providers or fallback
     if [ -z "$server_ip" ]; then
+        # Try hostname -I as fallback
         server_ip=$(hostname -I | awk '{print $1}')
     fi
     
@@ -565,6 +571,28 @@ else
 fi
 
 # Create systemd service
+# Determine SERVER_BASE_URL for OAuth redirects
+if [ -n "$DOMAIN" ]; then
+    SERVER_BASE_URL="https://$DOMAIN"
+else
+    # Get public IP for base URL (try multiple methods)
+    PUBLIC_IP=""
+    
+    # Try AWS metadata service
+    PUBLIC_IP=$(curl -s --connect-timeout 2 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+    
+    # If metadata service not available, try hostname -I
+    if [ -z "$PUBLIC_IP" ]; then
+        PUBLIC_IP=$(hostname -I | awk '{print $1}')
+    fi
+    
+    if [ -n "$PUBLIC_IP" ]; then
+        SERVER_BASE_URL="http://$PUBLIC_IP"
+    else
+        SERVER_BASE_URL="http://localhost:30210"
+    fi
+fi
+
 cat << EOF | sudo tee /etc/systemd/system/mcp-server.service
 [Unit]
 Description=MCP Server
@@ -576,6 +604,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/opt/mcp-server
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/mcp-server/venv/bin"
+Environment="SERVER_BASE_URL=$SERVER_BASE_URL"
 ExecStart={{STARTUP_COMMAND}}
 Restart=always
 RestartSec=10
@@ -620,15 +649,18 @@ sleep 5
 # Check service status
 if sudo systemctl is-active --quiet mcp-server; then
     echo "MCP server started successfully!"
+    # Get server IP for display
+    DISPLAY_IP=$(curl -s --connect-timeout 2 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || hostname -I | awk '{print $1}' || echo 'server-ip')
+    
     if [ -n "$DOMAIN" ]; then
         echo "Server will be available at:"
         echo "  - https://$DOMAIN (HTTPS - after SSL certificate is obtained)"
         echo "  - http://$DOMAIN (HTTP - redirects to HTTPS)"
-        echo "  - http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo 'server-ip'):30210 (Direct access)"
+        echo "  - http://${DISPLAY_IP}:30210 (Direct access)"
     else
         echo "Server is accessible at:"
-        echo "  - http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo 'server-ip'):80 (via Nginx)"
-        echo "  - http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo 'server-ip'):30210 (Direct access)"
+        echo "  - http://${DISPLAY_IP}:80 (via Nginx)"
+        echo "  - http://${DISPLAY_IP}:30210 (Direct access)"
     fi
 else
     echo "Warning: MCP server service may not have started correctly"

@@ -21,10 +21,12 @@ import io
 import gzip
 from pathlib import Path
 import shutil
+from datetime import datetime
 
 class OnlineDeployer:
     def __init__(self):
         self.logs = queue.Queue()
+        self.deployment_summary = None  # Store deployment details for download
 
     def log(self, message, level="INFO"):
         """Log a message to the queue"""
@@ -574,8 +576,14 @@ if __name__ == "__main__":
             # Check if remote_mcp_server_admin.py exists (online deployment)
             if 'remote_mcp_server_admin.py' in server_files:
                 # Online deployment: use remote_mcp_server_admin.py
-                # Use ExecStartPre for delay, or just start directly (systemd handles restarts)
-                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/remote_mcp_server_admin.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db --debug"
+                # Set SERVER_BASE_URL environment variable for OAuth redirects
+                if domain:
+                    server_base_url = f"https://{domain}"
+                else:
+                    # Use public IP if no domain (will be replaced after instance launch)
+                    server_base_url = f"http://{public_ip or 'SERVER_IP'}"
+                
+                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/remote_mcp_server_admin.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db --debug"
             else:
                 # Local deployment: use run_mcp_server.py
                 startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/run_mcp_server.py --config-file /opt/mcp-server/config.ini"
@@ -1135,6 +1143,9 @@ echo ""
 
     def deploy_to_aws(self, aws_access_key, aws_secret_key, region, instance_type, server_files, 
                      server_type=None, server_path=None, config_path=None, domain=None):
+        # Initialize admin credentials to None - will be set if database deployment
+        admin_username = None
+        admin_password = None
         """
         Deploy to AWS EC2
         
@@ -1329,7 +1340,10 @@ echo ""
                     time.sleep(10)
                     if not progress_stop.is_set():
                         wait_count += 1
-                        self.log(f"Still waiting for instance to start... ({wait_count * 10} seconds elapsed)", "INFO")
+                        elapsed = wait_count * 10
+                        self.log(f"⏳ Waiting for EC2 instance to start... ({elapsed} seconds elapsed)", "INFO")
+                        if wait_count % 3 == 0:  # Every 30 seconds, provide more detail
+                            self.log("   Instance is initializing. This typically takes 30-90 seconds.", "INFO")
             
             progress_thread = threading.Thread(target=log_progress, daemon=True)
             progress_thread.start()
@@ -1473,10 +1487,55 @@ echo ""
             self.log(f"  Instance ID: {instance.id}", "INFO")
             self.log(f"  Public IP: {public_ip}", "INFO")
             
+            # Get instance type from instance attributes
+            instance_type_attr = getattr(instance, 'instance_type', instance_type)
+            
+            # Generate deployment summary for download
+            deployment_summary = {
+                'deployment_type': 'AWS EC2',
+                'timestamp': datetime.now().isoformat(),
+                'instance_id': instance.id,
+                'region': region,
+                'public_ip': public_ip,
+                'domain': domain,
+                'instance_type': instance_type_attr,
+                'availability_zone': instance.placement.get('AvailabilityZone', 'N/A') if hasattr(instance, 'placement') and instance.placement else 'N/A',
+                'server_type': server_type,
+                'access_urls': {}
+            }
+            
+            if domain:
+                deployment_summary['access_urls'] = {
+                    'https': f"https://{domain}",
+                    'http': f"http://{domain}",
+                    'admin_panel': f"https://{domain}/admin/login",
+                    'oauth_endpoint': f"https://{domain}/.well-known/oauth-authorization-server",
+                    'direct_access': f"http://{public_ip}:30210"
+                }
+            else:
+                deployment_summary['access_urls'] = {
+                    'http': f"http://{public_ip}",
+                    'direct_access': f"http://{public_ip}:30210"
+                }
+            
+            # Add admin credentials if available (they were set earlier in the function if database deployment)
+            if admin_username and admin_password:
+                deployment_summary['admin_credentials'] = {
+                    'username': admin_username,
+                    'password': admin_password,
+                    'email': f"{admin_username}@mcp-server.local"
+                }
+            
             # Give a moment for all logs to be queued
             time.sleep(0.5)
             
-            return {"public_ip": public_ip, "instance_id": instance.id, "domain": domain}
+            # Include deployment summary in return
+            return {
+                "public_ip": public_ip, 
+                "instance_id": instance.id, 
+                "domain": domain,
+                "deployment_summary": deployment_summary
+            }
 
         except ClientError as e:
             error_code = e.response.get('Error', {}).get('Code', 'Unknown')
