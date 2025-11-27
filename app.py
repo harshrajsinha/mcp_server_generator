@@ -33,6 +33,11 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/favicon.ico')
+def favicon():
+    """Return empty response for favicon to prevent 404 errors"""
+    return '', 204
+
 @app.route('/about')
 def about():
     """About page"""

@@ -163,8 +163,9 @@ python3 -c "import mcp,httpx,requests,pandas,pypika,sqlalchemy,numpy,yaml,dotenv
 
 echo "Python dependencies installation completed"
 
-# Configure Nginx - always configure it for port 80 access
-echo "Configuring Nginx..."
+# Configure Nginx for all HTTP-based MCP servers
+# All online deployments now use HTTP transport with OAuth (database, api, swagger)
+echo "Configuring Nginx for {{SERVER_TYPE}} MCP server with HTTP/OAuth..."
 
 if [ -n "$DOMAIN" ]; then
     echo "Configuring Nginx for domain: $DOMAIN"
@@ -262,7 +263,7 @@ else
     exit 1
 fi
 
-    # Setup SSL with Let's Encrypt (only if domain is provided)
+# Setup SSL with Let's Encrypt (only if domain is provided)
 if [ -n "$DOMAIN" ]; then
     echo "Setting up SSL certificate with Let's Encrypt for $DOMAIN..."
     
@@ -274,8 +275,8 @@ if [ -n "$DOMAIN" ]; then
     
     # If AWS metadata not available, try other cloud providers or fallback
     if [ -z "$server_ip" ]; then
-        # Try hostname -I as fallback
-        server_ip=$(hostname -I | awk '{print $1}')
+    # Try hostname -I as fallback
+    server_ip=$(hostname -I | awk '{print $1}')
     fi
     
     echo "Server IP: $server_ip"
@@ -287,16 +288,16 @@ if [ -n "$DOMAIN" ]; then
     resolved_ip=$(dig +short $DOMAIN @8.8.8.8 2>/dev/null | tail -1 | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || echo "")
     
     if [ -n "$resolved_ip" ]; then
-        echo "Domain $DOMAIN resolves to: $resolved_ip"
-        if [ "$resolved_ip" = "$server_ip" ]; then
-            echo "✓ DNS is correctly pointing to this server"
-        else
-            echo "⚠ DNS points to $resolved_ip, but this server is $server_ip"
-            echo "Waiting additional 60 seconds for DNS update..."
-            sleep 60
-        fi
+    echo "Domain $DOMAIN resolves to: $resolved_ip"
+    if [ "$resolved_ip" = "$server_ip" ]; then
+        echo "✓ DNS is correctly pointing to this server"
     else
-        echo "⚠ Could not resolve domain. Continuing anyway..."
+        echo "⚠ DNS points to $resolved_ip, but this server is $server_ip"
+        echo "Waiting additional 60 seconds for DNS update..."
+        sleep 60
+    fi
+    else
+    echo "⚠ Could not resolve domain. Continuing anyway..."
     fi
     
     # Try certbot with retries (non-interactive mode)
@@ -305,32 +306,32 @@ if [ -n "$DOMAIN" ]; then
     ssl_success=false
     
     while [ $retry_count -lt $max_retries ]; do
-        echo ""
-        echo "Attempt $((retry_count + 1)) of $max_retries to obtain SSL certificate..."
+    echo ""
+    echo "Attempt $((retry_count + 1)) of $max_retries to obtain SSL certificate..."
         
-        # Run certbot in non-interactive mode
-        # Use --redirect to automatically set up HTTP to HTTPS redirect
-        if sudo certbot --nginx -d $DOMAIN \
-            --non-interactive \
-            --agree-tos \
-            --email admin@$DOMAIN \
-            --redirect \
-            --no-eff-email \
-            --expand \
-            2>&1 | tee /tmp/certbot.log; then
-            echo "✓ SSL certificate obtained successfully!"
-            ssl_success=true
+    # Run certbot in non-interactive mode
+    # Use --redirect to automatically set up HTTP to HTTPS redirect
+    if sudo certbot --nginx -d $DOMAIN \
+        --non-interactive \
+        --agree-tos \
+        --email admin@$DOMAIN \
+        --redirect \
+        --no-eff-email \
+        --expand \
+        2>&1 | tee /tmp/certbot.log; then
+        echo "✓ SSL certificate obtained successfully!"
+        ssl_success=true
+        
+        # Verify certbot updated the Nginx config
+        if grep -q "listen 443" /etc/nginx/sites-enabled/mcp-server 2>/dev/null; then
+            echo "✓ Nginx configuration updated with SSL"
+        else
+            echo "⚠ Certbot did not update Nginx config. Manually adding SSL configuration..."
+            # Backup current config
+            sudo cp /etc/nginx/sites-available/mcp-server /etc/nginx/sites-available/mcp-server.backup
             
-            # Verify certbot updated the Nginx config
-            if grep -q "listen 443" /etc/nginx/sites-enabled/mcp-server 2>/dev/null; then
-                echo "✓ Nginx configuration updated with SSL"
-            else
-                echo "⚠ Certbot did not update Nginx config. Manually adding SSL configuration..."
-                # Backup current config
-                sudo cp /etc/nginx/sites-enabled/mcp-server /etc/nginx/sites-enabled/mcp-server.backup
-                
-                # Add SSL configuration manually with complete security settings
-                sudo tee /etc/nginx/sites-available/mcp-server > /dev/null << NGINX_SSL_EOF
+            # Add SSL configuration manually with complete security settings
+            sudo tee /etc/nginx/sites-available/mcp-server > /dev/null << NGINX_SSL_EOF
 # HTTP server - redirect to HTTPS
 server {
     listen 80;
@@ -382,80 +383,80 @@ server {
     client_max_body_size 100M;
     
     location / {
-        proxy_pass http://127.0.0.1:{{SERVER_PORT}};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        
-        # WebSocket support
-        proxy_set_header X-Forwarded-Host \$host;
-        proxy_set_header X-Forwarded-Port \$server_port;
+    proxy_pass http://127.0.0.1:{{SERVER_PORT}};
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host \$host;
+    proxy_cache_bypass \$http_upgrade;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    
+    # WebSocket support
+    proxy_set_header X-Forwarded-Host \$host;
+    proxy_set_header X-Forwarded-Port \$server_port;
     }
 }
 NGINX_SSL_EOF
-                
-                # Test and reload Nginx
-                sudo nginx -t && sudo systemctl reload nginx && echo "✓ SSL configuration added manually" || {
-                    echo "ERROR: Failed to add SSL config. Restoring backup..."
-                    sudo cp /etc/nginx/sites-enabled/mcp-server.backup /etc/nginx/sites-enabled/mcp-server
-                }
-            fi
-            break
-        else
-            certbot_exit_code=${PIPESTATUS[0]}
-            echo "Certbot exited with code: $certbot_exit_code"
-            retry_count=$((retry_count + 1))
             
-            if [ $retry_count -lt $max_retries ]; then
-                echo "SSL certificate setup failed. Waiting 90 seconds before retry..."
-                sleep 90
-            else
-                echo ""
-                echo "WARNING: SSL certificate setup failed after $max_retries attempts."
-                echo "Common reasons:"
-                echo "  1. DNS is not pointing to this server yet (check with: dig $DOMAIN)"
-                echo "  2. Port 80 is not accessible from the internet (check security group)"
-                echo "  3. Domain already has a certificate on another server"
-                echo "  4. Let's Encrypt rate limits (too many requests)"
-                echo ""
-                echo "You can manually run:"
-                echo "  sudo certbot --nginx -d $DOMAIN"
-                echo ""
-                echo "Certbot logs: /tmp/certbot.log"
-                echo "Let's Encrypt logs: /var/log/letsencrypt/letsencrypt.log"
-            fi
+            # Test and reload Nginx
+            sudo nginx -t && sudo systemctl reload nginx && echo "✓ SSL configuration added manually" || {
+                echo "ERROR: Failed to add SSL config. Restoring backup..."
+                sudo cp /etc/nginx/sites-available/mcp-server.backup /etc/nginx/sites-available/mcp-server
+            }
         fi
+        break
+    else
+        certbot_exit_code=${PIPESTATUS[0]}
+        echo "Certbot exited with code: $certbot_exit_code"
+        retry_count=$((retry_count + 1))
+        
+        if [ $retry_count -lt $max_retries ]; then
+            echo "SSL certificate setup failed. Waiting 90 seconds before retry..."
+            sleep 90
+        else
+            echo ""
+            echo "WARNING: SSL certificate setup failed after $max_retries attempts."
+            echo "Common reasons:"
+            echo "  1. DNS is not pointing to this server yet (check with: dig $DOMAIN)"
+            echo "  2. Port 80 is not accessible from the internet (check security group)"
+            echo "  3. Domain already has a certificate on another server"
+            echo "  4. Let's Encrypt rate limits (too many requests)"
+            echo ""
+            echo "You can manually run:"
+            echo "  sudo certbot --nginx -d $DOMAIN"
+            echo ""
+            echo "Certbot logs: /tmp/certbot.log"
+            echo "Let's Encrypt logs: /var/log/letsencrypt/letsencrypt.log"
+        fi
+    fi
     done
     
     # Verify Nginx configuration after certbot
     echo ""
     echo "Verifying Nginx configuration..."
     sudo nginx -t || {
-        echo "ERROR: Nginx configuration is invalid after certbot!"
-        echo "Checking current Nginx config..."
-        sudo cat /etc/nginx/sites-enabled/mcp-server || true
+    echo "ERROR: Nginx configuration is invalid after certbot!"
+    echo "Checking current Nginx config..."
+    sudo cat /etc/nginx/sites-enabled/mcp-server || true
     }
     
     # Check if Nginx is listening on port 443
     if sudo ss -tlnp | grep -q ":443"; then
-        echo "✓ Nginx is listening on port 443"
+    echo "✓ Nginx is listening on port 443"
     else
-        echo "⚠ Nginx is not listening on port 443"
-        echo "Checking if SSL certificates exist..."
-        if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
-            echo "✓ SSL certificates found at /etc/letsencrypt/live/$DOMAIN/"
-            echo "Attempting to fix Nginx configuration..."
-            
-            # Check if config has SSL block
-            if ! grep -q "listen 443" /etc/nginx/sites-enabled/mcp-server; then
-                echo "Adding SSL configuration to Nginx..."
-                # Create SSL-enabled config with complete security settings
-                sudo tee /etc/nginx/sites-available/mcp-server > /dev/null << NGINX_FIX_EOF
+    echo "⚠ Nginx is not listening on port 443"
+    echo "Checking if SSL certificates exist..."
+    if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+        echo "✓ SSL certificates found at /etc/letsencrypt/live/$DOMAIN/"
+        echo "Attempting to fix Nginx configuration..."
+        
+        # Check if config has SSL block
+        if ! grep -q "listen 443" /etc/nginx/sites-enabled/mcp-server; then
+            echo "Adding SSL configuration to Nginx..."
+            # Create SSL-enabled config with complete security settings
+            sudo tee /etc/nginx/sites-available/mcp-server > /dev/null << NGINX_FIX_EOF
 # HTTP server - redirect to HTTPS
 server {
     listen 80;
@@ -506,68 +507,65 @@ server {
     client_max_body_size 100M;
     
     location / {
-        proxy_pass http://127.0.0.1:{{SERVER_PORT}};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_set_header X-Forwarded-Host \$host;
-        proxy_set_header X-Forwarded-Port \$server_port;
+    proxy_pass http://127.0.0.1:{{SERVER_PORT}};
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host \$host;
+    proxy_cache_bypass \$http_upgrade;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_set_header X-Forwarded-Host \$host;
+    proxy_set_header X-Forwarded-Port \$server_port;
     }
 }
 NGINX_FIX_EOF
-                
-                sudo nginx -t && sudo systemctl reload nginx && echo "✓ SSL configuration fixed!" || {
-                    echo "ERROR: Failed to fix SSL config"
-                    sudo systemctl status nginx || true
-                }
-            fi
-        else
-            echo "ERROR: SSL certificates not found!"
+            
+            sudo nginx -t && sudo systemctl reload nginx && echo "✓ SSL configuration fixed!" || {
+                echo "ERROR: Failed to fix SSL config"
+                sudo systemctl status nginx || true
+            }
         fi
+    else
+        echo "ERROR: SSL certificates not found!"
+    fi
     fi
     
     # Ensure Nginx is running and reloaded
     sudo systemctl reload nginx || sudo systemctl restart nginx || {
-        echo "ERROR: Could not reload/restart Nginx"
-        sudo systemctl status nginx || true
+    echo "ERROR: Could not reload/restart Nginx"
+    sudo systemctl status nginx || true
     }
     
     # Verify Nginx is running
     if sudo systemctl is-active --quiet nginx; then
-        echo "✓ Nginx is running"
-        # Verify ports
-        if sudo ss -tlnp | grep -q ":443"; then
-            echo "✓ Nginx is listening on port 443 (HTTPS)"
-        fi
-        if sudo ss -tlnp | grep -q ":80"; then
-            echo "✓ Nginx is listening on port 80 (HTTP)"
-        fi
+    echo "✓ Nginx is running"
+    # Verify ports
+    if sudo ss -tlnp | grep -q ":443"; then
+        echo "✓ Nginx is listening on port 443 (HTTPS)"
+    fi
+    if sudo ss -tlnp | grep -q ":80"; then
+        echo "✓ Nginx is listening on port 80 (HTTP)"
+    fi
     else
-        echo "ERROR: Nginx is not running after SSL setup"
-        sudo systemctl status nginx || true
+    echo "ERROR: Nginx is not running after SSL setup"
+    sudo systemctl status nginx || true
     fi
     
     if [ "$ssl_success" = true ]; then
-        echo ""
-        echo "=========================================="
-        echo "✓ Nginx and SSL configured successfully!"
-        echo "=========================================="
-        echo "Server is now accessible at:"
-        echo "  - https://$DOMAIN (HTTPS)"
-        echo "  - http://$DOMAIN (redirects to HTTPS)"
+    echo ""
+    echo "=========================================="
+    echo "✓ Nginx and SSL configured successfully!"
+    echo "=========================================="
+    echo "Server is now accessible at:"
+    echo "  - https://$DOMAIN (HTTPS)"
+    echo "  - http://$DOMAIN (redirects to HTTPS)"
     else
         echo ""
         echo "Nginx is configured, but SSL certificate needs to be obtained manually"
         echo "Run: sudo certbot --nginx -d $DOMAIN"
     fi
-else
-    echo "Nginx configured for IP access on port 80"
-    echo "Server accessible at: http://<public-ip>/"
 fi
 
 # Create systemd service
@@ -593,9 +591,10 @@ else
     fi
 fi
 
+# Create systemd service - all online servers use HTTP and run as persistent services
 cat << EOF | sudo tee /etc/systemd/system/mcp-server.service
 [Unit]
-Description=MCP Server
+Description=MCP Server ({{SERVER_TYPE}} with HTTP/OAuth)
 After=network-online.target
 Wants=network-online.target
 
@@ -605,6 +604,9 @@ User=ubuntu
 WorkingDirectory=/opt/mcp-server
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/mcp-server/venv/bin"
 Environment="SERVER_BASE_URL=$SERVER_BASE_URL"
+Environment="MCP_TRANSPORT=http"
+Environment="MCP_PORT=30210"
+Environment="MCP_HOST=0.0.0.0"
 ExecStart={{STARTUP_COMMAND}}
 Restart=always
 RestartSec=10
@@ -631,36 +633,87 @@ echo "Network connectivity confirmed"
 # Wait a bit more for any background processes
 sleep 3
 
-# Quick import test (simplified to save space)
-echo "Testing critical imports..."
+# Verify server files are present
+echo ""
+echo "=========================================="
+echo "=== Verifying MCP Server Files ==="
+echo "=========================================="
 cd /opt/mcp-server
-python3 -c "import sys;sys.path.insert(0,'.');from scikiq_dbutils.mcp_server.wrappers.connection_manager import ConnectionManager;from scikiq_dbutils.handlers.DBConnection import clsDBConnection" && echo "✓ Imports OK" || {
-    echo "WARNING: Some imports failed. Server may have issues."
-}
+echo "Files in /opt/mcp-server:"
+ls -lah
+echo ""
+
+# Check for YAML files if this is an API/Swagger server
+YAML_COUNT=$(find . -maxdepth 1 -name "*.yaml" -type f | wc -l)
+if [ $YAML_COUNT -gt 0 ]; then
+    echo "Found $YAML_COUNT YAML tool file(s):"
+    ls -lh *.yaml
+    echo ""
+fi
+
+# Check for mcp_server_loader.py
+if [ -f "mcp_server_loader.py" ]; then
+    echo "✓ mcp_server_loader.py found"
+else
+    echo "✗ mcp_server_loader.py NOT found"
+fi
+
+# Quick import test based on server type
+echo ""
+if [ "{{SERVER_TYPE}}" = "database" ]; then
+    echo "Testing database-specific imports..."
+    python3 -c "import sys;sys.path.insert(0,'.');from scikiq_dbutils.mcp_server.wrappers.connection_manager import ConnectionManager;from scikiq_dbutils.handlers.DBConnection import clsDBConnection" && echo "✓ Database imports OK" || {
+        echo "WARNING: Some database imports failed. Server may have issues."
+    }
+else
+    echo "Testing API/Swagger server imports..."
+    python3 -c "import mcp,httpx,yaml,starlette,uvicorn" && echo "✓ MCP and HTTP imports OK" || {
+        echo "WARNING: Some imports failed. Server may have issues."
+    }
+fi
 
 # Now start the MCP server service
 echo ""
-echo "Starting MCP server service..."
+echo "=========================================="
+echo "=== Starting MCP Server Service ==="
+echo "=========================================="
+echo "Startup command configured in systemd:"
+grep "ExecStart=" /etc/systemd/system/mcp-server.service
+echo ""
 sudo systemctl start mcp-server
 
 # Wait a moment for service to start
 sleep 5
 
-# Check service status
+# Check service status - all online servers run as HTTP services
 if sudo systemctl is-active --quiet mcp-server; then
-    echo "MCP server started successfully!"
+    echo "✓ MCP {{SERVER_TYPE}} Server started successfully!"
     # Get server IP for display
     DISPLAY_IP=$(curl -s --connect-timeout 2 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || hostname -I | awk '{print $1}' || echo 'server-ip')
     
     if [ -n "$DOMAIN" ]; then
-        echo "Server will be available at:"
+        echo "Server is available at:"
         echo "  - https://$DOMAIN (HTTPS - after SSL certificate is obtained)"
         echo "  - http://$DOMAIN (HTTP - redirects to HTTPS)"
         echo "  - http://${DISPLAY_IP}:30210 (Direct access)"
+        echo ""
+        if [ "{{SERVER_TYPE}}" = "database" ]; then
+            echo "OAuth Admin Interface: https://$DOMAIN/admin/login"
+        else
+            echo "OAuth Metadata: https://$DOMAIN/.well-known/oauth-authorization-server"
+            echo "Health Check: https://$DOMAIN/health"
+        fi
     else
         echo "Server is accessible at:"
         echo "  - http://${DISPLAY_IP}:80 (via Nginx)"
         echo "  - http://${DISPLAY_IP}:30210 (Direct access)"
+        echo ""
+        if [ "{{SERVER_TYPE}}" = "database" ]; then
+            echo "OAuth Admin Interface: http://${DISPLAY_IP}/admin/login"
+        else
+            echo "OAuth Metadata: http://${DISPLAY_IP}/.well-known/oauth-authorization-server"
+            echo "Health Check: http://${DISPLAY_IP}/health"
+        fi
     fi
 else
     echo "Warning: MCP server service may not have started correctly"

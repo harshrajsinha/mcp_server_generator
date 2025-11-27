@@ -182,7 +182,7 @@ class OnlineDeployer:
     ]
 }'''
 
-    def _prepare_server_files(self, server_type, server_path, config_path=None, is_online_deployment=False):
+    def _prepare_server_files(self, server_type, server_path, config_path=None, is_online_deployment=False, yaml_file=None):
         """
         Prepare server files based on server type for deployment
         
@@ -191,6 +191,7 @@ class OnlineDeployer:
             server_path: Path to server files directory
             config_path: Path to config file (for database servers)
             is_online_deployment: True if deploying online (AWS), False for local deployment
+            yaml_file: Specific YAML filename to copy (for API/Swagger servers, optional)
             
         Returns:
             Dictionary of files to deploy
@@ -369,30 +370,65 @@ class OnlineDeployer:
             # API MCP server files
             self.log(f"Preparing API MCP server files from {server_path}")
             
-            # Copy mcp_server_loader.py
-            loader_path = base_path / 'mcp_server_loader.py'
-            if not loader_path.exists():
-                loader_path = Path(__file__).parent / 'generated_servers' / 'mcp_server_loader.py'
-            if loader_path.exists():
-                with open(loader_path, 'r', encoding='utf-8') as f:
-                    server_files['mcp_server_loader.py'] = f.read()
+            # Copy appropriate loader based on deployment type
+            if is_online_deployment:
+                # For online deployment: generate HTTP loader with OAuth and admin interface
+                self.log(f"  Generating HTTP admin loader for online deployment...")
+                admin_loader_code = self._generate_admin_loader_code()
+                server_files['mcp_server_loader.py'] = admin_loader_code
+                self.log(f"  Added mcp_server_loader.py (HTTP with OAuth and admin interface)")
+            else:
+                # For local deployment: use stdio loader
+                loader_path = base_path / 'mcp_server_loader.py'
+                if not loader_path.exists():
+                    loader_path = Path(__file__).parent / 'generated_servers' / 'mcp_server_loader.py'
+                if loader_path.exists():
+                    with open(loader_path, 'r', encoding='utf-8') as f:
+                        server_files['mcp_server_loader.py'] = f.read()
+                        self.log(f"  Added mcp_server_loader.py (stdio)")
             
-            # Copy all YAML tool files
-            yaml_files = list(base_path.glob('tools_*.yaml'))
-            if not yaml_files:
-                yaml_files = list(Path(__file__).parent / 'generated_servers').glob('tools_*.yaml')
-            
-            for yaml_file in yaml_files:
-                with open(yaml_file, 'r', encoding='utf-8') as f:
-                    server_files[yaml_file.name] = f.read()
+            # Copy specific YAML tool file if provided, otherwise copy all
+            if yaml_file:
+                # Copy only the specific YAML file
+                yaml_path = base_path / yaml_file
+                if yaml_path.exists():
+                    with open(yaml_path, 'r', encoding='utf-8') as f:
+                        server_files[yaml_file] = f.read()
+                        self.log(f"  Added specific YAML file: {yaml_file}")
+                else:
+                    self.log(f"  WARNING: Specified YAML file not found: {yaml_file}", "WARNING")
+            else:
+                # Fallback: Copy all YAML tool files (legacy behavior)
+                yaml_files = list(base_path.glob('tools_*.yaml'))
+                if not yaml_files:
+                    yaml_files = list((Path(__file__).parent / 'generated_servers').glob('tools_*.yaml'))
+                
+                for yaml_file_path in yaml_files:
+                    with open(yaml_file_path, 'r', encoding='utf-8') as f:
+                        server_files[yaml_file_path.name] = f.read()
+                        self.log(f"  Added YAML file: {yaml_file_path.name}")
             
             # Copy requirements
             req_path = base_path / 'requirements.txt'
             if not req_path.exists():
-                server_files['requirements.txt'] = "mcp\nhttpx\npyyaml\n"
+                if is_online_deployment:
+                    # Include all dependencies for HTTP server with OAuth
+                    server_files['requirements.txt'] = """mcp
+httpx
+pyyaml
+starlette
+uvicorn[standard]
+click
+python-dotenv
+"""
+                    self.log(f"  Added default requirements.txt (with HTTP and OAuth support)")
+                else:
+                    server_files['requirements.txt'] = "mcp\nhttpx\npyyaml\n"
+                    self.log(f"  Added default requirements.txt (stdio)")
             else:
                 with open(req_path, 'r', encoding='utf-8') as f:
                     server_files['requirements.txt'] = f.read()
+                    self.log(f"  Added requirements.txt")
         
         return server_files
     
@@ -551,6 +587,330 @@ if __name__ == "__main__":
     main()
 '''
     
+    def _generate_admin_loader_code(self):
+        """Generate HTTP MCP server loader with OAuth admin interface for Swagger/API servers"""
+        # Read the admin loader template from the database server
+        admin_template_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils_online' / 'remote_mcp_server_admin.py'
+        
+        if admin_template_path.exists():
+            try:
+                with open(admin_template_path, 'r', encoding='utf-8') as f:
+                    template_code = f.read()
+                
+                # Adapt the database server code for YAML-based tools
+                # Replace the FastMCPServer class to use YAML tool loading instead of database connections
+                adapted_code = template_code.replace(
+                    'from scikiq_dbutils.mcp_server.config.manager import ConfigManager',
+                    '# ConfigManager not needed for YAML-based tools'
+                ).replace(
+                    'from scikiq_dbutils.mcp_server.config.ini_parser import IniConfigParser',
+                    '# IniConfigParser not needed for YAML-based tools'
+                ).replace(
+                    'from scikiq_dbutils.mcp_server.wrappers.connection_manager import ConnectionManager',
+                    '# ConnectionManager not needed for YAML-based tools'
+                ).replace(
+                    'from scikiq_dbutils.mcp_server.tools.registry import ToolRegistry',
+                    '# ToolRegistry not needed for YAML-based tools'
+                ).replace(
+                    'from scikiq_dbutils.mcp_server.wrappers.db_wrapper import DatabaseWrapper',
+                    '# DatabaseWrapper not needed for YAML-based tools'
+                )
+                
+                # Add YAML tool loader class
+                yaml_loader_class = '''
+
+class YAMLToolLoader:
+    """Load MCP tools from YAML files"""
+    
+    def __init__(self, yaml_paths: List[str]):
+        self.yaml_paths = yaml_paths
+        self.tools = []
+        self.load_tools()
+    
+    def load_tools(self):
+        """Load tools from all YAML files"""
+        for yaml_path in self.yaml_paths:
+            if not os.path.exists(yaml_path):
+                logger.warning(f"YAML file not found: {yaml_path}")
+                continue
+            
+            try:
+                with open(yaml_path, 'r', encoding='utf-8') as f:
+                    data = yaml.safe_load(f)
+                
+                if not data or 'tools' not in data:
+                    logger.warning(f"No tools found in {yaml_path}")
+                    continue
+                
+                tools_data = data['tools']
+                base_url = data.get('base_url', 'http://localhost:8000')
+                
+                for tool_data in tools_data:
+                    # Handle both snake_case and camelCase input schema
+                    input_schema = tool_data.get('input_schema') or tool_data.get('inputSchema') or {}
+                    
+                    # Ensure type: object is present
+                    if 'type' not in input_schema:
+                        input_schema['type'] = 'object'
+                        
+                    tool = {
+                        "name": tool_data['name'],
+                        "description": tool_data.get('description', ''),
+                        "inputSchema": input_schema,
+                        "endpoint": tool_data.get('endpoint', ''),
+                        "method": tool_data.get('method', 'GET'),
+                        "base_url": base_url
+                    }
+                    self.tools.append(tool)
+                
+                logger.info(f"Loaded {len(tools_data)} tools from {yaml_path}")
+            except Exception as e:
+                logger.error(f"Error loading YAML file {yaml_path}: {e}")
+    
+    async def list_tools(self):
+        """List all loaded tools"""
+        return {"tools": [
+            {
+                "name": tool["name"],
+                "description": tool["description"],
+                "inputSchema": tool["inputSchema"]
+            }
+            for tool in self.tools
+        ]}
+    
+    async def call_tool(self, name: str, arguments: dict):
+        """Call a tool by name"""
+        tool = next((t for t in self.tools if t["name"] == name), None)
+        if not tool:
+            return {
+                "content": [{"type": "text", "text": f"Tool '{name}' not found"}],
+                "isError": True
+            }
+        
+        try:
+            base_url = tool['base_url'].rstrip('/')
+            endpoint = tool['endpoint'].lstrip('/')
+            url = f"{base_url}/{endpoint}"
+            method = tool['method'].upper()
+            
+            async with httpx.AsyncClient() as client:
+                if method == "GET":
+                    response = await client.get(url, params=arguments, timeout=30.0)
+                elif method == "POST":
+                    response = await client.post(url, json=arguments, timeout=30.0)
+                elif method == "PUT":
+                    response = await client.put(url, json=arguments, timeout=30.0)
+                elif method == "DELETE":
+                    response = await client.delete(url, params=arguments, timeout=30.0)
+                else:
+                    return {
+                        "content": [{"type": "text", "text": f"Unsupported HTTP method: {method}"}],
+                        "isError": True
+                    }
+                
+                response.raise_for_status()
+                result_text = response.text
+                
+                return {
+                    "content": [{"type": "text", "text": result_text}],
+                    "isError": False
+                }
+        except Exception as e:
+            return {
+                "content": [{"type": "text", "text": f"Error calling tool: {str(e)}"}],
+                "isError": True
+            }
+'''
+                
+                # Replace FastMCPServer class to use YAML loader
+                fast_mcp_replacement = '''
+class FastMCPServer:
+    """MCP server using YAML-loaded tools"""
+    
+    def __init__(self, name: str, yaml_paths: List[str]):
+        self.name = name
+        self.tool_loader = YAMLToolLoader(yaml_paths)
+        self._tools = self.tool_loader.tools
+    
+    async def list_tools(self):
+        """List available tools"""
+        return await self.tool_loader.list_tools()
+    
+    async def call_tool(self, name: str, arguments: dict):
+        """Call a tool with arguments"""
+        return await self.tool_loader.call_tool(name, arguments)
+'''
+                
+                # Insert YAML loader class before FastMCPServer
+                adapted_code = adapted_code.replace(
+                    'class FastMCPServer:',
+                    yaml_loader_class + '\n' + fast_mcp_replacement + '\n\nclass FastMCPServer_OLD:'
+                )
+                
+                # Update RemoteMCPServerWithAdmin to accept YAML paths
+                adapted_code = adapted_code.replace(
+                    'config_path: str | None = None,',
+                    'yaml_paths: list[str] | None = None,'
+                ).replace(
+                    'self.config_path = config_path or os.getenv("CONFIG_PATH", "config.ini")',
+                    'self.yaml_paths = yaml_paths or []'
+                ).replace(
+                    'self.mcp_server = FastMCPServer("SciKiq DB Utils", self.config_path)',
+                    'self.mcp_server = FastMCPServer("MCP API Server", self.yaml_paths)'
+                ).replace(
+                    '"config_path": self.config_path',
+                    '"yaml_paths": self.yaml_paths'
+                ).replace(
+                    'logger.info(f"🔧 Config: {self.config_path}")',
+                    'logger.info(f"🔧 YAML Files: {self.yaml_paths}")'
+                ).replace(
+                    '<p><strong>Database Tools:</strong>',
+                    '<p><strong>MCP Tools:</strong>'
+                ).replace(
+                    'len(self.mcp_server.tool_registry._tools)',
+                    'len(self.mcp_server._tools)'
+                )
+                
+                # Update main() function to accept YAML files as an option (not positional argument)
+                # This allows --yaml-files to come after --host, --port, --db-path
+                adapted_code = adapted_code.replace(
+                    '@click.option("--config-path",',
+                    '@click.option("--yaml-files", multiple=True, type=click.Path(exists=True), help="YAML tool files to load")\n@click.option("--config-path-unused",'
+                ).replace(
+                    'def main(host: str, port: int, config_path: str, db_path: str, create_admin: str, debug: bool)',
+                    'def main(host: str, port: int, config_path_unused: str, db_path: str, create_admin: str, debug: bool, yaml_files: tuple)'
+                ).replace(
+                    '"""Remote MCP Server with Admin Interface"""',
+                    '"""MCP Server with Admin Interface - Load tools from YAML files"""'
+                ).replace(
+                    'config_path=config_path,',
+                    'yaml_paths=list(yaml_files) if yaml_files else [],'
+                )
+                
+                # Add yaml and httpx import
+                adapted_code = adapted_code.replace(
+                    'import uvicorn',
+                    'import uvicorn\nimport yaml\nimport httpx'
+                )
+                
+                return adapted_code
+                
+            except Exception as e:
+                self.log(f"Error reading admin template: {e}", "WARNING")
+                # Fall back to minimal implementation
+                pass
+        
+        # Fallback: Return minimal HTTP server with admin interface
+        return self._generate_minimal_admin_loader()
+    
+    def _generate_minimal_admin_loader(self):
+        """Generate a minimal HTTP MCP server with admin interface"""
+        return '''#!/usr/bin/env python3
+"""
+Minimal MCP Server with Admin Interface
+This is a fallback implementation when the full template is not available.
+"""
+import asyncio
+import base64
+import hashlib
+import json
+import logging
+import os
+import secrets
+import sqlite3
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlencode
+
+import click
+import httpx
+import uvicorn
+import yaml
+from starlette.applications import Starlette
+from starlette.middleware.cors import CORSMiddleware
+from starlette.routing import Route
+from starlette.responses import JSONResponse, RedirectResponse, HTMLResponse
+from starlette.requests import Request
+
+logger = logging.getLogger(__name__)
+
+# Minimal implementation - user should deploy with full template
+print("⚠️  WARNING: Using minimal admin loader. For full features, ensure admin template is available.")
+
+@click.command()
+@click.option('--host', default='0.0.0.0', help='Host to bind to')
+@click.option('--port', default=30210, type=int, help='Port to bind to')
+@click.option('--db-path', default='mcp_auth.db', help='Path to SQLite database')
+@click.option('--debug', is_flag=True, help='Enable debug mode')
+@click.option('--create-admin', help='Create admin user (format: username:password:email)')
+@click.option('--yaml-files', multiple=True, type=click.Path(exists=True), help='YAML tool files to load')
+def main(host, port, db_path, debug, create_admin, yaml_files):
+    """Minimal MCP Server - Please use full template for production"""
+    
+    logging.basicConfig(
+        level=logging.DEBUG if debug else logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    # Handle admin user creation
+    if create_admin:
+        print(f"⚠️  Admin user creation not implemented in minimal loader")
+        print(f"   Requested: {create_admin}")
+        print(f"   Please redeploy with full admin template for this feature")
+        return
+    
+    print(f"Starting minimal MCP server on {host}:{port}")
+    print(f"Database path: {db_path}")
+    print(f"YAML files: {yaml_files if yaml_files else 'None'}")
+    print("⚠️  This is a minimal implementation. Deploy with full admin template for OAuth and admin interface.")
+    
+    # Simple health check endpoint
+    async def health(request):
+        return JSONResponse({
+            "status": "minimal_server", 
+            "message": "Use full admin template for production",
+            "yaml_files": list(yaml_files) if yaml_files else [],
+            "warning": "This is a fallback minimal loader. Admin interface not available."
+        })
+    
+    # Minimal admin login page (just shows warning)
+    async def admin_login(request):
+        html = """
+<!DOCTYPE html>
+<html>
+<head><title>Minimal MCP Server</title></head>
+<body style="font-family: Arial; max-width: 600px; margin: 100px auto; padding: 20px;">
+    <h2>⚠️ Minimal MCP Server</h2>
+    <p>This server is running with a minimal fallback loader.</p>
+    <p><strong>Admin interface is not available.</strong></p>
+    <p>To enable the full admin interface with OAuth:</p>
+    <ol>
+        <li>Ensure the database admin template exists</li>
+        <li>Redeploy the server</li>
+    </ol>
+    <p><a href="/health">Check Server Health</a></p>
+</body>
+</html>"""
+        return HTMLResponse(html)
+    
+    app = Starlette(
+        debug=debug, 
+        routes=[
+            Route("/health", health),
+            Route("/admin/login", admin_login, methods=["GET", "POST"]),
+        ]
+    )
+    
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
+    server = uvicorn.Server(config)
+    asyncio.run(server.serve())
+
+if __name__ == "__main__":
+    main()
+'''
+    
     def generate_setup_script(self, server_files, python_version="3.10", server_type=None, domain=None, public_ip=None,
                              s3_bucket=None, s3_prefix=None, aws_access_key=None, aws_secret_key=None, region=None,
                              admin_username=None, admin_password=None):
@@ -590,11 +950,16 @@ if __name__ == "__main__":
         elif server_type in ['api', 'codebase', 'swagger']:
             # Find YAML files
             yaml_files = [f for f in server_files.keys() if f.endswith('.yaml')]
+            self.log(f"Found {len(yaml_files)} YAML files for startup command: {yaml_files}", "INFO")
             if yaml_files:
-                yaml_args = ' '.join([f"/opt/mcp-server/{f}" for f in yaml_files])
-                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py {yaml_args}"
+                # Build --yaml-files arguments (one --yaml-files per file)
+                yaml_args = ' '.join([f"--yaml-files /opt/mcp-server/{f}" for f in yaml_files])
+                # Use HTTP mode with OAuth admin interface (same as database server)
+                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db {yaml_args}"
+                self.log(f"Generated startup command (HTTP with OAuth admin): {startup_command}", "INFO")
             else:
-                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py"
+                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db"
+                self.log("WARNING: No YAML files found, starting server with no tools", "WARNING")
         else:
             # Default: look for app.py or mcp_server_loader.py
             if 'app.py' in server_files:
@@ -805,8 +1170,9 @@ echo "=========================================="
                 script_template = script_template.replace('{{FILE_DATA_JSON_B64}}', file_data_json_b64)
                 self.log(f"Embedded {len(file_data)} file(s) in setup script ({len(file_data_json_b64)} bytes base64)", "INFO")
         
-        # Generate admin user credentials if needed (for online database deployments)
-        if server_type == 'database' and 'remote_mcp_server_admin.py' in server_files:
+        # Generate admin user credentials if needed (for online deployments with admin interface)
+        if (server_type == 'database' and 'remote_mcp_server_admin.py' in server_files) or \
+           (server_type in ['api', 'codebase', 'swagger'] and 'mcp_server_loader.py' in server_files):
             import secrets
             import string
             if not admin_username:
@@ -820,6 +1186,13 @@ echo "=========================================="
             admin_email = f"{admin_username}@mcp-server.local"
             # Properly escape the password for shell command
             import shlex
+            
+            # Determine which script to use for admin creation
+            if server_type == 'database':
+                admin_script = "remote_mcp_server_admin.py"
+            else:
+                admin_script = "mcp_server_loader.py"
+            
             admin_creation_cmd = f"""
 # Create admin user for OAuth
 echo ""
@@ -836,7 +1209,7 @@ sudo chown -R ubuntu:ubuntu /opt/mcp-server
 chmod 755 /opt/mcp-server
 
 # Create database file with proper permissions
-python3 remote_mcp_server_admin.py --create-admin {shlex.quote(admin_username)}:{shlex.quote(admin_password)}:{shlex.quote(admin_email)} || echo "Admin user may already exist"
+python3 {admin_script} --create-admin {shlex.quote(admin_username)}:{shlex.quote(admin_password)}:{shlex.quote(admin_email)} || echo "Admin user may already exist"
 
 # Fix database file permissions (in case it was created)
 if [ -f "/opt/mcp-server/mcp_auth.db" ]; then
@@ -849,12 +1222,13 @@ echo ""
 echo "=========================================="
 echo "OAuth Admin Credentials"
 echo "=========================================="
-echo "Username: {admin_username}"
-echo "Password: {admin_password}"
-echo "Email: {admin_email}"
+echo 'Username: {admin_username}'
+echo 'Password: {admin_password}'
+echo 'Email: {admin_email}'
 echo ""
 echo "⚠️  IMPORTANT: Save these credentials securely!"
 echo "You will need these to login to the admin panel."
+echo "Admin login URL: https://{{{{DOMAIN}}}}/admin/login (or http://SERVER_IP/admin/login)"
 echo "=========================================="
 echo ""
 """
@@ -885,7 +1259,8 @@ echo ""
         
         # Update nginx proxy port for online database deployments
         # Server runs on 30210 internally, Nginx proxies from port 80 to 30210
-        if server_type == 'database' and 'remote_mcp_server_admin.py' in server_files:
+        if (server_type == 'database' and 'remote_mcp_server_admin.py' in server_files) or \
+           (server_type in ['swagger', 'api', 'codebase'] and 'mcp_server_loader.py' in server_files):
             script = script.replace('{{SERVER_PORT}}', '30210')
             script = script.replace('echo "Server is running on port 8000"', 'echo "Server is running on port 30210 (internal), accessible via Nginx on port 80"')
         else:
@@ -1142,7 +1517,7 @@ echo ""
             ssh.close()
 
     def deploy_to_aws(self, aws_access_key, aws_secret_key, region, instance_type, server_files, 
-                     server_type=None, server_path=None, config_path=None, domain=None):
+                     server_type=None, server_path=None, config_path=None, domain=None, server_name=None, yaml_file=None):
         # Initialize admin credentials to None - will be set if database deployment
         admin_username = None
         admin_password = None
@@ -1159,6 +1534,8 @@ echo ""
             server_path: Path to server files on local machine
             config_path: Path to config file (for database servers)
             domain: Domain name for Route 53 setup
+            server_name: Name for the EC2 instance (defaults to 'MCP-Server')
+            yaml_file: Specific YAML filename to copy (for API/Swagger servers)
         """
         self.log(f"Connecting to AWS ({region})...")
         
@@ -1198,7 +1575,7 @@ echo ""
             # Prepare server files based on server type
             if server_type and server_path:
                 # For AWS deployment, it's an online deployment
-                server_files = self._prepare_server_files(server_type, server_path, config_path, is_online_deployment=True)
+                server_files = self._prepare_server_files(server_type, server_path, config_path, is_online_deployment=True, yaml_file=yaml_file)
                 self.log(f"Prepared {len(server_files)} files for {server_type} server (online deployment)")
                 # Log file names for debugging
                 for filename in server_files.keys():
@@ -1228,7 +1605,8 @@ echo ""
             # Generate admin credentials for online database deployments
             admin_username = None
             admin_password = None
-            if server_type == 'database' and 'remote_mcp_server_admin.py' in server_files:
+            if (server_type == 'database' and 'remote_mcp_server_admin.py' in server_files) or \
+               (server_type in ['swagger', 'api', 'codebase'] and 'mcp_server_loader.py' in server_files):
                 import secrets
                 import string
                 admin_username = 'admin'
@@ -1310,6 +1688,8 @@ echo ""
             self.log(f"Using AMI: {image_id}", "INFO")
             
             self.log("Creating EC2 instance...", "INFO")
+            instance_name = server_name if server_name else 'MCP-Server'
+            self.log(f"Instance will be named: {instance_name}", "INFO")
             instances = ec2_resource.create_instances(
                 ImageId=image_id,
                 MinCount=1,
@@ -1320,7 +1700,7 @@ echo ""
                 UserData=user_data,
                 TagSpecifications=[{
                     'ResourceType': 'instance',
-                    'Tags': [{'Key': 'Name', 'Value': 'MCP-Server'}]
+                    'Tags': [{'Key': 'Name', 'Value': instance_name}]
                 }]
             )
             

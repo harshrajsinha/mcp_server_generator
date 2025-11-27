@@ -1432,6 +1432,51 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.3);
         }
+
+        /* Range Slider Styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            border: 2px solid var(--anthropic-purple);
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.6);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            border: 2px solid var(--anthropic-purple);
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.6);
+        }
     </style>
 </head>
 
@@ -1606,8 +1651,8 @@
                         <ol style="margin: 0; color: rgba(255, 255, 255, 0.8); line-height: 1.6;">
                             <li>Choose your MCP server type above (Swagger, Codebase, or Database)</li>
                             <li>Import/scan APIs and run "Bulk Analyze" to evaluate them</li>
-                            <li>Click "Install Locally" from the analysis results</li>
-                            <li>Run the generated installer script on your machine</li>
+                            <li>Click "Convert X APIs to MCP Tools" from the analysis results</li>
+                            <li>Choose deployment: Local (Claude Desktop) or Online (AWS/Azure/SSH)</li>
                         </ol>
                     </div>
                 </div>
@@ -1655,10 +1700,10 @@
         <!-- Center: Main Content -->
         <div class="main-content">
             <div class="tabs-container">
-                <div class="tab active" onclick="switchTab('code')">
+                <div class="tab" id="code-viewer-tab" onclick="switchTab('code')" style="display: none;">
                     <i class="fas fa-code"></i> Code Viewer
                 </div>
-                <div class="tab" onclick="switchTab('apis')">
+                <div class="tab active" onclick="switchTab('apis')">
                     <i class="fas fa-server"></i> APIs Discovered
                 </div>
                 <div class="tab" onclick="switchTab('mcp')">
@@ -1670,7 +1715,7 @@
             </div>
 
             <!-- Code Tab -->
-            <div id="code-tab" class="tab-content active">
+            <div id="code-tab" class="tab-content">
                 <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <i class="fas fa-file-code" style="color: var(--scikiq-light-blue);"></i>
@@ -1687,7 +1732,7 @@
             </div>
 
             <!-- APIs Tab -->
-            <div id="apis-tab" class="tab-content">
+            <div id="apis-tab" class="tab-content active">
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="font-family: 'Space Grotesk', sans-serif; color: var(--anthropic-orange);">
                         <i class="fas fa-radar"></i> Discovered APIs
@@ -1714,6 +1759,35 @@
                             <i class="fas fa-star"></i> 80%+ Only
                         </button>
                     </div>
+                    
+                    <!-- Minimum Score Filter -->
+                    <div style="background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem;">
+                            <label style="color: rgba(255, 255, 255, 0.9); font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-filter" style="color: var(--anthropic-purple);"></i>
+                                Filter by Score:
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 0.8rem;">
+                                <span style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem;">Min:</span>
+                                <span id="apiMinScoreDisplay" style="background: var(--anthropic-purple); color: white; padding: 0.3rem 0.8rem; border-radius: 6px; font-weight: 700; font-size: 1rem; min-width: 50px; text-align: center;">0%</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <input type="range" id="apiMinScoreSlider" min="0" max="100" value="0" step="5"
+                                oninput="updateAPIScoreFilter(this.value)"
+                                style="flex: 1; height: 8px; border-radius: 5px; background: linear-gradient(to right, #EF4444 0%, #F59E0B 25%, #10B981 50%, #059669 100%); outline: none; -webkit-appearance: none; cursor: pointer;">
+                            <button onclick="resetAPIScoreFilter()" class="action-btn"
+                                style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255, 255, 255, 0.1); min-width: auto;">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.8rem; color: rgba(255, 255, 255, 0.5);">
+                            <span>0%</span>
+                            <span>50%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                    
                     <div
                         style="display: flex; align-items: center; gap: 1rem; padding: 0.5rem; background: rgba(0, 0, 0, 0.2); border-radius: 6px;">
                         <span style="color: rgba(255, 255, 255, 0.9); font-weight: 600;">
@@ -1942,9 +2016,17 @@
                 const response = await fetch('/api/config');
                 if (response.ok) {
                     appConfig = await response.json();
-                    // Update form fields with config values
-                    document.getElementById('projectPath').value = appConfig.default_project_path || '';
-                    document.getElementById('sourceFile').value = appConfig.default_source_file || '';
+                    // Update form fields with config values (if they exist)
+                    const projectPathEl = document.getElementById('projectPath');
+                    const sourceFileEl = document.getElementById('sourceFile');
+                    
+                    if (projectPathEl) {
+                        projectPathEl.value = appConfig.default_project_path || '';
+                    }
+                    if (sourceFileEl) {
+                        sourceFileEl.value = appConfig.default_source_file || '';
+                    }
+                    
                     // Update default config
                     selectedProjectConfig.project_path = appConfig.default_project_path || '';
                     selectedProjectConfig.source_file = appConfig.default_source_file || '';
@@ -1978,14 +2060,9 @@
                 <div class="input-modal" id="swaggerModal">
                     <div class="input-modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
                         <h3><i class="fas fa-link"></i> Swagger/OpenAPI Configuration</h3>
-                        <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
+                        <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1rem;">
                             Import API endpoints from Swagger/OpenAPI specification
                         </p>
-
-                        <!-- Required Fields -->
-                        <div style="background: rgba(255, 111, 0, 0.1); border-left: 3px solid var(--anthropic-orange); padding: 1rem; margin-bottom: 1.5rem; border-radius: 4px;">
-                            <strong style="color: var(--anthropic-orange);">Required</strong>
-                        </div>
 
                         <div class="input-group">
                             <label>Swagger/OpenAPI URL <span style="color: var(--anthropic-orange);">*</span></label>
@@ -2003,42 +2080,59 @@
                             </small>
                         </div>
 
-                        <!-- Authentication Section -->
-                        <div style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3B82F6; padding: 1rem; margin: 1.5rem 0; border-radius: 4px;">
-                            <strong style="color: #3B82F6;">Authentication (Optional)</strong>
+                        <!-- OAuth Server Configuration -->
+                        <div style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8B5CF6; padding: 0.6rem 1rem; margin: 1rem 0 0.5rem 0; border-radius: 4px;">
+                            <strong style="color: #8B5CF6; font-size: 0.95rem;">OAuth Server (For Remote Deployment)</strong>
                         </div>
 
                         <div class="input-group">
-                            <label>Authentication Type</label>
-                            <select id="authType" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); color: white; padding: 0.75rem; border-radius: 8px; width: 100%;">
-                                <option value="none">None</option>
-                                <option value="bearer">Bearer Token</option>
-                                <option value="api_key">API Key</option>
-                                <option value="basic">Basic Auth</option>
-                            </select>
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="enableOAuthSwagger" style="margin-right: 0.5rem; width: auto;" />
+                                <span>Enable OAuth 2.1 Authentication</span>
+                            </label>
+                            <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                OAuth server will be automatically configured when MCP server is deployed. Client registration happens at runtime.
+                            </small>
                         </div>
 
-                        <div class="input-group" id="authTokenGroup" style="display: none;">
-                            <label>Token/API Key</label>
-                            <input type="password" id="authToken" placeholder="Enter your token or API key" />
+                        <!-- Authentication Section -->
+                        <div style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3B82F6; padding: 0.6rem 1rem; margin: 1rem 0 0.5rem 0; border-radius: 4px;">
+                            <strong style="color: #3B82F6; font-size: 0.95rem;">Authentication (Optional)</strong>
                         </div>
 
-                        <div class="input-group" id="authUserGroup" style="display: none;">
-                            <label>Username</label>
-                            <input type="text" id="authUser" placeholder="Enter username" />
-                        </div>
+                        <form autocomplete="off" onsubmit="return false;">
+                            <div class="input-group" style="margin-bottom: 0.75rem;">
+                                <label>Authentication Type</label>
+                                <select id="authType" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); color: white; padding: 0.75rem; border-radius: 8px; width: 100%;">
+                                    <option value="none">None</option>
+                                    <option value="bearer">Bearer Token</option>
+                                    <option value="api_key">API Key</option>
+                                    <option value="basic">Basic Auth</option>
+                                </select>
+                            </div>
 
-                        <div class="input-group" id="authPassGroup" style="display: none;">
-                            <label>Password</label>
-                            <input type="password" id="authPass" placeholder="Enter password" />
-                        </div>
+                            <div class="input-group" id="authTokenGroup" style="display: none;">
+                                <label>Token/API Key</label>
+                                <input type="password" id="authToken" placeholder="Enter your token or API key" autocomplete="off" />
+                            </div>
+
+                            <div class="input-group" id="authUserGroup" style="display: none;">
+                                <label>Username</label>
+                                <input type="text" id="authUser" placeholder="Enter username" autocomplete="username" />
+                            </div>
+
+                            <div class="input-group" id="authPassGroup" style="display: none;">
+                                <label>Password</label>
+                                <input type="password" id="authPass" placeholder="Enter password" autocomplete="current-password" />
+                            </div>
+                        </form>
 
                         <!-- SSL/TLS Section -->
-                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--success-green); padding: 1rem; margin: 1.5rem 0; border-radius: 4px;">
-                            <strong style="color: var(--success-green);">SSL/TLS Configuration</strong>
+                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--success-green); padding: 0.6rem 1rem; margin: 1rem 0 0.5rem 0; border-radius: 4px;">
+                            <strong style="color: var(--success-green); font-size: 0.95rem;">SSL/TLS Configuration</strong>
                         </div>
 
-                        <div class="input-group">
+                        <div class="input-group" style="margin-bottom: 0.75rem;">
                             <label style="display: flex; align-items: center; cursor: pointer;">
                                 <input type="checkbox" id="verifySsl" checked style="margin-right: 0.5rem; width: auto;" />
                                 <span>Verify SSL Certificate</span>
@@ -2057,8 +2151,8 @@
                         </div>
 
                         <!-- Additional Options -->
-                        <div style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8B5CF6; padding: 1rem; margin: 1.5rem 0; border-radius: 4px;">
-                            <strong style="color: #8B5CF6;">Additional Options</strong>
+                        <div style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8B5CF6; padding: 0.6rem 1rem; margin: 1rem 0 0.5rem 0; border-radius: 4px;">
+                            <strong style="color: #8B5CF6; font-size: 0.95rem;">Additional Options</strong>
                         </div>
 
                         <div class="input-group">
@@ -2104,6 +2198,8 @@
             });
         }
 
+        // OAuth fields are auto-configured at runtime, no manual toggle needed
+
         function closeSwaggerModal() {
             const modal = document.getElementById('swaggerModal');
             if (modal) modal.remove();
@@ -2112,21 +2208,64 @@
         function showCodebaseModal() {
             const modalHTML = `
                 <div class="input-modal" id="codebaseModal">
-                    <div class="input-modal-content">
+                    <div class="input-modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
                         <h3><i class="fas fa-folder-open"></i> Browse Codebase</h3>
                         <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
                             Scan your local project or GitHub repository for API endpoints
                         </p>
-                        <div class="input-group">
-                            <label>Project Path</label>
-                            <input type="text" id="projectPath" placeholder="C:/demo/my-api-project or /path/to/project" value="" />
-                            <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
-                                Local path or GitHub repository URL
-                            </small>
+
+                        <!-- Source Type Selection -->
+                        <div style="background: rgba(255, 111, 0, 0.1); border-left: 3px solid var(--anthropic-orange); padding: 1rem; margin-bottom: 1.5rem; border-radius: 4px;">
+                            <strong style="color: var(--anthropic-orange);">Source Type</strong>
                         </div>
+
+                        <div class="input-group">
+                            <label>Codebase Source</label>
+                            <select id="codebaseSourceType" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); color: white; padding: 0.75rem; border-radius: 8px; width: 100%;" onchange="toggleCodebaseSource()">
+                                <option value="local">Local Folder</option>
+                                <option value="github">GitHub Repository</option>
+                            </select>
+                        </div>
+
+                        <!-- Local Path Fields -->
+                        <div id="localPathFields">
+                            <div class="input-group">
+                                <label>Project Path <span style="color: var(--anthropic-orange);">*</span></label>
+                                <input type="text" id="projectPath" placeholder="C:/demo/my-api-project or /path/to/project" value="" />
+                                <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                    Full path to your local project folder
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- GitHub Fields -->
+                        <div id="githubFields" style="display: none;">
+                            <div class="input-group">
+                                <label>GitHub Repository URL <span style="color: var(--anthropic-orange);">*</span></label>
+                                <input type="text" id="githubRepoUrl" placeholder="https://github.com/owner/repo" />
+                                <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                    Full GitHub repository URL
+                                </small>
+                            </div>
+                            <div class="input-group">
+                                <label>Branch (Optional)</label>
+                                <input type="text" id="githubBranch" placeholder="main" value="main" />
+                                <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                    Repository branch to scan
+                                </small>
+                            </div>
+                            <div class="input-group">
+                                <label>GitHub Token (For Private Repos)</label>
+                                <input type="password" id="githubToken" placeholder="ghp_..." />
+                                <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                    Optional: Personal access token for private repositories
+                                </small>
+                            </div>
+                        </div>
+
                         <div class="input-group">
                             <label>Source File (Optional)</label>
-                            <input type="text" id="sourceFile" placeholder="app.py or routes.py" value="glic_routes.py" />
+                            <input type="text" id="sourceFile" placeholder="app.py or routes.py" value="" />
                             <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
                                 Leave empty to scan all files
                             </small>
@@ -2136,6 +2275,21 @@
                             <input type="text" id="apiServerUrl" placeholder="http://localhost:9321" value="http://localhost:9321" />
                             <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
                                 Base URL where your API server is running (used in generated MCP tools)
+                            </small>
+                        </div>
+
+                        <!-- OAuth Server Configuration -->
+                        <div style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8B5CF6; padding: 0.6rem 1rem; margin: 1rem 0 0.5rem 0; border-radius: 4px;">
+                            <strong style="color: #8B5CF6; font-size: 0.95rem;">OAuth Server (For Remote Deployment)</strong>
+                        </div>
+
+                        <div class="input-group">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="enableOAuthCodebase" style="margin-right: 0.5rem; width: auto;" />
+                                <span>Enable OAuth 2.1 Authentication</span>
+                            </label>
+                            <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                OAuth server will be automatically configured when MCP server is deployed. Client registration happens at runtime.
                             </small>
                         </div>
                         <div class="input-buttons">
@@ -2151,6 +2305,22 @@
             `;
             document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
+
+        function toggleCodebaseSource() {
+            const sourceType = document.getElementById('codebaseSourceType').value;
+            const localFields = document.getElementById('localPathFields');
+            const githubFields = document.getElementById('githubFields');
+            
+            if (sourceType === 'github') {
+                localFields.style.display = 'none';
+                githubFields.style.display = 'block';
+            } else {
+                localFields.style.display = 'block';
+                githubFields.style.display = 'none';
+            }
+        }
+
+        // OAuth fields are auto-configured at runtime, no manual toggle needed
 
         function closeCodebaseModal() {
             const modal = document.getElementById('codebaseModal');
@@ -2694,7 +2864,7 @@
                                         <div class="input-group" style="margin-bottom: 1rem;">
                                             <label>Domain Name (Optional)</label>
                                             <input type="text" id="dbAwsDomain" placeholder="mcp.example.com" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
-                                            <small style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; display: block; margin-top: 0.5rem;">Leave empty to use IP address only. Requires Route 53 hosted zone.</small>
+                                            <small style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; display: block; margin-top: 0.5rem;">Leave empty to use IP address. Format: subdomain.domain.com (no http:// or https://). Requires Route 53 hosted zone.</small>
                                         </div>
                                         <button onclick="deployDatabaseOnline('aws', '${configPath}', '${serverPath}', '${serverName}')" style="background: linear-gradient(135deg, #FF9900, #CC7A00); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
                                             <i class="fas fa-cloud-upload-alt"></i> Deploy to AWS EC2
@@ -3187,9 +3357,18 @@
             const timeout = parseInt(document.getElementById('requestTimeout').value);
             const apiName = document.getElementById('apiName').value;
 
+            // OAuth configuration
+            const enableOAuth = document.getElementById('enableOAuthSwagger').checked;
+
             if (!swaggerUrl) {
                 alert('Please enter a Swagger URL');
                 return;
+            }
+
+            // Hide Code Viewer tab for Swagger MCP server
+            const codeViewerTab = document.getElementById('code-viewer-tab');
+            if (codeViewerTab) {
+                codeViewerTab.style.display = 'none';
             }
 
             // Store the Swagger configuration
@@ -3199,6 +3378,7 @@
                 api_base_url: apiBaseUrl,
                 auth_type: authType,
                 auth_token: authToken,
+                enable_oauth: enableOAuth,
                 auth_user: authUser,
                 auth_pass: authPass,
                 verify_ssl: verifySsl,
@@ -3280,21 +3460,59 @@
         };
 
         async function scanFromCodebase() {
-            const projectPath = document.getElementById('projectPath').value;
-            const sourceFile = document.getElementById('sourceFile').value;
-            const apiBaseUrl = document.getElementById('apiServerUrl').value;
+            const codebaseSourceType = document.getElementById('codebaseSourceType').value;
+            
+            let projectPath, sourceFile, apiBaseUrl;
+            let githubRepoUrl, githubBranch, githubToken;
 
-            if (!projectPath) {
-                alert('Please enter a project path');
-                return;
+            if (codebaseSourceType === 'github') {
+                githubRepoUrl = document.getElementById('githubRepoUrl').value;
+                githubBranch = document.getElementById('githubBranch').value || 'main';
+                githubToken = document.getElementById('githubToken').value;
+                sourceFile = document.getElementById('sourceFile').value;
+                apiBaseUrl = document.getElementById('apiServerUrl').value;
+
+                if (!githubRepoUrl) {
+                    alert('Please enter a GitHub repository URL');
+                    return;
+                }
+            } else {
+                projectPath = document.getElementById('projectPath').value;
+                sourceFile = document.getElementById('sourceFile').value;
+                apiBaseUrl = document.getElementById('apiServerUrl').value;
+
+                if (!projectPath) {
+                    alert('Please enter a project path');
+                    return;
+                }
             }
 
+            // OAuth configuration
+            const enableOAuth = document.getElementById('enableOAuthCodebase').checked;
+
             // Store the configuration (similar to Swagger config)
-            projectSourceType = 'folder';
+            projectSourceType = codebaseSourceType === 'github' ? 'github' : 'folder';
+            
+            // Show and activate Code Viewer tab for codebase MCP server
+            const codeViewerTab = document.getElementById('code-viewer-tab');
+            if (codeViewerTab) {
+                codeViewerTab.style.display = 'flex';
+                // Also make it active and switch to code tab
+                document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+                codeViewerTab.classList.add('active');
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                document.getElementById('code-tab').classList.add('active');
+            }
+            
             selectedProjectConfig = {
+                source_type: codebaseSourceType,
                 project_path: projectPath,
+                github_repo_url: githubRepoUrl,
+                github_branch: githubBranch,
+                github_token: githubToken,
                 source_file: sourceFile,
-                api_base_url: apiBaseUrl || 'http://localhost:5000'
+                api_base_url: apiBaseUrl || 'http://localhost:5000',
+                enable_oauth: enableOAuth
             };
 
             closeCodebaseModal();
@@ -3719,6 +3937,67 @@
             updateSelectionCount();
         }
 
+        // Score filter functions
+        function updateAPIScoreFilter(value) {
+            const display = document.getElementById('apiMinScoreDisplay');
+            display.textContent = value + '%';
+            
+            // Update slider background gradient based on value
+            const slider = document.getElementById('apiMinScoreSlider');
+            const percentage = value;
+            let color;
+            if (percentage < 25) color = '#EF4444';
+            else if (percentage < 50) color = '#F59E0B';
+            else if (percentage < 75) color = '#10B981';
+            else color = '#059669';
+            
+            display.style.background = color;
+            
+            // Filter and re-render APIs
+            filterAPIsByScore(value / 100);
+        }
+
+        function resetAPIScoreFilter() {
+            const slider = document.getElementById('apiMinScoreSlider');
+            slider.value = 0;
+            updateAPIScoreFilter(0);
+        }
+
+        function filterAPIsByScore(minScore) {
+            if (!window.allAPIs) return;
+            
+            // Hide APIs below threshold
+            window.allAPIs.forEach(api => {
+                const score = api.mcp_suitability_score || (api.confidence * 100) || 85;
+                const apiRow = document.querySelector(`[data-api-index="${api.index}"]`);
+                
+                if (apiRow) {
+                    if (score >= (minScore * 100)) {
+                        apiRow.style.display = '';
+                    } else {
+                        apiRow.style.display = 'none';
+                        // Uncheck if hidden
+                        const checkbox = apiRow.querySelector('.api-checkbox');
+                        if (checkbox && checkbox.checked) {
+                            checkbox.checked = false;
+                            window.selectedAPIs.delete(api.index);
+                        }
+                    }
+                }
+            });
+            
+            updateSelectionCount();
+            
+            // Show count of visible APIs
+            const visibleCount = window.allAPIs.filter(api => {
+                const score = api.mcp_suitability_score || (api.confidence * 100) || 85;
+                return score >= (minScore * 100);
+            }).length;
+            
+            // Update a status message if needed
+            console.log(`Showing ${visibleCount} of ${window.allAPIs.length} APIs (min score: ${(minScore * 100).toFixed(0)}%)`);
+        }
+
         async function analyzeSelectedAPIs() {
             if (window.selectedAPIs.size === 0) return;
 
@@ -3758,6 +4037,10 @@
                         renderAPIs(projectData.api_definitions);
                     }
 
+                    // Store high confidence APIs FIRST before showing modal
+                    window.highConfidenceAPIs = result.high_confidence_apis;
+
+                    // Show summary modal
                     showBulkAnalysisSummary(result);
                     btn.innerHTML = '<i class="fas fa-check"></i> Analyzed!';
                 } else {
@@ -4750,14 +5033,17 @@
                         renderAPIs(projectData.api_definitions);
                     }
 
+                    // Store high confidence APIs FIRST before showing modal
+                    window.highConfidenceAPIs = result.high_confidence_apis;
+
                     // Show summary modal
                     showBulkAnalysisSummary(result);
 
-                    // Enable convert button
-                    document.getElementById('convertHighBtn').disabled = false;
-
-                    // Store high confidence APIs
-                    window.highConfidenceAPIs = result.high_confidence_apis;
+                    // Enable convert button if it exists
+                    const convertHighBtn = document.getElementById('convertHighBtn');
+                    if (convertHighBtn) {
+                        convertHighBtn.disabled = false;
+                    }
 
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-check"></i> Analysis Complete';
@@ -4845,13 +5131,13 @@
             summaryHTML += `
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
-                        <button onclick="convertHighConfidenceAPIs()" style="padding: 1rem; background: linear-gradient(135deg, var(--success-green), #059669); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                    <div style="margin-top: 1.5rem;">
+                        <button onclick="convertHighConfidenceAPIs()" style="width: 100%; padding: 1.2rem; background: linear-gradient(135deg, var(--success-green), #059669); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: all 0.3s ease;">
                             <i class="fas fa-magic"></i> Convert ${apis.length} APIs to MCP Tools
                         </button>
-                        <button onclick="installLocallyAfterAnalysis()" style="padding: 1rem; background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
-                            <i class="fas fa-cloud-download-alt"></i> Install Locally
-                        </button>
+                        <p style="text-align: center; color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; margin-top: 1rem;">
+                            <i class="fas fa-info-circle"></i> After conversion, you'll see deployment options for local and online setup
+                        </p>
                     </div>
                 </div>
             `;
@@ -4877,15 +5163,12 @@
                 return;
             }
 
-            // Close the bulk analysis modal first
-            const bulkAnalysisModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10000"]');
-            if (bulkAnalysisModal) {
-                bulkAnalysisModal.remove();
+            // Find the convert button in the modal
+            const convertBtn = event ? event.target : document.querySelector('button[onclick*="convertHighConfidenceAPIs"]');
+            if (convertBtn) {
+                convertBtn.disabled = true;
+                convertBtn.innerHTML = '<div class="spinner"></div> Converting...';
             }
-
-            const btn = document.getElementById('convertHighBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<div class="spinner"></div> Converting...';
 
             try {
                 // Get base URL from either Swagger config or folder scan config
@@ -4918,21 +5201,24 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // Store yaml_path for later auto-deploy
+                    // Close the bulk analysis modal first
+                    const bulkAnalysisModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10000"]');
+                    if (bulkAnalysisModal) {
+                        bulkAnalysisModal.remove();
+                    }
+
+                    // Store yaml_path and base URL for later auto-deploy
                     window.lastGeneratedYamlPath = result.yaml_path;
+                    window.currentApiDomain = baseUrl;  // Store API domain for server naming
 
                     // Show detailed setup modal instead of simple alert
                     showMCPSetupModal(result);
 
-                    // Enable test button
-                    document.getElementById('testBtn').disabled = false;
-
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-check"></i> Converted!';
-
-                    setTimeout(() => {
-                        btn.innerHTML = '<i class="fas fa-magic"></i> Convert Top APIs';
-                    }, 3000);
+                    // Enable test button if it exists
+                    const testBtn = document.getElementById('testBtn');
+                    if (testBtn) {
+                        testBtn.disabled = false;
+                    }
                 } else {
                     throw new Error(result.error || 'Conversion failed');
                 }
@@ -4940,8 +5226,10 @@
             } catch (error) {
                 console.error('Conversion error:', error);
                 alert('Conversion failed: ' + error.message);
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
+                if (convertBtn) {
+                    convertBtn.disabled = false;
+                    convertBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed - Try Again';
+                }
             }
         }
 
@@ -4968,21 +5256,7 @@
                         <!-- Body -->
                         <div style="padding: 2rem;">
 
-                            <!-- File Info -->
-                            <div style="background: rgba(16, 185, 129, 0.1); border: 2px solid var(--success-green); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
-                                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                                    <i class="fas fa-file-code" style="font-size: 2rem; color: var(--success-green);"></i>
-                                    <div>
-                                        <div style="font-weight: 700; font-size: 1.2rem; color: white;">${filename}</div>
-                                        <div style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; font-family: 'Fira Code', monospace;">${fullPath}</div>
-                                    </div>
-                                </div>
-                                <button onclick="copyToClipboard('${fullPath}')" style="width: 100%; padding: 0.8rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; cursor: pointer; font-size: 0.9rem;">
-                                    <i class="fas fa-copy"></i> Copy File Path
-                                </button>
-                            </div>
-
-                            <!-- Auto-Deploy Button (NEW!) -->
+                            <!-- Auto-Deploy Button -->
                             <div id="autoDeploySection" style="background: linear-gradient(135deg, rgba(0, 163, 224, 0.2), rgba(124, 58, 237, 0.2)); border: 2px solid var(--scikiq-light-blue); border-radius: 12px; padding: 2rem; margin-bottom: 2rem; text-align: center;">
                                 <div style="font-size: 3rem; margin-bottom: 0.5rem;">🚀</div>
                                 <h3 style="color: white; margin: 0 0 0.5rem 0; font-size: 1.5rem;">One-Click Deployment</h3>
@@ -5104,24 +5378,39 @@
                                 </div>
                             </details>
 
-                            <!-- Generated Code Preview -->
+                            <!-- Deployment Options -->
                             <div style="margin-top: 2rem; border-top: 2px solid rgba(255, 255, 255, 0.1); padding-top: 2rem;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                                    <h3 style="margin: 0; color: var(--scikiq-light-blue);">
-                                        <i class="fas fa-code"></i> Generated MCP Server Code
-                                    </h3>
-                                    <button onclick="downloadMCPCode('${filename}')" style="padding: 0.6rem 1.2rem; background: linear-gradient(135deg, var(--anthropic-orange), #B45309); border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer; font-size: 0.9rem;">
-                                        <i class="fas fa-download"></i> Download
-                                    </button>
-                                </div>
-                                <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1.5rem; max-height: 400px; overflow-y: auto; position: relative;">
-                                    <button onclick="copyToClipboard(document.getElementById('mcpCodePreview').textContent)" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.1); border: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; z-index: 1;">
-                                        <i class="fas fa-copy"></i> Copy Code
-                                    </button>
-                                    <pre id="mcpCodePreview" style="margin: 0; color: #e5e7eb; font-family: 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;"><i class="fas fa-spinner fa-spin"></i> Loading code...</pre>
-                                </div>
-                                <div style="margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;">
-                                    <i class="fas fa-info-circle"></i> This is your complete MCP server with ${toolCount} tool definitions ready to use.
+                                <h3 style="color: var(--scikiq-light-blue); margin-bottom: 1rem;">
+                                    <i class="fas fa-rocket"></i> Deploy Your MCP Server
+                                </h3>
+                                <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
+                                    Choose how you want to deploy your MCP server
+                                </p>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                                    <!-- Local Deployment -->
+                                    <div style="background: rgba(16, 185, 129, 0.1); border: 2px solid var(--success-green); border-radius: 12px; padding: 1.5rem; text-align: center;">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">💻</div>
+                                        <h4 style="color: white; margin: 0 0 0.5rem 0;">Local Deployment</h4>
+                                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 1rem;">
+                                            Deploy to your local Claude Desktop
+                                        </p>
+                                        <button onclick="deployMCPLocal('${fullPath}', '${filename}')" style="width: 100%; padding: 0.8rem; background: var(--success-green); border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;">
+                                            <i class="fas fa-desktop"></i> Deploy Locally
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Online Deployment -->
+                                    <div style="background: rgba(0, 163, 224, 0.1); border: 2px solid var(--scikiq-light-blue); border-radius: 12px; padding: 1.5rem; text-align: center;">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">☁️</div>
+                                        <h4 style="color: white; margin: 0 0 0.5rem 0;">Online Deployment</h4>
+                                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 1rem;">
+                                            Deploy to AWS, Azure, or Remote Server
+                                        </p>
+                                        <button onclick="showOnlineDeploymentModal('${fullPath}', '${filename}')" style="width: 100%; padding: 0.8rem; background: var(--scikiq-light-blue); border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;">
+                                            <i class="fas fa-cloud"></i> Deploy Online
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -5788,8 +6077,8 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         </div>
 
                         <!-- Installation Features -->
-                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid var(--success-green); padding: 1rem; margin: 1.5rem 0; border-radius: 8px;">
-                            <h4 style="margin: 0 0 0.8rem; color: var(--success-green);">
+                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid var(--success-green); padding: 0.6rem 1rem; margin: 1rem 0 0.5rem 0; border-radius: 8px;">
+                            <h4 style="margin: 0 0 0.8rem; color: var(--success-green); font-size: 0.95rem;">
                                 <i class="fas fa-check-circle"></i> What will be installed:
                             </h4>
                             <ul style="margin: 0; padding-left: 1.5rem; color: rgba(255, 255, 255, 0.8);">
@@ -5801,8 +6090,8 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         </div>
 
                         <!-- Requirements -->
-                        <div style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3B82F6; padding: 1rem; margin: 1.5rem 0; border-radius: 8px;">
-                            <h4 style="margin: 0 0 0.8rem; color: #3B82F6;">
+                        <div style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3B82F6; padding: 0.6rem 1rem; margin: 1rem 0 0.5rem 0; border-radius: 8px;">
+                            <h4 style="margin: 0 0 0.8rem; color: #3B82F6; font-size: 0.95rem;">
                                 <i class="fas fa-info-circle"></i> Requirements:
                             </h4>
                             <ul style="margin: 0; padding-left: 1.5rem; color: rgba(255, 255, 255, 0.8);">
@@ -5956,8 +6245,8 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                             </ol>
                         </div>
 
-                        <div style="background: rgba(251, 191, 36, 0.1); border-left: 4px solid #F59E0B; padding: 1rem; margin: 1.5rem 0; border-radius: 8px;">
-                            <h4 style="margin: 0 0 0.8rem; color: #F59E0B;">
+                        <div style="background: rgba(251, 191, 36, 0.1); border-left: 4px solid #F59E0B; padding: 0.6rem 1rem; margin: 1rem 0 0.5rem 0; border-radius: 8px;">
+                            <h4 style="margin: 0 0 0.8rem; color: #F59E0B; font-size: 0.95rem;">
                                 <i class="fas fa-exclamation-triangle"></i> Troubleshooting:
                             </h4>
                             <ul style="margin: 0; padding-left: 1.5rem; color: rgba(255, 255, 255, 0.8);">
@@ -6059,7 +6348,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                             <div class="input-group">
                                 <label>Domain Name (Optional)</label>
                                 <input type="text" id="awsDomain" placeholder="api.yourdomain.com" />
-                                <small style="color: rgba(255, 255, 255, 0.5);">Leave empty to use public IP</small>
+                                <small style="color: rgba(255, 255, 255, 0.5);">Leave empty to use public IP. Format: subdomain.domain.com (no http:// or https://)</small>
                             </div>
                         </div>
 
@@ -6124,9 +6413,6 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                             </div>
                         </div>
 
-                        <!-- Deployment Log -->
-                        <div id="deploymentLog" style="display: none; margin: 1.5rem 0; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 1rem; max-height: 300px; overflow-y: auto; font-family: 'Fira Code', monospace; font-size: 0.85rem; color: #e0e0e0;"></div>
-
                         <!-- Buttons -->
                         <div class="input-buttons">
                             <button class="btn-secondary-custom" onclick="closePublishOnlineModal()">
@@ -6174,29 +6460,138 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             document.getElementById('remoteKeyField').style.display = method === 'key' ? 'block' : 'none';
         }
 
+        function validateDomain(domain) {
+            // If domain is empty, it's valid (optional field)
+            if (!domain || domain.trim() === '') {
+                return { valid: true };
+            }
+
+            // Trim whitespace
+            domain = domain.trim();
+
+            // Check for valid domain format
+            // Domain should not start with http:// or https://
+            if (domain.startsWith('http://') || domain.startsWith('https://')) {
+                return {
+                    valid: false,
+                    error: 'Domain should not include http:// or https://. Enter only the domain name (e.g., mcp.example.com)'
+                };
+            }
+
+            // Check for trailing slash
+            if (domain.endsWith('/')) {
+                return {
+                    valid: false,
+                    error: 'Domain should not end with /. Enter only the domain name (e.g., mcp.example.com)'
+                };
+            }
+
+            // Basic domain validation regex
+            // Allows: subdomain.example.com, example.com, sub.domain.example.com
+            const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+            
+            if (!domainRegex.test(domain)) {
+                return {
+                    valid: false,
+                    error: 'Invalid domain format. Use format like: mcp.example.com or api.yourdomain.com'
+                };
+            }
+
+            // Check minimum length and must have at least one dot
+            if (domain.length < 4 || !domain.includes('.')) {
+                return {
+                    valid: false,
+                    error: 'Domain must be a valid format like: mcp.example.com (must include a domain extension)'
+                };
+            }
+
+            return { valid: true };
+        }
+
         async function startDeployment() {
             const activeTab = document.querySelector('.deployment-tab.active').dataset.tab;
-            const logDiv = document.getElementById('deploymentLog');
-            const deployBtn = document.getElementById('deployBtn');
-
-            logDiv.style.display = 'block';
-            logDiv.innerHTML = '';
-            deployBtn.disabled = true;
-            deployBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deploying...';
 
             try {
                 let endpoint, payload;
 
                 if (activeTab === 'aws') {
+                    const domain = document.getElementById('awsDomain').value;
+                    const domainValidation = validateDomain(domain);
+                    
+                    if (!domainValidation.valid) {
+                        alert('Domain Validation Error: ' + domainValidation.error);
+                        return;
+                    }
+
                     endpoint = '/api/deploy/aws';
+                    // Get server_path and yaml filename from yaml path
+                    let serverPath = null;
+                    let yamlFileName = null;
+                    if (window.lastGeneratedYamlPath) {
+                        // Extract directory and filename from yaml file path
+                        const normalizedPath = window.lastGeneratedYamlPath.replace(/\\/g, '/');
+                        serverPath = normalizedPath.substring(0, normalizedPath.lastIndexOf('/'));
+                        yamlFileName = normalizedPath.substring(normalizedPath.lastIndexOf('/') + 1);
+                    } else {
+                        // No MCP server files generated yet
+                        alert('Warning: No MCP server files found. Please convert APIs to MCP tools first.');
+                        return;
+                    }
+
+                    // Generate unique server name for API/Swagger deployments
+                    let serverName = window.currentServerName;
+                    if (!serverName && window.currentApiDomain) {
+                        // Extract domain name without protocol and special chars
+                        const domainMatch = window.currentApiDomain.match(/(?:https?:\/\/)?([^/:]+)/);
+                        if (domainMatch && domainMatch[1]) {
+                            const cleanDomain = domainMatch[1].replace(/\./g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                            serverName = cleanDomain.substring(0, 30) + '-mcp';  // Limit to 30 chars + '-mcp'
+                        }
+                    }
+                    if (!serverName) {
+                        // Fallback: generate from timestamp
+                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                        serverName = `api-mcp-${timestamp}`;
+                    }
+
                     payload = {
                         access_key: document.getElementById('awsAccessKey').value,
                         secret_key: document.getElementById('awsSecretKey').value,
                         region: document.getElementById('awsRegion').value || 'ap-south-1',
                         instance_type: document.getElementById('awsInstanceType').value,
-                        domain: document.getElementById('awsDomain').value
+                        domain: domain,
+                        server_name: serverName,
+                        server_type: projectSourceType || 'api',  // Use project source type
+                        server_path: serverPath,  // Send directory path where mcp_server_loader.py and YAML files are
+                        yaml_file: yamlFileName   // Send specific YAML filename to copy (not all YAML files)
                     };
                 } else if (activeTab === 'azure') {
+                    // Get server_path and yaml filename from yaml path
+                    let serverPath = null;
+                    let yamlFileName = null;
+                    if (window.lastGeneratedYamlPath) {
+                        const normalizedPath = window.lastGeneratedYamlPath.replace(/\\/g, '/');
+                        serverPath = normalizedPath.substring(0, normalizedPath.lastIndexOf('/'));
+                        yamlFileName = normalizedPath.substring(normalizedPath.lastIndexOf('/') + 1);
+                    } else {
+                        alert('Warning: No MCP server files found. Please convert APIs to MCP tools first.');
+                        return;
+                    }
+
+                    // Generate unique server name for API/Swagger deployments
+                    let serverName = window.currentServerName;
+                    if (!serverName && window.currentApiDomain) {
+                        const domainMatch = window.currentApiDomain.match(/(?:https?:\/\/)?([^/:]+)/);
+                        if (domainMatch && domainMatch[1]) {
+                            const cleanDomain = domainMatch[1].replace(/\./g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                            serverName = cleanDomain.substring(0, 30) + '-mcp';
+                        }
+                    }
+                    if (!serverName) {
+                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                        serverName = `api-mcp-${timestamp}`;
+                    }
+
                     endpoint = '/api/deploy/azure';
                     payload = {
                         subscription_id: document.getElementById('azureSubscriptionId').value,
@@ -6204,18 +6599,102 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         client_secret: document.getElementById('azureClientSecret').value,
                         tenant_id: document.getElementById('azureTenantId').value,
                         resource_group: document.getElementById('azureResourceGroup').value,
-                        location: document.getElementById('azureLocation').value
+                        location: document.getElementById('azureLocation').value,
+                        server_name: serverName,
+                        server_type: projectSourceType || 'api',
+                        server_path: serverPath,
+                        yaml_file: yamlFileName
                     };
                 } else if (activeTab === 'remote') {
+                    // Get server_path and yaml filename from yaml path
+                    let serverPath = null;
+                    let yamlFileName = null;
+                    if (window.lastGeneratedYamlPath) {
+                        const normalizedPath = window.lastGeneratedYamlPath.replace(/\\/g, '/');
+                        serverPath = normalizedPath.substring(0, normalizedPath.lastIndexOf('/'));
+                        yamlFileName = normalizedPath.substring(normalizedPath.lastIndexOf('/') + 1);
+                    } else {
+                        alert('Warning: No MCP server files found. Please convert APIs to MCP tools first.');
+                        return;
+                    }
+
+                    // Generate unique server name for API/Swagger deployments
+                    let serverName = window.currentServerName;
+                    if (!serverName && window.currentApiDomain) {
+                        const domainMatch = window.currentApiDomain.match(/(?:https?:\/\/)?([^/:]+)/);
+                        if (domainMatch && domainMatch[1]) {
+                            const cleanDomain = domainMatch[1].replace(/\./g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                            serverName = cleanDomain.substring(0, 30) + '-mcp';
+                        }
+                    }
+                    if (!serverName) {
+                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                        serverName = `api-mcp-${timestamp}`;
+                    }
+
                     endpoint = '/api/deploy/remote';
                     const authMethod = document.getElementById('remoteAuthMethod').value;
                     payload = {
                         host: document.getElementById('remoteHost').value,
                         username: document.getElementById('remoteUsername').value,
                         password: authMethod === 'password' ? document.getElementById('remotePassword').value : null,
-                        key_path: authMethod === 'key' ? document.getElementById('remoteKeyPath').value : null
+                        key_path: authMethod === 'key' ? document.getElementById('remoteKeyPath').value : null,
+                        server_name: serverName,
+                        server_type: projectSourceType || 'api',
+                        server_path: serverPath,
+                        yaml_file: yamlFileName
                     };
                 }
+
+                // Create a log display modal
+                const logHTML = `
+                    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 999999; padding: 2rem; display: flex; align-items: center; justify-content: center;" id="deployLogModal">
+                        <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 800px; width: 100%; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+                            <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                                <h3 style="margin: 0; color: var(--scikiq-light-blue);">
+                                    <i class="fas fa-cloud-upload-alt"></i> Deploying to ${activeTab.toUpperCase()}
+                                </h3>
+                            </div>
+                            <div id="deployLogContent" style="flex: 1; overflow-y: auto; padding: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.85rem; background: rgba(0, 0, 0, 0.5);"></div>
+                            <div style="padding: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: flex-end;">
+                                <button onclick="document.getElementById('deployLogModal').remove()" style="padding: 0.8rem 1.5rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; cursor: pointer;">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', logHTML);
+                const logContent = document.getElementById('deployLogContent');
+
+                function appendLog(message, type = 'info') {
+                    const color = type === 'error' ? '#EF4444' : type === 'success' ? '#10B981' : '#E0E0E0';
+                    
+                    // Check if this message contains a permission suggestion block
+                    const hasMultipleLines = message.includes('\n');
+                    const isPermissionSuggestion = message.includes('Missing Permission') || 
+                                                   message.includes('Required IAM Permissions') || 
+                                                   message.includes('How to Fix:') ||
+                                                   message.includes('Example IAM Policy:') ||
+                                                   (message.includes('=') && message.split('=').length > 10);
+                    
+                    if (hasMultipleLines && isPermissionSuggestion && type === 'error') {
+                        // Format as special permission block
+                        const formattedMessage = message
+                            .replace(/=/g, '─')
+                            .replace(/⚠️/g, '⚠️');
+                        
+                        logContent.innerHTML += `<div style="color: ${color}; margin: 1.5rem 0; padding: 1.5rem; background: rgba(239, 68, 68, 0.15); border: 2px solid ${color}; border-radius: 8px; white-space: pre-wrap; font-family: 'Fira Code', 'Courier New', monospace; font-size: 0.9rem; line-height: 1.8; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); word-wrap: break-word;">${formattedMessage}</div>`;
+                    } else if (hasMultipleLines) {
+                        // Multi-line message - preserve line breaks
+                        logContent.innerHTML += `<div style="color: ${color}; margin-bottom: 0.5rem; white-space: pre-wrap; font-family: 'Fira Code', monospace; word-wrap: break-word;">${message}</div>`;
+                    } else {
+                        // Single line message
+                        logContent.innerHTML += `<div style="color: ${color}; margin-bottom: 0.3rem; white-space: pre-wrap; word-wrap: break-word;">${message}</div>`;
+                    }
+                    logContent.scrollTop = logContent.scrollHeight;
+                }
+
+                appendLog(`[${new Date().toLocaleTimeString()}] Starting deployment to ${activeTab.toUpperCase()}...`);
+                appendLog(`[${new Date().toLocaleTimeString()}] Connecting to API endpoint: ${endpoint}`);
 
                 const response = await fetch(endpoint, {
                     method: 'POST',
@@ -6223,26 +6702,71 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     body: JSON.stringify(payload)
                 });
 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    appendLog(`[${new Date().toLocaleTimeString()}] ERROR: ${response.status} - ${response.statusText}`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] Details: ${errorText}`, 'error');
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const text = decoder.decode(value);
-                    logDiv.innerHTML += text;
-                    logDiv.scrollTop = logDiv.scrollHeight;
+                    // Try to parse as JSON for better error display
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        appendLog(`[${new Date().toLocaleTimeString()}] ${errorJson.error || errorJson.message || 'Unknown error'}`, 'error');
+                    } catch (e) {
+                        appendLog(`[${new Date().toLocaleTimeString()}] Raw error: ${errorText}`, 'error');
+                    }
+                    return;
                 }
 
-                deployBtn.innerHTML = '<i class="fas fa-check"></i> Deployment Complete';
-                deployBtn.style.background = 'linear-gradient(135deg, var(--success-green), #059669)';
+                // Stream logs if response is text/plain
+                if (response.headers.get('content-type')?.includes('text/plain')) {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    let buffer = '';
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop(); // Keep incomplete line in buffer
+
+                        lines.forEach(line => {
+                            if (line.trim()) {
+                                const isError = line.includes('[ERROR]') || line.includes('ERROR:');
+                                const isSuccess = line.includes('[SUCCESS]') || line.includes('SUCCESS:');
+                                appendLog(line, isError ? 'error' : isSuccess ? 'success' : 'info');
+                            }
+                        });
+                    }
+
+                    // Process remaining buffer
+                    if (buffer.trim()) {
+                        const isError = buffer.includes('[ERROR]') || buffer.includes('ERROR:');
+                        const isSuccess = buffer.includes('[SUCCESS]') || buffer.includes('SUCCESS:');
+                        appendLog(buffer, isError ? 'error' : isSuccess ? 'success' : 'info');
+                    }
+                } else {
+                    // Handle JSON response
+                    const result = await response.json();
+                    if (result.success) {
+                        appendLog(`[${new Date().toLocaleTimeString()}] Deployment completed successfully!`, 'success');
+                        if (result.message) appendLog(result.message, 'success');
+                    } else {
+                        appendLog(`[${new Date().toLocaleTimeString()}] Deployment failed: ${result.error}`, 'error');
+                    }
+                }
+
+                appendLog(`[${new Date().toLocaleTimeString()}] Deployment process finished.`, 'success');
 
             } catch (error) {
-                logDiv.innerHTML += `\n[ERROR] ${error.message}\n`;
-                deployBtn.disabled = false;
-                deployBtn.innerHTML = '<i class="fas fa-rocket"></i> Retry Deployment';
-                deployBtn.style.background = '';
+                console.error('Deployment error:', error);
+                const logContent = document.getElementById('deployLogContent');
+                if (logContent) {
+                    logContent.innerHTML += `<div style="color: #EF4444; margin-bottom: 0.5rem;">[${new Date().toLocaleTimeString()}] ERROR: ${error.message}</div>`;
+                } else {
+                    alert('Deployment error: ' + error.message);
+                }
             }
         }
 
@@ -6303,6 +6827,14 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
 
                 // Prepare payload based on platform
                 if (platform === 'aws') {
+                    const domain = document.getElementById('dbAwsDomain')?.value || '';
+                    const domainValidation = validateDomain(domain);
+                    
+                    if (!domainValidation.valid) {
+                        alert('Domain Validation Error: ' + domainValidation.error);
+                        return;
+                    }
+
                     endpoint = '/api/deploy/aws';
                     payload = {
                         access_key: document.getElementById('dbAwsAccessKey').value,
@@ -6313,7 +6845,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         config_path: configPath,
                         server_path: serverPath,
                         server_name: serverName,
-                        domain: document.getElementById('dbAwsDomain')?.value || ''
+                        domain: domain
                     };
                 } else if (platform === 'azure') {
                     endpoint = '/api/deploy/azure';
@@ -6500,6 +7032,133 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     alert(`Deployment error: ${error.message}\n\nCheck console for details.`);
                 }
             }
+        }
+
+        // ==================== MCP DEPLOYMENT FUNCTIONS (SWAGGER & CODEBASE) ====================
+        
+        async function deployMCPLocal(serverPath, filename) {
+            try {
+                const serverName = document.getElementById('mcpServerName')?.value || 'scikiq-mcp-autoAPI';
+                
+                const response = await fetch('/api/deploy-mcp-local', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        server_path: serverPath,
+                        server_name: serverName,
+                        config: selectedSwaggerConfig || selectedProjectConfig
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('✅ MCP Server deployed locally!\n\nRestart Claude Desktop to see your tools.');
+                } else {
+                    alert('❌ Deployment failed: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Deployment error: ' + error.message);
+            }
+        }
+
+        function showOnlineDeploymentModal(serverPath, filename) {
+            // Close the MCP setup modal first
+            const setupModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10000"]');
+            if (setupModal) setupModal.remove();
+            
+            // Show deployment modal similar to database MCP
+            const modalHTML = `
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow-y: auto;">
+                    <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.98), rgba(26, 31, 58, 0.98)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+                        <div style="background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2); padding: 2rem; border-radius: 14px 14px 0 0;">
+                            <h2 style="margin: 0; color: white; font-size: 1.8rem;">
+                                <i class="fas fa-cloud"></i> Deploy MCP Server Online
+                            </h2>
+                        </div>
+                        
+                        <div style="padding: 2rem;">
+                            <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1.5rem;">
+                                Deploy your MCP server to a cloud provider or remote server
+                            </p>
+                            
+                            <!-- Deployment Options -->
+                            <div style="display: grid; gap: 1rem;">
+                                <button onclick="deployToAWS('${serverPath}', '${filename}')" style="padding: 1.5rem; background: rgba(255, 153, 0, 0.1); border: 2px solid #FF9900; border-radius: 8px; color: white; cursor: pointer; text-align: left; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 153, 0, 0.2)'" onmouseout="this.style.background='rgba(255, 153, 0, 0.1)'">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <i class="fab fa-aws" style="font-size: 2rem;"></i>
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 1.1rem;">AWS EC2</div>
+                                            <div style="font-size: 0.9rem; opacity: 0.8;">Deploy to Amazon Web Services</div>
+                                        </div>
+                                    </div>
+                                </button>
+                                
+                                <button onclick="deployToAzure('${serverPath}', '${filename}')" style="padding: 1.5rem; background: rgba(0, 120, 215, 0.1); border: 2px solid #0078D7; border-radius: 8px; color: white; cursor: pointer; text-align: left; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(0, 120, 215, 0.2)'" onmouseout="this.style.background='rgba(0, 120, 215, 0.1)'">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <i class="fab fa-microsoft" style="font-size: 2rem;"></i>
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 1.1rem;">Azure VM</div>
+                                            <div style="font-size: 0.9rem; opacity: 0.8;">Deploy to Microsoft Azure</div>
+                                        </div>
+                                    </div>
+                                </button>
+                                
+                                <button onclick="deployToRemote('${serverPath}', '${filename}')" style="padding: 1.5rem; background: rgba(124, 58, 237, 0.1); border: 2px solid #7C3AED; border-radius: 8px; color: white; cursor: pointer; text-align: left; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(124, 58, 237, 0.2)'" onmouseout="this.style.background='rgba(124, 58, 237, 0.1)'">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <i class="fas fa-server" style="font-size: 2rem;"></i>
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 1.1rem;">Remote Server (SSH)</div>
+                                            <div style="font-size: 0.9rem; opacity: 0.8;">Deploy to any server via SSH</div>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+                            
+                            <button onclick="this.closest('[style*=fixed]').remove()" style="width: 100%; margin-top: 1.5rem; padding: 1rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        async function deployToAWS(serverPath, filename) {
+            // Close current modal and show publish online modal with AWS tab
+            const currentModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10001"]');
+            if (currentModal) currentModal.remove();
+            
+            showPublishOnlineModal();
+            // Wait for modal to render, then switch to AWS tab
+            setTimeout(() => {
+                switchDeploymentTab('aws');
+            }, 100);
+        }
+
+        async function deployToAzure(serverPath, filename) {
+            // Close current modal and show publish online modal with Azure tab
+            const currentModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10001"]');
+            if (currentModal) currentModal.remove();
+            
+            showPublishOnlineModal();
+            // Wait for modal to render, then switch to Azure tab
+            setTimeout(() => {
+                switchDeploymentTab('azure');
+            }, 100);
+        }
+
+        async function deployToRemote(serverPath, filename) {
+            // Close current modal and show publish online modal with Remote tab
+            const currentModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10001"]');
+            if (currentModal) currentModal.remove();
+            
+            showPublishOnlineModal();
+            // Wait for modal to render, then switch to Remote tab
+            setTimeout(() => {
+                switchDeploymentTab('remote');
+            }, 100);
         }
     </script>
 </body>
