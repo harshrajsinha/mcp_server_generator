@@ -2396,6 +2396,19 @@ Respond in JSON:
                         }
                         yield "[LOG] Prepared server files\n"
                     
+                    # If config_path is not provided for database server, try to find it in the server path
+                    if not config_path and server_type == 'database' and server_path:
+                        potential_config = Path(server_path) / 'scikiq_pkg_dbutils' / 'config.ini'
+                        if potential_config.exists():
+                            config_path = str(potential_config)
+                            yield f"[LOG] Auto-detected config file: {config_path}\n"
+                        else:
+                             # Try directly in server_path
+                            potential_config_direct = Path(server_path) / 'config.ini'
+                            if potential_config_direct.exists():
+                                config_path = str(potential_config_direct)
+                                yield f"[LOG] Auto-detected config file: {config_path}\n"
+                    
                     result = deployer.deploy_to_aws(
                         aws_access_key=data.get('access_key'),
                         aws_secret_key=data.get('secret_key'),
