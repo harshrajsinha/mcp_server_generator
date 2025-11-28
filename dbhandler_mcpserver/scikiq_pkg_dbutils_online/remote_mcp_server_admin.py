@@ -767,8 +767,14 @@ class FastMCPServer:
             result = self.tool_registry.execute_tool(tool_call)
             
             if hasattr(result, 'is_error') and result.is_error:
+                error_message = "Tool execution failed"
+                if isinstance(result.content, dict):
+                    error_message = result.content.get("message", str(result.content))
+                else:
+                    error_message = str(result.content)
+                
                 return {
-                    "content": [{"type": "text", "text": result.content.get("message", "Tool execution failed")}],
+                    "content": [{"type": "text", "text": error_message}],
                     "isError": True
                 }
             else:
@@ -1304,6 +1310,60 @@ class RemoteMCPServerWithAdmin:
                         logger.info(f"Tool call response: {response}")
                         return JSONResponse(response)
                         
+                    elif method == "notifications/initialized":
+                        # Client initialized notification
+                        logger.info("Client initialized notification received")
+                        return Response(status_code=200)
+
+                    elif method == "resources/list":
+                        # List available resources
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {
+                                "resources": []
+                            }
+                        }
+                        return JSONResponse(response)
+
+                    elif method == "resources/read":
+                        # Read a resource
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "error": {"code": -32602, "message": "No resources available"}
+                        }
+                        return JSONResponse(response)
+
+                    elif method == "prompts/list":
+                        # List available prompts
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {
+                                "prompts": []
+                            }
+                        }
+                        return JSONResponse(response)
+                        
+                    elif method == "prompts/get":
+                        # Get a prompt
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "error": {"code": -32602, "message": "No prompts available"}
+                        }
+                        return JSONResponse(response)
+                        
+                    elif method == "ping":
+                        # Ping
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request_id,
+                            "result": {}
+                        }
+                        return JSONResponse(response)
+
                     else:
                         # Unknown method
                         error_response = {

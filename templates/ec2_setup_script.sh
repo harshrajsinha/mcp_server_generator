@@ -30,7 +30,7 @@ sudo apt-get upgrade -y || { echo "WARNING: apt-get upgrade failed, continuing..
 
 # Install required packages
 echo "Installing required packages..."
-sudo apt-get install -y python3 python3-pip python3-venv nginx certbot python3-certbot-nginx git || { echo "ERROR: Package installation failed"; exit 1; }
+sudo apt-get install -y python3 python3-pip python3-venv nginx certbot python3-certbot-nginx git build-essential default-libmysqlclient-dev pkg-config || { echo "ERROR: Package installation failed"; exit 1; }
 echo "Packages installed successfully"
 
 # Create directory for MCP server

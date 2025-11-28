@@ -207,6 +207,10 @@ class OnlineDeployer:
                 online_pkg_path = Path(__file__).parent / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils_online'
                 
                 # Copy config.ini - only database sections, remove server config and examples
+                config_filename = "config.ini"
+                if config_path:
+                    config_filename = os.path.basename(config_path)
+                
                 if config_path and Path(config_path).exists():
                     import configparser
                     try:
@@ -234,14 +238,14 @@ class OnlineDeployer:
                         from io import StringIO
                         config_string = StringIO()
                         filtered_config.write(config_string)
-                        server_files['config.ini'] = config_string.getvalue()
-                        self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes, filtered to database sections only)")
+                        server_files[config_filename] = config_string.getvalue()
+                        self.log(f"  - {config_filename} ({len(server_files[config_filename])} bytes, filtered to database sections only)")
                     except Exception as e:
                         # Fallback: use original file if parsing fails
                         self.log(f"  - Warning: Could not filter config.ini: {e}. Using original file.", "WARNING")
                         with open(config_path, 'r', encoding='utf-8') as f:
-                            server_files['config.ini'] = f.read()
-                        self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes)")
+                            server_files[config_filename] = f.read()
+                        self.log(f"  - {config_filename} ({len(server_files[config_filename])} bytes)")
                 else:
                     # Try to find config.ini in online package
                     config_online_path = online_pkg_path / 'config.ini'
@@ -317,14 +321,14 @@ class OnlineDeployer:
                         from io import StringIO
                         config_string = StringIO()
                         filtered_config.write(config_string)
-                        server_files['config.ini'] = config_string.getvalue()
-                        self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes, filtered to database sections only)")
+                        server_files[config_filename] = config_string.getvalue()
+                        self.log(f"  - {config_filename} ({len(server_files[config_filename])} bytes, filtered to database sections only)")
                     except Exception as e:
                         # Fallback: use original file if parsing fails
                         self.log(f"  - Warning: Could not filter config.ini: {e}. Using original file.", "WARNING")
                         with open(config_path, 'r', encoding='utf-8') as f:
-                            server_files['config.ini'] = f.read()
-                        self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes)")
+                            server_files[config_filename] = f.read()
+                        self.log(f"  - {config_filename} ({len(server_files[config_filename])} bytes)")
                 else:
                     self.log("  - config.ini not found, will be created on server", "WARNING")
                 
@@ -1036,10 +1040,14 @@ if __name__ == "__main__":
                     # Use public IP if no domain (will be replaced after instance launch)
                     server_base_url = f"http://{public_ip or 'SERVER_IP'}"
                 
-                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/remote_mcp_server_admin.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db --config-path /opt/mcp-server/config.ini --debug"
+                # Find config file (ends with .ini)
+                config_file = next((f for f in server_files.keys() if f.endswith('.ini')), 'config.ini')
+                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/remote_mcp_server_admin.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db --config-path /opt/mcp-server/{config_file} --debug"
             else:
                 # Local deployment: use run_mcp_server.py
-                startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/run_mcp_server.py --config-file /opt/mcp-server/config.ini"
+                # Find config file (ends with .ini)
+                config_file = next((f for f in server_files.keys() if f.endswith('.ini')), 'config.ini')
+                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/run_mcp_server.py --config-file /opt/mcp-server/{config_file}"
         elif server_type in ['api', 'codebase', 'swagger', 'github']:
             # Find YAML files
             yaml_files = [f for f in server_files.keys() if f.endswith('.yaml')]

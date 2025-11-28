@@ -198,7 +198,7 @@ dask[dataframe]>=2023.1.0
 # ======================================================================
 
 # Vertica
-# vertica-python>=1.1.1
+vertica-python>=1.1.1
 
 # Teradata
 # teradatasql>=17.0.0
