@@ -1063,7 +1063,9 @@ if __name__ == "__main__":
                     admin_arg = f" --create-admin {admin_username}:{admin_password}"
                 
                 # Use HTTP mode with OAuth admin interface (same as database server)
-                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db {yaml_args}{admin_arg} --debug"
+                # Note: We don't include admin_arg here because admin creation is handled separately in the setup script
+                # Including it here would cause the server to exit after creating the user, leading to a restart loop
+                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db {yaml_args} --debug"
                 self.log(f"Generated startup command (HTTP with OAuth admin): {startup_command}", "INFO")
             else:
                 startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db"
