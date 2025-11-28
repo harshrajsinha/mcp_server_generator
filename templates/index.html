@@ -2011,6 +2011,17 @@
         let appConfig = null;
 
         // Load configuration from backend
+        
+        function escapeHtml(text) {
+            if (!text) return text;
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         async function loadConfig() {
             try {
                 const response = await fetch('/api/config');
@@ -3180,7 +3191,7 @@
 
                     item.innerHTML = `
                         <span class="icon"><i class="fas fa-plug" style="color: ${methodColor};"></i></span>
-                        <span style="flex: 1;">${api.route}</span>
+                        <span style="flex: 1;">${escapeHtml(api.route)}</span>
                         <span style="background: ${methodColor}; color: white; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.65rem; margin-left: 0.5rem;">${method}</span>
                     `;
 
@@ -3309,7 +3320,7 @@
 
                     item.innerHTML = `
                         <span class="icon"><i class="fas fa-plug" style="color: ${methodColor};"></i></span>
-                        <span style="flex: 1;">${api.route}</span>
+                        <span style="flex: 1;">${escapeHtml(api.route)}</span>
                         <span style="background: ${methodColor}; color: white; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.65rem; margin-left: 0.5rem;">${method}</span>
                         ${fileBadge}
                     `;
@@ -3849,7 +3860,7 @@
                 <div class="api-item" data-api-index="${api.index}" data-domain="${domain}">
                     <input type="checkbox" class="api-checkbox" onchange="toggleAPISelection(${api.index})" />
                     <span class="api-method method-${method}">${method}</span>
-                    <span class="api-route">${api.route}</span>
+                    <span class="api-route">${escapeHtml(api.route)}</span>
                     <span class="api-confidence ${confidenceClass}" title="MCP Suitability Score (AI-analyzed)">${scoreDisplay}</span>
                 </div>
             `;
@@ -4194,7 +4205,7 @@
                     treeHTML += `
                         <div class="tree-endpoint" id="${endpointId}" onclick="showEndpointCode(${domainIndex}, ${apiIndex})">
                             <span class="tree-endpoint-method ${api.methods[0]}">${api.methods[0]}</span>
-                            <span class="tree-endpoint-route">${api.route}</span>
+                            <span class="tree-endpoint-route">${escapeHtml(api.route)}</span>
                         </div>
                     `;
                 });
@@ -4367,7 +4378,7 @@
                     </div>
                     <div class="metadata-row">
                         <span class="metadata-label">Route</span>
-                        <span class="metadata-value">${api.route}</span>
+                        <span class="metadata-value">${escapeHtml(api.route)}</span>
                     </div>
                     <div class="metadata-row">
                         <span class="metadata-label">Method</span>

@@ -3035,4 +3035,44 @@ except Exception as e:
             ]
         }
 
+    def generate_mcp_server_code(endpoints, api_server_url, enable_oauth, oauth_config):
+        """
+        Generate MCP server code from endpoints
+        """
+        try:
+            # Create converter instance just for code generation
+            from intelligent_mcp_converter import IntelligentMCPConverter
+            converter = IntelligentMCPConverter(project_root=".", base_url=api_server_url)
+            
+            # Manually set endpoints
+            converter.endpoints = endpoints
+            
+            # Convert to tools
+            converter.convert_to_mcp_tools()
+            
+            # Generate code using a temporary file
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.py') as tf:
+                temp_path = tf.name
+            
+            # Close the file handle so converter can write to it
+            
+            converter.generate_mcp_server_code(temp_path)
+            
+            with open(temp_path, 'r', encoding='utf-8') as f:
+                code = f.read()
+                
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            
+            return code, []
+            
+        except Exception as e:
+            print(f"Error generating MCP server code: {e}")
+            import traceback
+            traceback.print_exc()
+            return f"# Error generating code: {str(e)}", []
+
     print("[OK] MCP Studio routes initialized")

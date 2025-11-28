@@ -739,18 +739,42 @@ class YAMLToolLoader:
             if arguments:
                 logger.info(f"Arguments: {json.dumps(arguments)}")
             
+            # Handle path parameters (e.g., <int:restaurant_id>)
+            import re
+            request_args = arguments.copy() if arguments else {}
+            
+            # Find all placeholders in the URL
+            placeholders = re.findall(r'<([^>]+)>', url)
+            
+            for placeholder in placeholders:
+                # Extract variable name (handle type converters like int:id)
+                if ':' in placeholder:
+                    param_name = placeholder.split(':')[-1].strip()
+                else:
+                    param_name = placeholder.strip()
+                
+                if param_name in request_args:
+                    # Replace in URL
+                    url = url.replace(f'<{placeholder}>', str(request_args[param_name]))
+                    # Remove from request args so it's not sent as query param
+                    del request_args[param_name]
+                else:
+                    logger.warning(f"Missing path parameter: {param_name} for URL: {url}")
+            
+            logger.info(f"Final URL: {url}")
+            
             async with httpx.AsyncClient() as client:
                 response = None
                 if method == "GET":
-                    response = await client.get(url, params=arguments, timeout=60.0)
+                    response = await client.get(url, params=request_args, timeout=60.0)
                 elif method == "POST":
-                    response = await client.post(url, json=arguments, timeout=60.0)
+                    response = await client.post(url, json=request_args, timeout=60.0)
                 elif method == "PUT":
-                    response = await client.put(url, json=arguments, timeout=60.0)
+                    response = await client.put(url, json=request_args, timeout=60.0)
                 elif method == "DELETE":
-                    response = await client.delete(url, params=arguments, timeout=60.0)
+                    response = await client.delete(url, params=request_args, timeout=60.0)
                 elif method == "PATCH":
-                    response = await client.patch(url, json=arguments, timeout=60.0)
+                    response = await client.patch(url, json=request_args, timeout=60.0)
                 else:
                     logger.error(f"Unsupported HTTP method: {method}")
                     return {
@@ -1253,7 +1277,8 @@ echo "=========================================="
                 admin_username = 'admin'
             if not admin_password:
                 # Generate a secure random password
-                alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+                # Exclude '&' to prevent HTML entity issues in UI
+                alphabet = string.ascii_letters + string.digits + "!@#$%^*"
                 admin_password = ''.join(secrets.choice(alphabet) for i in range(16))
             
             # Add admin user creation command
@@ -1685,7 +1710,8 @@ echo ""
                 import string
                 admin_username = 'admin'
                 # Generate a secure random password
-                alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+                # Exclude '&' to prevent HTML entity issues in UI
+                alphabet = string.ascii_letters + string.digits + "!@#$%^*"
                 admin_password = ''.join(secrets.choice(alphabet) for i in range(16))
                 self.log(f"Generated admin credentials: username={admin_username}, password={admin_password}", "INFO")
                 # Log credentials prominently for user visibility

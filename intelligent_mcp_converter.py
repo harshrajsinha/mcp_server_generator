@@ -6,6 +6,7 @@ Dynamically understands API patterns without hardcoded rules
 
 import ast
 import re
+import os
 from typing import Dict, List, Any, Optional, Set, Tuple
 from pathlib import Path
 from collections import defaultdict, Counter
@@ -1143,6 +1144,46 @@ def intelligent_convert_fastapi_to_mcp(
     print("="*80)
 
     return report
+
+
+
+def scan_for_apis(project_path: str) -> Dict[str, Any]:
+    """
+    Scan codebase for APIs using IntelligentMCPConverter
+    Wrapper for backward compatibility/external usage
+    """
+    try:
+        # Initialize converter
+        converter = IntelligentMCPConverter(project_root=project_path)
+        
+        # Walk through directory
+        for root, _, files in os.walk(project_path):
+            for file in files:
+                if file.endswith('.py'):
+                    file_path = os.path.join(root, file)
+                    
+                    # Skip virtual environments and hidden directories
+                    if 'venv' in file_path or '.git' in file_path or '__pycache__' in file_path:
+                        continue
+                        
+                    try:
+                        # Analyze file - this adds to converter.endpoints internally
+                        # analyze_codebase expects path relative to project_root
+                        rel_path = os.path.relpath(file_path, project_path)
+                        converter.analyze_codebase(rel_path)
+                    except Exception as e:
+                        print(f"Error analyzing {file_path}: {e}")
+        
+        return {
+            'success': True,
+            'apis': converter.endpoints,
+            'count': len(converter.endpoints)
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
 
 if __name__ == "__main__":
