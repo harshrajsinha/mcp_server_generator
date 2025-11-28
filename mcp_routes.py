@@ -927,6 +927,178 @@ def setup_mcp_routes(app):
                 'error': str(e)
             }), 500
 
+    @app.route('/api/generate-yaml-documentation', methods=['POST'])
+    def generate_yaml_documentation():
+        """Generate comprehensive documentation from YAML MCP tools file"""
+        try:
+            import yaml
+
+            data = request.get_json()
+            yaml_content = data.get('yaml_content')
+            yaml_path = data.get('yaml_path')
+
+            # Get YAML content from path if not provided directly
+            if not yaml_content and yaml_path:
+                if os.path.exists(yaml_path):
+                    with open(yaml_path, 'r', encoding='utf-8') as f:
+                        yaml_content = f.read()
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': 'YAML file not found'
+                    }), 404
+
+            if not yaml_content:
+                return jsonify({
+                    'success': False,
+                    'error': 'No YAML content provided'
+                }), 400
+
+            # Parse YAML
+            try:
+                yaml_data = yaml.safe_load(yaml_content)
+            except Exception as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid YAML: {str(e)}'
+                }), 400
+
+            tools = yaml_data.get('tools', [])
+            server_info = yaml_data.get('server', {})
+
+            # Generate documentation in Markdown format
+            doc_lines = []
+
+            # Header
+            doc_lines.append("# MCP Server API Documentation")
+            doc_lines.append("")
+            doc_lines.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            doc_lines.append(f"**Total Tools:** {len(tools)}")
+            doc_lines.append("")
+
+            # Server info if available
+            if server_info:
+                doc_lines.append("## Server Configuration")
+                doc_lines.append("")
+                if server_info.get('name'):
+                    doc_lines.append(f"- **Name:** {server_info.get('name')}")
+                if server_info.get('version'):
+                    doc_lines.append(f"- **Version:** {server_info.get('version')}")
+                if server_info.get('base_url'):
+                    doc_lines.append(f"- **Base URL:** `{server_info.get('base_url')}`")
+                doc_lines.append("")
+
+            # Table of Contents
+            doc_lines.append("## Table of Contents")
+            doc_lines.append("")
+            for i, tool in enumerate(tools, 1):
+                tool_name = tool.get('name', f'tool_{i}')
+                doc_lines.append(f"{i}. [{tool_name}](#{tool_name.lower().replace('_', '-')})")
+            doc_lines.append("")
+
+            # Tools Documentation
+            doc_lines.append("---")
+            doc_lines.append("")
+            doc_lines.append("## API Tools Reference")
+            doc_lines.append("")
+
+            for tool in tools:
+                tool_name = tool.get('name', 'Unknown')
+                description = tool.get('description', 'No description available')
+                method = tool.get('method', 'GET').upper()
+                endpoint = tool.get('endpoint', '/')
+                input_schema = tool.get('inputSchema', {})
+                properties = input_schema.get('properties', {})
+                required = input_schema.get('required', [])
+
+                # Tool Header
+                doc_lines.append(f"### {tool_name}")
+                doc_lines.append("")
+                doc_lines.append(f"**Description:** {description}")
+                doc_lines.append("")
+                doc_lines.append(f"**Endpoint:** `{method} {endpoint}`")
+                doc_lines.append("")
+
+                # Parameters
+                if properties:
+                    doc_lines.append("#### Parameters")
+                    doc_lines.append("")
+                    doc_lines.append("| Parameter | Type | Required | Description |")
+                    doc_lines.append("|-----------|------|----------|-------------|")
+
+                    for param_name, param_info in properties.items():
+                        param_type = param_info.get('type', 'string')
+                        param_desc = param_info.get('description', '-')
+                        is_required = '✓' if param_name in required else '✗'
+                        doc_lines.append(f"| `{param_name}` | {param_type} | {is_required} | {param_desc} |")
+
+                    doc_lines.append("")
+                else:
+                    doc_lines.append("#### Parameters")
+                    doc_lines.append("")
+                    doc_lines.append("*No parameters required*")
+                    doc_lines.append("")
+
+                # Example Usage
+                doc_lines.append("#### Example Usage")
+                doc_lines.append("")
+                doc_lines.append("```json")
+                doc_lines.append("{")
+                doc_lines.append(f'  "tool": "{tool_name}",')
+                doc_lines.append('  "arguments": {')
+
+                example_args = []
+                for param_name, param_info in properties.items():
+                    param_type = param_info.get('type', 'string')
+                    if param_type == 'string':
+                        example_args.append(f'    "{param_name}": "example_value"')
+                    elif param_type == 'integer' or param_type == 'number':
+                        example_args.append(f'    "{param_name}": 0')
+                    elif param_type == 'boolean':
+                        example_args.append(f'    "{param_name}": true')
+                    elif param_type == 'array':
+                        example_args.append(f'    "{param_name}": []')
+                    elif param_type == 'object':
+                        example_args.append(f'    "{param_name}": {{}}')
+                    else:
+                        example_args.append(f'    "{param_name}": null')
+
+                doc_lines.append(',\n'.join(example_args))
+                doc_lines.append('  }')
+                doc_lines.append("}")
+                doc_lines.append("```")
+                doc_lines.append("")
+                doc_lines.append("---")
+                doc_lines.append("")
+
+            # Footer
+            doc_lines.append("## Notes")
+            doc_lines.append("")
+            doc_lines.append("- All endpoints require proper authentication if configured")
+            doc_lines.append("- Response format is JSON")
+            doc_lines.append("- Error responses include `error` field with description")
+            doc_lines.append("")
+            doc_lines.append("---")
+            doc_lines.append("")
+            doc_lines.append("*Documentation auto-generated by SCIKIQ MCP Studio*")
+
+            documentation = '\n'.join(doc_lines)
+
+            return jsonify({
+                'success': True,
+                'documentation': documentation,
+                'tool_count': len(tools),
+                'format': 'markdown'
+            })
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
     @app.route('/api/analyze-endpoint', methods=['POST'])
     def mcp_analyze_endpoint():
         """Analyze endpoint with AI to generate plain English explanation and MCP suitability score"""
@@ -2344,6 +2516,56 @@ Respond in JSON:
                             yield "=" * 60 + "\n"
                             yield "Copy the above details for your records.\n"
                             yield "=" * 60 + "\n"
+
+                        # Auto-download logs if requested
+                        auto_download_logs = data.get('auto_download_logs', False)
+                        if auto_download_logs and result.get('deployment_summary'):
+                            instance_id = result.get('deployment_summary', {}).get('instance_id')
+                            region = data.get('region', 'ap-south-1')
+
+                            if instance_id:
+                                yield "\n"
+                                yield "=" * 60 + "\n"
+                                yield "FETCHING DEPLOYMENT LOGS...\n"
+                                yield "=" * 60 + "\n"
+                                yield f"[INFO] Waiting for setup to complete on {instance_id}...\n"
+                                yield "[INFO] This may take 5-10 minutes. Logs will be fetched automatically.\n"
+
+                                # Wait a bit for cloud-init to start logging
+                                time.sleep(30)
+
+                                log_result = deployer.get_deployment_logs(
+                                    instance_id=instance_id,
+                                    aws_access_key=data.get('access_key'),
+                                    aws_secret_key=data.get('secret_key'),
+                                    region=region,
+                                    wait_for_completion=True,
+                                    max_wait_seconds=600  # Wait up to 10 minutes
+                                )
+
+                                # Stream any logs from the log fetcher
+                                while True:
+                                    try:
+                                        log = deployer.logs.get(timeout=0.1)
+                                        yield f"{log}\n"
+                                    except:
+                                        break
+
+                                if log_result.get('success'):
+                                    yield "\n"
+                                    yield "=" * 60 + "\n"
+                                    yield "EC2 CONSOLE OUTPUT / SETUP LOGS\n"
+                                    yield "=" * 60 + "\n"
+                                    yield log_result.get('logs', 'No logs available yet')
+                                    yield "\n"
+                                    yield "=" * 60 + "\n"
+                                    if log_result.get('completed'):
+                                        yield "[SUCCESS] Setup completed on EC2 instance.\n"
+                                    else:
+                                        yield "[INFO] Setup may still be in progress. Check instance console for full logs.\n"
+                                else:
+                                    yield f"[WARNING] Could not fetch logs: {log_result.get('error', 'Unknown error')}\n"
+                                    yield "[INFO] You can manually fetch logs later using the /api/deploy/aws/logs endpoint.\n"
                     else:
                         # Read any remaining error logs
                         try:
@@ -2369,6 +2591,113 @@ Respond in JSON:
             print(f"[DEPLOY-AWS] {error_msg}")
             import traceback
             traceback.print_exc()
+            return jsonify({'error': error_msg}), 500
+
+    @app.route('/api/deploy/aws/logs', methods=['POST'])
+    def get_aws_deployment_logs():
+        """Get deployment logs from AWS EC2 instance"""
+        print("[DEPLOY-AWS-LOGS] Endpoint called!")
+        try:
+            from online_deployment import OnlineDeployer
+            data = request.get_json()
+
+            instance_id = data.get('instance_id')
+            access_key = data.get('access_key')
+            secret_key = data.get('secret_key')
+            region = data.get('region', 'ap-south-1')
+            wait_for_completion = data.get('wait_for_completion', False)
+            max_wait_seconds = data.get('max_wait_seconds', 300)
+
+            if not instance_id:
+                return jsonify({'error': 'instance_id is required'}), 400
+            if not access_key or not secret_key:
+                return jsonify({'error': 'AWS credentials (access_key, secret_key) are required'}), 400
+
+            deployer = OnlineDeployer()
+
+            def generate():
+                yield f"[LOG] Fetching logs for instance {instance_id} in {region}...\n"
+
+                result = deployer.get_deployment_logs(
+                    instance_id=instance_id,
+                    aws_access_key=access_key,
+                    aws_secret_key=secret_key,
+                    region=region,
+                    wait_for_completion=wait_for_completion,
+                    max_wait_seconds=max_wait_seconds
+                )
+
+                # Stream deployer logs
+                while True:
+                    try:
+                        log = deployer.logs.get(timeout=0.1)
+                        yield f"{log}\n"
+                    except:
+                        break
+
+                if result.get('success'):
+                    yield "\n" + "=" * 60 + "\n"
+                    yield "DEPLOYMENT LOGS\n"
+                    yield "=" * 60 + "\n"
+                    yield result.get('logs', 'No logs available')
+                    yield "\n" + "=" * 60 + "\n"
+                    if result.get('completed'):
+                        yield "[SUCCESS] Setup completed.\n"
+                    else:
+                        yield "[INFO] Setup still in progress or status unknown.\n"
+                else:
+                    yield f"[ERROR] Failed to fetch logs: {result.get('error', 'Unknown error')}\n"
+
+            return Response(stream_with_context(generate()), mimetype='text/plain')
+
+        except Exception as e:
+            error_msg = f"Error fetching logs: {str(e)}"
+            print(f"[DEPLOY-AWS-LOGS] {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': error_msg}), 500
+
+    @app.route('/api/deploy/aws/logs/download', methods=['POST'])
+    def download_aws_deployment_logs():
+        """Download deployment logs as a file"""
+        print("[DEPLOY-AWS-LOGS-DOWNLOAD] Endpoint called!")
+        try:
+            from online_deployment import OnlineDeployer
+            data = request.get_json()
+
+            instance_id = data.get('instance_id')
+            access_key = data.get('access_key')
+            secret_key = data.get('secret_key')
+            region = data.get('region', 'ap-south-1')
+
+            if not instance_id:
+                return jsonify({'error': 'instance_id is required'}), 400
+            if not access_key or not secret_key:
+                return jsonify({'error': 'AWS credentials are required'}), 400
+
+            deployer = OnlineDeployer()
+            result = deployer.get_deployment_logs(
+                instance_id=instance_id,
+                aws_access_key=access_key,
+                aws_secret_key=secret_key,
+                region=region,
+                wait_for_completion=False
+            )
+
+            if result.get('success'):
+                logs_content = result.get('logs', 'No logs available')
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"deployment_logs_{instance_id}_{timestamp}.txt"
+
+                response = Response(logs_content, mimetype='text/plain')
+                response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
+            else:
+                return jsonify({'error': result.get('error', 'Failed to fetch logs')}), 500
+
+        except Exception as e:
+            error_msg = f"Error downloading logs: {str(e)}"
+            print(f"[DEPLOY-AWS-LOGS-DOWNLOAD] {error_msg}")
             return jsonify({'error': error_msg}), 500
 
     @app.route('/api/deploy/azure', methods=['POST'])

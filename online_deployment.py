@@ -2046,14 +2046,152 @@ echo ""
         except Exception as e:
             error_message = str(e)
             self.log(f"AWS Deployment Error: {error_message}", "ERROR")
-            
+
             # Check if it's a permission-related error even if not ClientError
             if 'not authorized' in error_message.lower() or 'unauthorized' in error_message.lower():
                 suggestions = self._get_iam_permission_suggestions('UnauthorizedOperation', 'RunInstances')
                 if suggestions:
                     self.log(suggestions, "ERROR")
-            
+
             return None
+
+    def get_deployment_logs(self, instance_id, aws_access_key, aws_secret_key, region, wait_for_completion=True, max_wait_seconds=600):
+        """
+        Get deployment logs from an EC2 instance using console output.
+        This retrieves cloud-init and setup script logs without requiring SSH access.
+
+        Args:
+            instance_id: EC2 instance ID
+            aws_access_key: AWS access key
+            aws_secret_key: AWS secret key
+            region: AWS region
+            wait_for_completion: If True, wait for setup to complete before returning logs
+            max_wait_seconds: Maximum seconds to wait for completion (default 10 minutes)
+
+        Returns:
+            dict with 'success', 'logs', 'completed', 'error' keys
+        """
+        self.log(f"Fetching deployment logs for instance {instance_id}...")
+
+        try:
+            ec2_client = boto3.client(
+                'ec2',
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key,
+                region_name=region
+            )
+
+            logs_content = []
+            setup_completed = False
+            start_time = time.time()
+
+            while True:
+                elapsed = time.time() - start_time
+
+                # Get console output
+                try:
+                    # Try with Latest=True first (works for older instance types)
+                    # Fall back to without Latest for Nitro-based instances (t3, c5, m5, etc.)
+                    try:
+                        response = ec2_client.get_console_output(
+                            InstanceId=instance_id,
+                            Latest=True
+                        )
+                    except ClientError as latest_error:
+                        if 'UnsupportedOperation' in str(latest_error):
+                            # Nitro-based instances don't support Latest parameter
+                            self.log("Instance uses Nitro hypervisor, fetching full console output...", "INFO")
+                            response = ec2_client.get_console_output(
+                                InstanceId=instance_id
+                            )
+                        else:
+                            raise
+
+                    if response.get('Output'):
+                        # Console output is base64 encoded
+                        import base64
+                        try:
+                            console_output = base64.b64decode(response['Output']).decode('utf-8', errors='replace')
+                        except:
+                            console_output = response['Output']
+
+                        logs_content = [console_output]
+
+                        # Check for completion markers
+                        if 'MCP_SERVER_SETUP_COMPLETE' in console_output or 'Setup completed successfully' in console_output:
+                            setup_completed = True
+                            self.log("Setup completed successfully!", "SUCCESS")
+                        elif 'MCP_SERVER_SETUP_FAILED' in console_output or 'Setup failed' in console_output:
+                            setup_completed = True
+                            self.log("Setup failed - check logs for details", "ERROR")
+                        elif 'cloud-init' in console_output.lower() and 'finished' in console_output.lower():
+                            setup_completed = True
+                            self.log("Cloud-init finished", "SUCCESS")
+                    else:
+                        self.log(f"Console output not yet available (elapsed: {int(elapsed)}s)...", "INFO")
+
+                except ClientError as e:
+                    error_code = e.response.get('Error', {}).get('Code', '')
+                    if error_code == 'InvalidInstanceID.NotFound':
+                        self.log(f"Instance {instance_id} not found", "ERROR")
+                        return {
+                            'success': False,
+                            'logs': '',
+                            'completed': False,
+                            'error': f'Instance {instance_id} not found'
+                        }
+                    raise
+
+                # Check if we should continue waiting
+                if not wait_for_completion:
+                    break
+
+                if setup_completed:
+                    break
+
+                if elapsed >= max_wait_seconds:
+                    self.log(f"Timeout waiting for setup completion after {int(elapsed)}s", "WARNING")
+                    break
+
+                # Wait before next poll
+                self.log(f"Waiting for setup to complete... ({int(elapsed)}s / {max_wait_seconds}s)", "INFO")
+                time.sleep(15)
+
+            # Also try to get instance status for additional context
+            try:
+                instance_status = ec2_client.describe_instance_status(
+                    InstanceIds=[instance_id],
+                    IncludeAllInstances=True
+                )
+                if instance_status.get('InstanceStatuses'):
+                    status = instance_status['InstanceStatuses'][0]
+                    instance_state = status.get('InstanceState', {}).get('Name', 'unknown')
+                    system_status = status.get('SystemStatus', {}).get('Status', 'unknown')
+                    instance_status_check = status.get('InstanceStatus', {}).get('Status', 'unknown')
+
+                    status_info = f"\n\n=== Instance Status ===\nState: {instance_state}\nSystem Status: {system_status}\nInstance Status: {instance_status_check}\n"
+                    logs_content.append(status_info)
+            except:
+                pass
+
+            full_logs = '\n'.join(logs_content)
+
+            return {
+                'success': True,
+                'logs': full_logs,
+                'completed': setup_completed,
+                'instance_id': instance_id,
+                'region': region
+            }
+
+        except Exception as e:
+            self.log(f"Error fetching logs: {str(e)}", "ERROR")
+            return {
+                'success': False,
+                'logs': '',
+                'completed': False,
+                'error': str(e)
+            }
 
     def _get_ubuntu_ami(self, ec2_client, region, aws_access_key=None, aws_secret_key=None):
         """

@@ -1384,7 +1384,7 @@
             background: rgba(0, 0, 0, 0.3);
             border-radius: 8px;
             padding: 1rem;
-            max-height: 300px;
+            max-height: 600px;
             overflow-y: auto;
             font-size: 0.85rem;
             line-height: 1.6;
@@ -1865,7 +1865,7 @@
                             </span>
                             <span id="yamlToolCount" style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;"></span>
                         </div>
-                        <pre id="yamlCodeContent" style="margin: 0; padding: 1rem; max-height: 500px; overflow-y: auto; font-family: 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.5; color: #e0e0e0; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                        <pre id="yamlCodeContent" style="margin: 0; padding: 1rem; max-height: 800px; overflow-y: auto; font-family: 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.5; color: #e0e0e0; white-space: pre-wrap; word-wrap: break-word;"></pre>
                     </div>
                 </div>
             </div>
@@ -2457,14 +2457,13 @@
                         <div class="input-group">
                             <label>Connection Name</label>
                             <input type="text" name="connection_name" placeholder="prod_mysql" value="connection_${dbConnectionCounter}" />
-                            <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
-                                Unique identifier for this connection
-                            </small>
+                           
                         </div>
                         <div class="input-group">
                             <label>Database Type</label>
                             <select name="db_type" onchange="updateDatabaseTypeFields('${connectionId}', this.value)">
                                 <option value="MYSQL">MySQL</option>
+                                <option value="VERTICA">VERTICA</option>
                                 <option value="POSTGRES">PostgreSQL</option>
                                 <option value="SQLSERVER">SQL Server</option>
                                 <option value="ORACLE">Oracle</option>
@@ -5364,9 +5363,152 @@
 
                     // Switch to MCP Tools tab
                     switchToMcpTab();
+
+                    // Auto-generate documentation from YAML
+                    generateDocumentationFromYaml(result.content, toolCount);
                 }
             } catch (error) {
                 console.error('Error loading YAML:', error);
+            }
+        }
+
+        // Generate documentation from YAML content
+        async function generateDocumentationFromYaml(yamlContent, toolCount) {
+            const docsContainer = document.getElementById('documentationContent');
+
+            try {
+                // Show loading state
+                docsContainer.innerHTML = `
+                    <div class="text-center" style="padding: 3rem; color: rgba(255, 255, 255, 0.7);">
+                        <div class="loading-spinner" style="width: 40px; height: 40px; border: 3px solid rgba(255, 255, 255, 0.2); border-top-color: var(--anthropic-orange); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+                        <div>Generating documentation for ${toolCount} tools...</div>
+                    </div>
+                `;
+
+                const response = await fetch('/api/generate-yaml-documentation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ yaml_content: yamlContent })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.documentation) {
+                    // Store documentation for download
+                    window.generatedDocumentation = result.documentation;
+
+                    // Render markdown documentation with syntax highlighting
+                    const renderedDoc = renderMarkdownDoc(result.documentation);
+
+                    docsContainer.innerHTML = `
+                        <div style="margin-bottom: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <button onclick="copyDocumentation()" class="action-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255, 255, 255, 0.1);">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <button onclick="downloadDocumentation()" class="action-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: linear-gradient(135deg, var(--anthropic-orange), #CC5500);">
+                                <i class="fas fa-download"></i> Download MD
+                            </button>
+                        </div>
+                        <div class="markdown-content" style="background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 1.5rem; max-height: 600px; overflow-y: auto;">
+                            ${renderedDoc}
+                        </div>
+                    `;
+                } else {
+                    throw new Error(result.error || 'Failed to generate documentation');
+                }
+            } catch (error) {
+                console.error('Error generating documentation:', error);
+                docsContainer.innerHTML = `
+                    <div class="text-center" style="padding: 3rem; color: rgba(255, 255, 255, 0.5);">
+                        <div><i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: #EF4444; margin-bottom: 1rem;"></i></div>
+                        <div>Failed to generate documentation: ${error.message}</div>
+                        <button onclick="generateDocumentationFromYaml(window.generatedYamlContent, document.getElementById('mcpTools').textContent)" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--anthropic-orange); border: none; border-radius: 6px; color: white; cursor: pointer;">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // Simple markdown renderer
+        function renderMarkdownDoc(markdown) {
+            return markdown
+                // Headers
+                .replace(/^### (.*$)/gm, '<h3 style="color: var(--scikiq-light-blue); margin: 1.5rem 0 0.5rem; font-size: 1.1rem;">$1</h3>')
+                .replace(/^## (.*$)/gm, '<h2 style="color: var(--anthropic-orange); margin: 1.5rem 0 0.75rem; font-size: 1.3rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">$1</h2>')
+                .replace(/^# (.*$)/gm, '<h1 style="color: white; margin: 0 0 1rem; font-size: 1.6rem;">$1</h1>')
+                // Bold
+                .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #E0E0E0;">$1</strong>')
+                // Italic
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                // Code blocks
+                .replace(/```json\n([\s\S]*?)```/g, '<pre style="background: rgba(0,0,0,0.4); padding: 1rem; border-radius: 6px; overflow-x: auto; font-family: \'Fira Code\', monospace; font-size: 0.85rem; color: #10B981; margin: 0.5rem 0;">$1</pre>')
+                .replace(/```([\s\S]*?)```/g, '<pre style="background: rgba(0,0,0,0.4); padding: 1rem; border-radius: 6px; overflow-x: auto; font-family: \'Fira Code\', monospace; font-size: 0.85rem; color: #E0E0E0; margin: 0.5rem 0;">$1</pre>')
+                // Inline code
+                .replace(/`([^`]+)`/g, '<code style="background: rgba(0,0,0,0.3); padding: 0.2rem 0.4rem; border-radius: 4px; font-family: \'Fira Code\', monospace; font-size: 0.85rem; color: var(--anthropic-orange);">$1</code>')
+                // Tables
+                .replace(/\|(.+)\|/g, function(match) {
+                    if (match.includes('---')) {
+                        return ''; // Skip separator row
+                    }
+                    const cells = match.split('|').filter(c => c.trim());
+                    const isHeader = match.includes('Parameter') || match.includes('Type');
+                    const cellTag = isHeader ? 'th' : 'td';
+                    const cellStyle = isHeader
+                        ? 'style="padding: 0.5rem; text-align: left; background: rgba(255,255,255,0.1); color: var(--scikiq-light-blue); font-weight: 600;"'
+                        : 'style="padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);"';
+                    return '<tr>' + cells.map(c => `<${cellTag} ${cellStyle}>${c.trim()}</${cellTag}>`).join('') + '</tr>';
+                })
+                // Wrap tables
+                .replace(/(<tr>.*<\/tr>\n?)+/g, '<table style="width: 100%; border-collapse: collapse; margin: 0.5rem 0; font-size: 0.9rem;">$&</table>')
+                // Lists
+                .replace(/^- (.*$)/gm, '<li style="margin: 0.3rem 0; color: rgba(255,255,255,0.8);">$1</li>')
+                .replace(/(<li.*<\/li>\n?)+/g, '<ul style="margin: 0.5rem 0; padding-left: 1.5rem;">$&</ul>')
+                // Numbered lists
+                .replace(/^\d+\. \[(.*?)\]\(.*?\)/gm, '<li style="margin: 0.3rem 0;"><a href="#" style="color: var(--scikiq-light-blue); text-decoration: none;">$1</a></li>')
+                // Horizontal rule
+                .replace(/^---$/gm, '<hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 1.5rem 0;">')
+                // Line breaks
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n/g, '<br>');
+        }
+
+        // Copy documentation to clipboard
+        function copyDocumentation() {
+            if (window.generatedDocumentation) {
+                navigator.clipboard.writeText(window.generatedDocumentation).then(() => {
+                    const btns = document.querySelectorAll('.action-btn');
+                    btns.forEach(btn => {
+                        if (btn.textContent.includes('Copy')) {
+                            const originalHTML = btn.innerHTML;
+                            btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                            btn.style.background = 'var(--success-green)';
+                            setTimeout(() => {
+                                btn.innerHTML = originalHTML;
+                                btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                            }, 2000);
+                        }
+                    });
+                });
+            }
+        }
+
+        // Download documentation as markdown file
+        function downloadDocumentation() {
+            if (window.generatedDocumentation) {
+                const fileName = window.generatedYamlPath
+                    ? window.generatedYamlPath.split('/').pop().split('\\').pop().replace('.yaml', '_documentation.md').replace('.yml', '_documentation.md')
+                    : 'mcp_documentation.md';
+
+                const blob = new Blob([window.generatedDocumentation], { type: 'text/markdown' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             }
         }
 
@@ -6553,6 +6695,13 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                                 <input type="text" id="awsDomain" placeholder="api.yourdomain.com" />
                                 <small style="color: rgba(255, 255, 255, 0.5);">Leave empty to use public IP. Format: subdomain.domain.com (no http:// or https://)</small>
                             </div>
+                            <div class="input-group" style="display: flex; align-items: center; gap: 0.8rem; margin-top: 1rem;">
+                                <input type="checkbox" id="awsAutoDownloadLogs" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--anthropic-orange);" />
+                                <label for="awsAutoDownloadLogs" style="cursor: pointer; margin: 0;">
+                                    <i class="fas fa-file-download"></i> Auto-download logs after deployment
+                                </label>
+                                <small style="color: rgba(255, 255, 255, 0.5); display: block; margin-left: 28px;">(Wait for setup completion and fetch EC2 console logs)</small>
+                            </div>
                         </div>
 
                         <!-- Azure Tab -->
@@ -6766,7 +6915,15 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         server_name: serverName,
                         server_type: projectSourceType || 'api',  // Use project source type
                         server_path: serverPath,  // Send directory path where mcp_server_loader.py and YAML files are
-                        yaml_file: yamlFileName   // Send specific YAML filename to copy (not all YAML files)
+                        yaml_file: yamlFileName,   // Send specific YAML filename to copy (not all YAML files)
+                        auto_download_logs: document.getElementById('awsAutoDownloadLogs')?.checked || false
+                    };
+
+                    // Store credentials for later log download
+                    window.lastAwsDeployment = {
+                        access_key: payload.access_key,
+                        secret_key: payload.secret_key,
+                        region: payload.region
                     };
                 } else if (activeTab === 'azure') {
                     // Get server_path and yaml filename from yaml path
@@ -6862,7 +7019,12 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                                 </h3>
                             </div>
                             <div id="deployLogContent" style="flex: 1; overflow-y: auto; padding: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.85rem; background: rgba(0, 0, 0, 0.5);"></div>
-                            <div style="padding: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: flex-end;">
+                            <div style="padding: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button id="downloadLogsBtn" onclick="downloadDisplayedLogs()" style="padding: 0.8rem 1.5rem; background: linear-gradient(135deg, #10B981, #059669); border: none; border-radius: 6px; color: white; cursor: pointer; display: inline-flex;" title="Download deployment logs">
+                                        <i class="fas fa-download"></i> Download Logs
+                                    </button>
+                                </div>
                                 <button onclick="document.getElementById('deployLogModal').remove()" style="padding: 0.8rem 1.5rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; cursor: pointer;">Close</button>
                             </div>
                         </div>
@@ -6873,11 +7035,22 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
 
                 function appendLog(message, type = 'info') {
                     const color = type === 'error' ? '#EF4444' : type === 'success' ? '#10B981' : '#E0E0E0';
-                    
+
+                    // Extract instance ID from logs if present
+                    const instanceIdMatch = message.match(/Instance ID:\s*(i-[a-f0-9]+)/i) || message.match(/Instance\s+(i-[a-f0-9]+)\s+launched/i);
+                    if (instanceIdMatch && window.lastAwsDeployment) {
+                        window.lastAwsDeployment.instance_id = instanceIdMatch[1];
+                        // Show the download/refresh buttons
+                        const downloadBtn = document.getElementById('downloadLogsBtn');
+                        const refreshBtn = document.getElementById('refreshLogsBtn');
+                        if (downloadBtn) downloadBtn.style.display = 'inline-flex';
+                        if (refreshBtn) refreshBtn.style.display = 'inline-flex';
+                    }
+
                     // Check if this message contains a permission suggestion block
                     const hasMultipleLines = message.includes('\n');
-                    const isPermissionSuggestion = message.includes('Missing Permission') || 
-                                                   message.includes('Required IAM Permissions') || 
+                    const isPermissionSuggestion = message.includes('Missing Permission') ||
+                                                   message.includes('Required IAM Permissions') ||
                                                    message.includes('How to Fix:') ||
                                                    message.includes('Example IAM Policy:') ||
                                                    (message.includes('=') && message.split('=').length > 10);
@@ -6979,6 +7152,178 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
         function closePublishOnlineModal() {
             const modal = document.getElementById('publishOnlineModal');
             if (modal) modal.remove();
+        }
+
+        // Download logs displayed in the deployment popup
+        function downloadDisplayedLogs() {
+            const logContent = document.getElementById('deployLogContent');
+            if (!logContent) {
+                alert('No logs to download');
+                return;
+            }
+
+            // Get text content from the log div
+            const logsText = logContent.innerText || logContent.textContent;
+
+            if (!logsText.trim()) {
+                alert('No logs to download');
+                return;
+            }
+
+            // Create filename with timestamp
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+            const filename = `deployment_logs_${timestamp}.txt`;
+
+            // Create and download the file
+            const blob = new Blob([logsText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Download deployment logs from EC2 instance (legacy - kept for compatibility)
+        async function downloadDeploymentLogs() {
+            if (!window.lastAwsDeployment || !window.lastAwsDeployment.instance_id) {
+                alert('No deployment instance found. Please deploy first.');
+                return;
+            }
+
+            const { instance_id, access_key, secret_key, region } = window.lastAwsDeployment;
+            const downloadBtn = document.getElementById('downloadLogsBtn');
+
+            try {
+                if (downloadBtn) {
+                    downloadBtn.disabled = true;
+                    downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+                }
+
+                const response = await fetch('/api/deploy/aws/logs/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        instance_id: instance_id,
+                        access_key: access_key,
+                        secret_key: secret_key,
+                        region: region
+                    })
+                });
+
+                if (response.ok) {
+                    // Get filename from Content-Disposition header or create one
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = `deployment_logs_${instance_id}.txt`;
+                    if (contentDisposition) {
+                        const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                        if (match) filename = match[1];
+                    }
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                } else {
+                    const error = await response.json();
+                    alert('Failed to download logs: ' + (error.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error downloading logs:', error);
+                alert('Error downloading logs: ' + error.message);
+            } finally {
+                if (downloadBtn) {
+                    downloadBtn.disabled = false;
+                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download Logs';
+                }
+            }
+        }
+
+        // Refresh/fetch logs from EC2 instance
+        async function refreshDeploymentLogs() {
+            if (!window.lastAwsDeployment || !window.lastAwsDeployment.instance_id) {
+                alert('No deployment instance found. Please deploy first.');
+                return;
+            }
+
+            const { instance_id, access_key, secret_key, region } = window.lastAwsDeployment;
+            const refreshBtn = document.getElementById('refreshLogsBtn');
+            const logContent = document.getElementById('deployLogContent');
+
+            try {
+                if (refreshBtn) {
+                    refreshBtn.disabled = true;
+                    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+                }
+
+                if (logContent) {
+                    logContent.innerHTML += `<div style="color: #3B82F6; margin: 1rem 0; padding: 0.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 4px;">[${new Date().toLocaleTimeString()}] Fetching latest logs from EC2...</div>`;
+                    logContent.scrollTop = logContent.scrollHeight;
+                }
+
+                const response = await fetch('/api/deploy/aws/logs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        instance_id: instance_id,
+                        access_key: access_key,
+                        secret_key: secret_key,
+                        region: region,
+                        wait_for_completion: false
+                    })
+                });
+
+                if (response.ok && response.headers.get('content-type')?.includes('text/plain')) {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    let buffer = '';
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop();
+
+                        lines.forEach(line => {
+                            if (line.trim() && logContent) {
+                                const isError = line.includes('[ERROR]');
+                                const isSuccess = line.includes('[SUCCESS]');
+                                const color = isError ? '#EF4444' : isSuccess ? '#10B981' : '#E0E0E0';
+                                logContent.innerHTML += `<div style="color: ${color}; margin-bottom: 0.3rem; white-space: pre-wrap;">${line}</div>`;
+                                logContent.scrollTop = logContent.scrollHeight;
+                            }
+                        });
+                    }
+
+                    if (buffer.trim() && logContent) {
+                        logContent.innerHTML += `<div style="color: #E0E0E0; margin-bottom: 0.3rem; white-space: pre-wrap;">${buffer}</div>`;
+                    }
+                } else {
+                    const error = await response.json();
+                    if (logContent) {
+                        logContent.innerHTML += `<div style="color: #EF4444; margin-bottom: 0.5rem;">[${new Date().toLocaleTimeString()}] Failed to fetch logs: ${error.error || 'Unknown error'}</div>`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error refreshing logs:', error);
+                if (logContent) {
+                    logContent.innerHTML += `<div style="color: #EF4444; margin-bottom: 0.5rem;">[${new Date().toLocaleTimeString()}] Error: ${error.message}</div>`;
+                }
+            } finally {
+                if (refreshBtn) {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Logs';
+                }
+            }
         }
 
         // Database Deployment Method Switching
