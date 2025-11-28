@@ -2050,13 +2050,19 @@ Respond in JSON:
                 elif db_type == 'MONGODB':
                     auth_db = conn.get('auth_database', 'admin')
                     config_lines.append(f"AUTH_DATABASE={auth_db}")
-                elif db_type in ['POSTGRES', 'MYSQL', 'SQLSERVER']:
-                    # Add default schema
-                    if db_type == 'POSTGRES':
-                        config_lines.append("SCHEMA=public")
-                    elif db_type == 'SQLSERVER':
-                        config_lines.append("SCHEMA=dbo")
-                
+                elif db_type in ['POSTGRES', 'SQLSERVER', 'VERTICA']:
+                    # Add schema from user input or use default
+                    schema = conn.get('schema', '')
+                    if not schema:
+                        # Use default schema based on database type
+                        if db_type == 'POSTGRES':
+                            schema = 'public'
+                        elif db_type == 'SQLSERVER':
+                            schema = 'dbo'
+                        elif db_type == 'VERTICA':
+                            schema = 'public'
+                    config_lines.append(f"SCHEMA={schema}")
+
                 # Add SSL configuration if provided
                 ssl_mode = conn.get('ssl_mode', '')
                 if ssl_mode:
@@ -2076,7 +2082,8 @@ Respond in JSON:
             'MONGODB': 27017,
             'SNOWFLAKE': 443,
             'REDSHIFT': 5439,
-            'BIGQUERY': 443
+            'BIGQUERY': 443,
+            'VERTICA': 5433
         }
         return ports.get(db_type, 3306)
 
