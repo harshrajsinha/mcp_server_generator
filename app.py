@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 
 from mcp_routes import setup_mcp_routes
 
-# Load environment variables
-load_dotenv()
+# Load environment variables (override=True ensures .env takes precedence over system env vars)
+load_dotenv(override=True)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -116,4 +116,4 @@ if __name__ == '__main__':
     print("[READY] Server starting on port 9555")
     print("="*70 + "\n")
 
-    app.run(debug=True, host='0.0.0.0', port=9555, use_reloader=False)
+    app.run(debug=True, host='0.0.0.0', port=30211, use_reloader=False)

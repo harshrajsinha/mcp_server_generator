@@ -1,0 +1,403 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCIKIQ Services Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        /* Category Section Styles */
+        .category-section {
+            margin-bottom: 40px;
+        }
+        .category-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .category-header:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .category-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+        }
+        .category-title {
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 600;
+            flex-grow: 1;
+        }
+        .category-count {
+            background: rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-right: 15px;
+        }
+        .toggle-icon {
+            color: #94a3b8;
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+        .category-header.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        .category-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            padding: 0 10px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+        }
+        .category-content.hidden {
+            max-height: 0;
+            opacity: 0;
+            padding: 0;
+        }
+
+        /* Ministry Category - Purple Theme */
+        .category-ministry .category-header {
+            border-left: 4px solid #8b5cf6;
+        }
+        .category-ministry .category-icon {
+            color: #8b5cf6;
+        }
+
+        /* Help Desk Category - Green Theme */
+        .category-helpdesk .category-header {
+            border-left: 4px solid #22c55e;
+        }
+        .category-helpdesk .category-icon {
+            color: #22c55e;
+        }
+
+        /* GenAI Category - Orange Theme */
+        .category-genai .category-header {
+            border-left: 4px solid #f97316;
+        }
+        .category-genai .category-icon {
+            color: #f97316;
+        }
+
+        /* Other Category - Blue Theme */
+        .category-other .category-header {
+            border-left: 4px solid #3b82f6;
+        }
+        .category-other .category-icon {
+            color: #3b82f6;
+        }
+
+        /* Service Card Styles */
+        .service-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            display: block;
+        }
+        .service-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #3b82f6;
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.2);
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .port-badge {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-right: 15px;
+        }
+        .service-name {
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .service-type {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .type-icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .type-python { background: #3776ab; }
+        .type-node { background: #68a063; }
+        .type-streamlit { background: #ff4b4b; }
+        .service-desc {
+            color: #cbd5e1;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #22c55e;
+            font-size: 0.8rem;
+            margin-top: 15px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        .refresh-btn {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+        .refresh-btn:hover {
+            background: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SCIKIQ Services Portal</h1>
+            <p class="subtitle">Access all running services on app.scikiq.org</p>
+        </header>
+
+        <!-- Ministry Category -->
+        <div class="category-section category-ministry">
+            <div class="category-header collapsed" onclick="toggleCategory(this)">
+                <span class="category-icon">&#127963;</span>
+                <span class="category-title">Ministry</span>
+                <span class="category-count">4 Services</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="category-content hidden">
+                <a href="http://tools.scikiq.org:30202" target="_blank" class="service-card">
+                    <div class="card-header">
+                        <span class="port-badge">30202</span>
+                        <span class="service-name">Law Ministry</span>
+                    </div>
+                    <p class="service-desc">Law Ministry analytics dashboard.</p>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span> Running
+                    </div>
+                </a>
+
+                <a href="http://tools.scikiq.org:30203" target="_blank" class="service-card">
+                    <div class="card-header">
+                        <span class="port-badge">30203</span>
+                        <span class="service-name">Law Ministry</span>
+                    </div>
+                    <p class="service-desc">Law Ministry analytics dashboard.</p>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span> Running
+                    </div>
+                </a>
+
+                <a href="http://tools.scikiq.org:30204" target="_blank" class="service-card">
+                    <div class="card-header">
+                        <span class="port-badge">30204</span>
+                        <span class="service-name">Arbitration Analytics Dashboard</span>
+                    </div>
+                    <p class="service-desc">Legal arbitration case analytics and insights dashboard.</p>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span> Running
+                    </div>
+                </a>
+
+                <a href="http://tools.scikiq.org:30208" target="_blank" class="service-card">
+                    <div class="card-header">
+                        <span class="port-badge">30208</span>
+                        <span class="service-name">Ministry Services Cases</span>
+                    </div>
+                    <p class="service-desc">Ministry services case management and analytics.</p>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span> Running
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Help Desk Category -->
+        <div class="category-section category-helpdesk">
+            <div class="category-header collapsed" onclick="toggleCategory(this)">
+                <span class="category-icon">&#128222;</span>
+                <span class="category-title">Help Desk</span>
+                <span class="category-count">1 Service</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="category-content hidden">
+                <a href="http://tools.scikiq.org:30201" target="_blank" class="service-card">
+                    <div class="card-header">
+                        <span class="port-badge">30201</span>
+                        <span class="service-name">Omantel AI Churn Retention</span>
+                    </div>
+                    <p class="service-desc">AI-powered customer churn prediction and retention analytics for Omantel.</p>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span> Running
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- GenAI Category -->
+        <div class="category-section category-genai">
+            <div class="category-header collapsed" onclick="toggleCategory(this)">
+                <span class="category-icon">&#129302;</span>
+                <span class="category-title">GenAI</span>
+                <span class="category-count">3 Services</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="category-content hidden">
+                <a href="http://tools.scikiq.org:30206" target="_blank" class="service-card">
+                    <div class="card-header">
+                        <span class="port-badge">30206</span>
+                        <span class="service-name">CIRCOR Pumps - Demo Data Intelligence</span>
+                    </div>
+                    <p class="service-desc">CIRCOR Pumps data intelligence and analytics demo.</p>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span> Running
+                    </div>
+                </a>
+
+                <a href="http://tools.scikiq.org:30209" target="_blank" class="service-card">
+                    <div class="card-header">
+                        <span class="port-badge">30209</span>
+                        <span class="service-name">AI-Ready Data Products</span>
+                    </div>
+                    <p class="service-desc">Enterprise Data Intelligence Platform - AI-Ready Data Products in 60-90 Days.</p>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span> Running
+                    </div>
+                </a>
+
+                <a href="http://tools.scikiq.org:30211" target="_blank" class="service-card">
+                    <div class="card-header">
+                        <span class="port-badge">30211</span>
+                        <span class="service-name">SCIKIQ MCP Studio</span>
+                    </div>
+                    <p class="service-desc">AI-powered API to MCP conversion tool. Analyze and convert REST APIs to Anthropic MCP tools.</p>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span> Running
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Other Category -->
+        <div class="category-section category-other">
+            <div class="category-header collapsed" onclick="toggleCategory(this)">
+                <span class="category-icon">&#128187;</span>
+                <span class="category-title">Other Services</span>
+                <span class="category-count">2 Services</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="category-content hidden">
+                <a href="http://tools.scikiq.org:30205" target="_blank" class="service-card">
+                    <div class="card-header">
+                        <span class="port-badge">30205</span>
+                        <span class="service-name">eSanskar</span>
+                    </div>
+                    <p class="service-desc">eSanskar application service.</p>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span> Running
+                    </div>
+                </a>
+
+                <a href="http://tools.scikiq.org:30212" target="_blank" class="service-card">
+                    <div class="card-header">
+                        <span class="port-badge">30212</span>
+                        <span class="service-name">Restaurant Order API</span>
+                    </div>
+                    <p class="service-desc">Restaurant ordering system with customer management, menu items, and order tracking.</p>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span> Running
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>SCIKIQ Services Portal &copy; 2025</p>
+            <button class="refresh-btn" onclick="location.reload()">Refresh Status</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleCategory(header) {
+            header.classList.toggle('collapsed');
+            const content = header.nextElementSibling;
+            content.classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>
