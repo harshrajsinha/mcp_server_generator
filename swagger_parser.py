@@ -188,3 +188,42 @@ class SwaggerParser:
             return f"array[{items_type}]"
 
         return param_type or 'string'
+
+
+def scan_codebase_for_apis(project_path: str, source_file: str = None) -> Dict[str, Any]:
+    """
+    Scan codebase for APIs using IntelligentMCPConverter
+    """
+    try:
+        from intelligent_mcp_converter import scan_for_apis
+        
+        # Use intelligent scanner
+        result = scan_for_apis(project_path)
+        
+        if not result['success']:
+            return {'success': False, 'error': result.get('error')}
+            
+        # Convert to format expected by UI
+        api_definitions = []
+        for endpoint in result['apis']:
+            # Handle EndpointUnderstanding object
+            api_definitions.append({
+                'route': endpoint.path,
+                'method': endpoint.methods[0],
+                'function_name': endpoint.function_name,
+                'docstring': endpoint.purpose,
+                'parameters': endpoint.parameters
+            })
+            
+        return {
+            'success': True,
+            'api_definitions': api_definitions,
+            'file_tree': {}, 
+            'intelligence': {
+                'total_apis': len(api_definitions),
+                'confidence': 0.9
+            }
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
