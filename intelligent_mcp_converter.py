@@ -632,7 +632,8 @@ class IntelligentCodeAnalyzer:
                 (r"request\.args\.get\(['\"](\w+)['\"]\)", 'query'),
                 (r"request\.form\.get\(['\"](\w+)['\"]\)", 'form'),
                 (r"data\.get\(['\"](\w+)['\"]\)", 'body'),
-                (r"(\w+)\s*=\s*data\[?['\"](\w+)['\"]\]?", 'body')
+                (r"(\w+)\s*=\s*data\[?['\"](\w+)['\"]\]?", 'body'),
+                (r"data\[['\"](\w+)['\"]\]", 'body')
             ]
 
             for pattern, source_type in patterns:
