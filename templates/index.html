@@ -1700,9 +1700,6 @@
         <!-- Center: Main Content -->
         <div class="main-content">
             <div class="tabs-container">
-                <div class="tab" id="code-viewer-tab" onclick="switchTab('code')" style="display: none;">
-                    <i class="fas fa-code"></i> Code Viewer
-                </div>
                 <div class="tab active" onclick="switchTab('apis')">
                     <i class="fas fa-server"></i> APIs Discovered
                 </div>
@@ -1711,23 +1708,6 @@
                 </div>
                 <div class="tab" onclick="switchTab('docs')">
                     <i class="fas fa-file-alt"></i> Documentation
-                </div>
-            </div>
-
-            <!-- Code Tab -->
-            <div id="code-tab" class="tab-content">
-                <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <i class="fas fa-file-code" style="color: var(--scikiq-light-blue);"></i>
-                        <span id="currentFile" style="font-weight: 600; margin-left: 0.5rem;">No file selected</span>
-                    </div>
-                    <button class="btn btn-sm" style="background: var(--anthropic-orange); color: white;"
-                        onclick="copyCode()">
-                        <i class="fas fa-copy"></i> Copy Code
-                    </button>
-                </div>
-                <div class="code-editor">
-                    <pre id="codeContent">// Select a file from the file browser to view its contents</pre>
                 </div>
             </div>
 
@@ -1933,23 +1913,8 @@
                     style="background: linear-gradient(135deg, #7C3AED, #9333EA);">
                     <i class="fas fa-chart-line"></i> Bulk Analyze (80%+)
                 </button>
-                <button class="action-btn" onclick="convertHighConfidenceAPIs()" id="convertHighBtn" disabled
-                    style="background: linear-gradient(135deg, var(--success-green), #059669);">
-                    <i class="fas fa-magic"></i> Convert Top APIs
-                </button>
-                <button class="action-btn" onclick="generateMCP()" id="generateBtn" disabled>
-                    <i class="fas fa-cogs"></i> Generate MCP Tools
-                </button>
                 <button class="action-btn" onclick="downloadDocs()" id="docsBtn" disabled>
                     <i class="fas fa-download"></i> Download Docs
-                </button>
-                <button class="action-btn" onclick="testWithClaude()" id="testBtn" disabled
-                    style="background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2);">
-                    <i class="fas fa-robot"></i> Test with Claude
-                </button>
-                <button class="action-btn" onclick="showPublishOnlineModal()" id="publishOnlineBtn" disabled
-                    style="background: linear-gradient(135deg, #7C3AED, #9333EA);">
-                    <i class="fas fa-cloud-upload-alt"></i> Publish Online
                 </button>
             </div>
 
@@ -2058,7 +2023,10 @@
         function showSwaggerModal() {
             const modalHTML = `
                 <div class="input-modal" id="swaggerModal">
-                    <div class="input-modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+                    <div class="input-modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative;">
+                        <button onclick="document.getElementById('swaggerModal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                            <i class="fas fa-times"></i>
+                        </button>
                         <h3><i class="fas fa-link"></i> Swagger/OpenAPI Configuration</h3>
                         <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1rem;">
                             Import API endpoints from Swagger/OpenAPI specification
@@ -2208,7 +2176,10 @@
         function showCodebaseModal() {
             const modalHTML = `
                 <div class="input-modal" id="codebaseModal">
-                    <div class="input-modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+                    <div class="input-modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative;">
+                        <button onclick="document.getElementById('codebaseModal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                            <i class="fas fa-times"></i>
+                        </button>
                         <h3><i class="fas fa-folder-open"></i> Browse Codebase</h3>
                         <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
                             Scan your local project or GitHub repository for API endpoints
@@ -2330,7 +2301,10 @@
         function showDatabaseModal() {
             const modalHTML = `
                 <div class="input-modal" id="databaseModal">
-                    <div class="input-modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+                    <div class="input-modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto; position: relative;">
+                        <button onclick="document.getElementById('databaseModal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                            <i class="fas fa-times"></i>
+                        </button>
                         <h3><i class="fas fa-database"></i> Database MCP Server Configuration</h3>
                         <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
                             Configure database connections for your MCP server. You can add multiple databases and the server will provide tools to interact with them through Claude.
@@ -2747,7 +2721,10 @@
                     <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
                         
                         <!-- Header -->
-                        <div style="background: linear-gradient(135deg, var(--scikiq-light-blue), var(--scikiq-green)); padding: 2rem; text-align: center; border-radius: 14px 14px 0 0;">
+                        <div style="background: linear-gradient(135deg, var(--scikiq-light-blue), var(--scikiq-green)); padding: 2rem; text-align: center; border-radius: 14px 14px 0 0; position: relative;">
+                            <button onclick="this.closest('[style*=fixed]').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                <i class="fas fa-times"></i>
+                            </button>
                             <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 1rem; color: white;"></i>
                             <h2 style="margin: 0; color: white; font-family: 'Space Grotesk', sans-serif;">
                                 Database MCP Server Ready!
@@ -3424,7 +3401,6 @@
 
                     // Enable action buttons
                     document.getElementById('bulkAnalyzeBtn').disabled = false;
-                    document.getElementById('generateBtn').disabled = false;
                     document.getElementById('docsBtn').disabled = false;
 
                     // Update bulk analyze button text with count
@@ -3568,7 +3544,6 @@
 
                     // Enable action buttons
                     document.getElementById('bulkAnalyzeBtn').disabled = false;
-                    document.getElementById('generateBtn').disabled = false;
                     document.getElementById('docsBtn').disabled = false;
 
                     // Update bulk analyze button text with count
@@ -3626,7 +3601,6 @@
                 document.getElementById('apisFound').textContent = projectData.total_apis || projectData.api_definitions.length;
 
                 // Enable buttons
-                document.getElementById('generateBtn').disabled = false;
                 document.getElementById('docsBtn').disabled = false;
                 document.getElementById('bulkAnalyzeBtn').disabled = false;
 
@@ -4846,7 +4820,10 @@
 
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(`${tabName}-tab`).classList.add('active');
+            const tabContent = document.getElementById(`${tabName}-tab`);
+            if (tabContent) {
+                tabContent.classList.add('active');
+            }
         }
 
         function copyCode() {
@@ -5146,11 +5123,11 @@
             const modal = document.createElement('div');
             modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem;';
             modal.innerHTML = `
-                <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.95), rgba(26, 31, 58, 0.95)); border-radius: 16px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
-                    ${summaryHTML}
-                    <button onclick="this.closest('[style*=fixed]').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.1); border: none; color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">
-                        <i class="fas fa-times"></i> Close
+                <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.95), rgba(26, 31, 58, 0.95)); border-radius: 16px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); position: relative;">
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                        <i class="fas fa-times"></i>
                     </button>
+                    ${summaryHTML}
                 </div>
             `;
 
@@ -5244,7 +5221,10 @@
                     <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.98), rgba(26, 31, 58, 0.98)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);">
 
                         <!-- Header -->
-                        <div style="background: linear-gradient(135deg, var(--success-green), #059669); padding: 2rem; border-radius: 14px 14px 0 0;">
+                        <div style="background: linear-gradient(135deg, var(--success-green), #059669); padding: 2rem; border-radius: 14px 14px 0 0; position: relative;">
+                            <button onclick="this.closest('[style*=fixed]').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                <i class="fas fa-times"></i>
+                            </button>
                             <h2 style="margin: 0; color: white; font-size: 1.8rem;">
                                 <i class="fas fa-check-circle"></i> MCP Server Generated Successfully!
                             </h2>
@@ -5256,44 +5236,40 @@
                         <!-- Body -->
                         <div style="padding: 2rem;">
 
-                            <!-- Auto-Deploy Button -->
-                            <div id="autoDeploySection" style="background: linear-gradient(135deg, rgba(0, 163, 224, 0.2), rgba(124, 58, 237, 0.2)); border: 2px solid var(--scikiq-light-blue); border-radius: 12px; padding: 2rem; margin-bottom: 2rem; text-align: center;">
-                                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🚀</div>
-                                <h3 style="color: white; margin: 0 0 0.5rem 0; font-size: 1.5rem;">One-Click Deployment</h3>
-                                <p style="color: rgba(255, 255, 255, 0.8); margin: 0 0 1.5rem 0; font-size: 0.95rem;">
-                                    Automatically configure Claude Desktop and start using your MCP tools instantly!
+                            <!-- Deployment Options -->
+                            <div style="margin-bottom: 2rem;">
+                                <h3 style="color: var(--scikiq-light-blue); margin-bottom: 1rem;">
+                                    <i class="fas fa-rocket"></i> Deploy Your MCP Server
+                                </h3>
+                                <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
+                                    Choose how you want to deploy your MCP server
                                 </p>
-                                
-                                <!-- MCP Server Configuration -->
-                                <div style="background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: left;">
-                                    <div style="margin-bottom: 1rem;">
-                                        <label style="display: block; color: white; font-weight: 600; margin-bottom: 0.5rem;">
-                                            <i class="fas fa-server"></i> MCP Server Name
-                                        </label>
-                                        <div style="display: flex; gap: 0.5rem; align-items: stretch;">
-                                            <input type="text" id="mcpServerName" placeholder="my-api-server" 
-                                                style="flex: 1; padding: 0.75rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 1rem; font-family: 'Fira Code', monospace; transition: border-color 0.3s ease;"
-                                                value="scikiq-mcp-autoAPI" 
-                                                oninput="validateServerNameInput(this)" />
-                                            <button type="button" onclick="generateSuggestedServerName()" 
-                                                style="padding: 0.75rem 1rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(124, 58, 237, 0.2); color: white; font-size: 0.9rem; cursor: pointer; transition: all 0.3s ease; white-space: nowrap;"
-                                                onmouseover="this.style.background='rgba(124, 58, 237, 0.4)'" 
-                                                onmouseout="this.style.background='rgba(124, 58, 237, 0.2)'">
-                                                <i class="fas fa-magic"></i> Generate
-                                            </button>
-                                        </div>
-                                        <div id="serverNameFeedback" style="margin-top: 0.5rem; font-size: 0.85rem; transition: all 0.3s ease;"></div>
-                                        <small style="color: rgba(255, 255, 255, 0.7); margin-top: 0.5rem; display: block; font-size: 0.85rem;">
-                                            <i class="fas fa-info-circle"></i> This name will identify your MCP server in Claude Desktop. Use lowercase letters, numbers, and hyphens only.
-                                        </small>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                                    <!-- Local Deployment -->
+                                    <div style="background: rgba(16, 185, 129, 0.1); border: 2px solid var(--success-green); border-radius: 12px; padding: 1.5rem; text-align: center;">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">💻</div>
+                                        <h4 style="color: white; margin: 0 0 0.5rem 0;">Local Deployment</h4>
+                                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 1rem;">
+                                            Deploy to your local Claude Desktop
+                                        </p>
+                                        <button onclick="deployMCPLocal('${fullPath}', '${filename}')" style="width: 100%; padding: 0.8rem; background: var(--success-green); border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;">
+                                            <i class="fas fa-desktop"></i> Deploy Locally
+                                        </button>
+                                    </div>
+
+                                    <!-- Online Deployment -->
+                                    <div style="background: rgba(0, 163, 224, 0.1); border: 2px solid var(--scikiq-light-blue); border-radius: 12px; padding: 1.5rem; text-align: center;">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">☁️</div>
+                                        <h4 style="color: white; margin: 0 0 0.5rem 0;">Online Deployment</h4>
+                                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 1rem;">
+                                            Deploy to AWS, Azure, or Remote Server
+                                        </p>
+                                        <button onclick="showOnlineDeploymentModal('${fullPath}', '${filename}')" style="width: 100%; padding: 0.8rem; background: var(--scikiq-light-blue); border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;">
+                                            <i class="fas fa-cloud"></i> Deploy Online
+                                        </button>
                                     </div>
                                 </div>
-                                
-                                <button id="autoDeployBtn" onclick="autoDeployMCP('${fullPath}')"
-                                    style="background: linear-gradient(135deg, var(--scikiq-light-blue), #7C3AED); color: white; border: none; padding: 1rem 2.5rem; border-radius: 8px; font-size: 1.1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 163, 224, 0.4); transition: all 0.3s ease;">
-                                    <i class="fas fa-rocket"></i> Auto-Deploy to Claude Desktop
-                                </button>
-                                <div id="autoDeployStatus" style="margin-top: 1rem; display: none;"></div>
                             </div>
 
                             <!-- Manual Setup Steps (Collapsible) -->
@@ -5378,40 +5354,44 @@
                                 </div>
                             </details>
 
-                            <!-- Deployment Options -->
-                            <div style="margin-top: 2rem; border-top: 2px solid rgba(255, 255, 255, 0.1); padding-top: 2rem;">
-                                <h3 style="color: var(--scikiq-light-blue); margin-bottom: 1rem;">
-                                    <i class="fas fa-rocket"></i> Deploy Your MCP Server
-                                </h3>
-                                <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
-                                    Choose how you want to deploy your MCP server
+                            <!-- One-Click Deployment Section (moved to bottom) -->
+                            <div id="autoDeploySection" style="background: linear-gradient(135deg, rgba(0, 163, 224, 0.2), rgba(124, 58, 237, 0.2)); border: 2px solid var(--scikiq-light-blue); border-radius: 12px; padding: 2rem; margin-bottom: 2rem; text-align: center;">
+                                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🚀</div>
+                                <h3 style="color: white; margin: 0 0 0.5rem 0; font-size: 1.5rem;">One-Click Deployment</h3>
+                                <p style="color: rgba(255, 255, 255, 0.8); margin: 0 0 1.5rem 0; font-size: 0.95rem;">
+                                    Automatically configure Claude Desktop and start using your MCP tools instantly!
                                 </p>
-                                
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-                                    <!-- Local Deployment -->
-                                    <div style="background: rgba(16, 185, 129, 0.1); border: 2px solid var(--success-green); border-radius: 12px; padding: 1.5rem; text-align: center;">
-                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">💻</div>
-                                        <h4 style="color: white; margin: 0 0 0.5rem 0;">Local Deployment</h4>
-                                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 1rem;">
-                                            Deploy to your local Claude Desktop
-                                        </p>
-                                        <button onclick="deployMCPLocal('${fullPath}', '${filename}')" style="width: 100%; padding: 0.8rem; background: var(--success-green); border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;">
-                                            <i class="fas fa-desktop"></i> Deploy Locally
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Online Deployment -->
-                                    <div style="background: rgba(0, 163, 224, 0.1); border: 2px solid var(--scikiq-light-blue); border-radius: 12px; padding: 1.5rem; text-align: center;">
-                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">☁️</div>
-                                        <h4 style="color: white; margin: 0 0 0.5rem 0;">Online Deployment</h4>
-                                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 1rem;">
-                                            Deploy to AWS, Azure, or Remote Server
-                                        </p>
-                                        <button onclick="showOnlineDeploymentModal('${fullPath}', '${filename}')" style="width: 100%; padding: 0.8rem; background: var(--scikiq-light-blue); border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;">
-                                            <i class="fas fa-cloud"></i> Deploy Online
-                                        </button>
+
+                                <!-- MCP Server Configuration -->
+                                <div style="background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: left;">
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="display: block; color: white; font-weight: 600; margin-bottom: 0.5rem;">
+                                            <i class="fas fa-server"></i> MCP Server Name
+                                        </label>
+                                        <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+                                            <input type="text" id="mcpServerName" placeholder="my-api-server"
+                                                style="flex: 1; padding: 0.75rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 1rem; font-family: 'Fira Code', monospace; transition: border-color 0.3s ease;"
+                                                value="scikiq-mcp-autoAPI"
+                                                oninput="validateServerNameInput(this)" />
+                                            <button type="button" onclick="generateSuggestedServerName()"
+                                                style="padding: 0.75rem 1rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(124, 58, 237, 0.2); color: white; font-size: 0.9rem; cursor: pointer; transition: all 0.3s ease; white-space: nowrap;"
+                                                onmouseover="this.style.background='rgba(124, 58, 237, 0.4)'"
+                                                onmouseout="this.style.background='rgba(124, 58, 237, 0.2)'">
+                                                <i class="fas fa-magic"></i> Generate
+                                            </button>
+                                        </div>
+                                        <div id="serverNameFeedback" style="margin-top: 0.5rem; font-size: 0.85rem; transition: all 0.3s ease;"></div>
+                                        <small style="color: rgba(255, 255, 255, 0.7); margin-top: 0.5rem; display: block; font-size: 0.85rem;">
+                                            <i class="fas fa-info-circle"></i> This name will identify your MCP server in Claude Desktop. Use lowercase letters, numbers, and hyphens only.
+                                        </small>
                                     </div>
                                 </div>
+
+                                <button id="autoDeployBtn" onclick="autoDeployMCP('${fullPath}')"
+                                    style="background: linear-gradient(135deg, var(--scikiq-light-blue), #7C3AED); color: white; border: none; padding: 1rem 2.5rem; border-radius: 8px; font-size: 1.1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 163, 224, 0.4); transition: all 0.3s ease;">
+                                    <i class="fas fa-rocket"></i> Auto-Deploy to Claude Desktop
+                                </button>
+                                <div id="autoDeployStatus" style="margin-top: 1rem; display: none;"></div>
                             </div>
 
                             <!-- Action Buttons -->
@@ -6049,7 +6029,10 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
 
             const modalHTML = `
                 <div class="input-modal" id="installationModal">
-                    <div class="input-modal-content" style="max-width: 700px;">
+                    <div class="input-modal-content" style="max-width: 700px; position: relative;">
+                        <button onclick="document.getElementById('installationModal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                            <i class="fas fa-times"></i>
+                        </button>
                         <h3><i class="fas fa-cloud-download-alt"></i> Install ${serverDisplayName} Locally</h3>
                         <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
                             This will generate an installer script that you can run on your machine to automatically set up the MCP server with a virtual environment.
@@ -6221,7 +6204,10 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
         function showInstallerDownloadModal(result) {
             const modalHTML = `
                 <div class="input-modal" id="downloadModal">
-                    <div class="input-modal-content" style="max-width: 800px;">
+                    <div class="input-modal-content" style="max-width: 800px; position: relative;">
+                        <button onclick="document.getElementById('downloadModal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                            <i class="fas fa-times"></i>
+                        </button>
                         <h3><i class="fas fa-check-circle" style="color: var(--success-green);"></i> Installer Generated Successfully!</h3>
                         
                         <div style="background: rgba(16, 185, 129, 0.1); border: 2px solid var(--success-green); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
@@ -6279,7 +6265,10 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
         function showPublishOnlineModal() {
             const modalHTML = `
                 <div class="input-modal" id="publishOnlineModal">
-                    <div class="input-modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+                    <div class="input-modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto; position: relative;">
+                        <button onclick="document.getElementById('publishOnlineModal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                            <i class="fas fa-times"></i>
+                        </button>
                         <h3><i class="fas fa-cloud-upload-alt"></i> Publish MCP Server Online</h3>
                         <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
                             Deploy your MCP server to the cloud or remote machine
@@ -6649,7 +6638,10 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                 // Create a log display modal
                 const logHTML = `
                     <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 999999; padding: 2rem; display: flex; align-items: center; justify-content: center;" id="deployLogModal">
-                        <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 800px; width: 100%; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+                        <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 800px; width: 100%; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; position: relative;">
+                            <button onclick="document.getElementById('deployLogModal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                <i class="fas fa-times"></i>
+                            </button>
                             <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
                                 <h3 style="margin: 0; color: var(--scikiq-light-blue);">
                                     <i class="fas fa-cloud-upload-alt"></i> Deploying to ${activeTab.toUpperCase()}
@@ -6880,7 +6872,10 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                 // Create a log display modal
                 const logHTML = `
                     <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 999999; padding: 2rem; display: flex; align-items: center; justify-content: center;" id="deployLogModal">
-                        <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 800px; width: 100%; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+                        <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 800px; width: 100%; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; position: relative;">
+                            <button onclick="document.getElementById('deployLogModal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                <i class="fas fa-times"></i>
+                            </button>
                             <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
                                 <h3 style="margin: 0; color: var(--scikiq-light-blue);">
                                     <i class="fas fa-cloud-upload-alt"></i> Deploying to ${platform.toUpperCase()}
@@ -6898,21 +6893,21 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
 
                 function appendLog(message, type = 'info') {
                     const color = type === 'error' ? '#EF4444' : type === 'success' ? '#10B981' : '#E0E0E0';
-                    
+
                     // Check if this message contains a permission suggestion block (has multiple lines with formatting)
                     const hasMultipleLines = message.includes('\n');
-                    const isPermissionSuggestion = message.includes('Missing Permission') || 
-                                                   message.includes('Required IAM Permissions') || 
+                    const isPermissionSuggestion = message.includes('Missing Permission') ||
+                                                   message.includes('Required IAM Permissions') ||
                                                    message.includes('How to Fix:') ||
                                                    message.includes('Example IAM Policy:') ||
                                                    (message.includes('=') && message.split('=').length > 10);
-                    
+
                     if (hasMultipleLines && isPermissionSuggestion && type === 'error') {
                         // This is a multi-line permission suggestion - format it as a special block
                         const formattedMessage = message
                             .replace(/=/g, '─')
                             .replace(/⚠️/g, '⚠️');
-                        
+
                         logContent.innerHTML += `<div style="color: ${color}; margin: 1.5rem 0; padding: 1.5rem; background: rgba(239, 68, 68, 0.15); border: 2px solid ${color}; border-radius: 8px; white-space: pre-wrap; font-family: 'Fira Code', 'Courier New', monospace; font-size: 0.9rem; line-height: 1.8; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); word-wrap: break-word;">${formattedMessage}</div>`;
                     } else if (hasMultipleLines) {
                         // Multi-line message - preserve line breaks
@@ -7069,8 +7064,11 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             // Show deployment modal similar to database MCP
             const modalHTML = `
                 <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow-y: auto;">
-                    <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.98), rgba(26, 31, 58, 0.98)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
-                        <div style="background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2); padding: 2rem; border-radius: 14px 14px 0 0;">
+                    <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.98), rgba(26, 31, 58, 0.98)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
+                        <div style="background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2); padding: 2rem; border-radius: 14px 14px 0 0; position: relative;">
+                            <button onclick="this.closest('[style*=fixed]').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                <i class="fas fa-times"></i>
+                            </button>
                             <h2 style="margin: 0; color: white; font-size: 1.8rem;">
                                 <i class="fas fa-cloud"></i> Deploy MCP Server Online
                             </h2>
