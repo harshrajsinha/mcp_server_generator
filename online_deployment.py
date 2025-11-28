@@ -1036,7 +1036,7 @@ if __name__ == "__main__":
                     # Use public IP if no domain (will be replaced after instance launch)
                     server_base_url = f"http://{public_ip or 'SERVER_IP'}"
                 
-                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/remote_mcp_server_admin.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db --debug"
+                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/remote_mcp_server_admin.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db --config-path /opt/mcp-server/config.ini --debug"
             else:
                 # Local deployment: use run_mcp_server.py
                 startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/run_mcp_server.py --config-file /opt/mcp-server/config.ini"

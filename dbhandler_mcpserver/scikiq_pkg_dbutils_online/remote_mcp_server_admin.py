@@ -20,6 +20,7 @@ import contextlib
 import hashlib
 import json
 import logging
+import logging.handlers
 import os
 import secrets
 import sqlite3
@@ -1736,10 +1737,26 @@ def main(host: str, port: int, config_path: str, db_path: str, create_admin: str
     """
     
     # Configure logging
-    logging.basicConfig(
-        level=logging.DEBUG if debug else logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    log_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG if debug else logging.INFO)
+    
+    # Clear existing handlers
+    if root_logger.hasHandlers():
+        root_logger.handlers.clear()
+    
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(log_formatter)
+    root_logger.addHandler(console_handler)
+    
+    # File handler
+    log_file = "mcp_server.log"
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_file, maxBytes=10*1024*1024, backupCount=5
     )
+    file_handler.setFormatter(log_formatter)
+    root_logger.addHandler(file_handler)
     
     # Create database manager
     db_manager = DatabaseManager(db_path)
