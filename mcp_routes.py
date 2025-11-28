@@ -15,8 +15,8 @@ import subprocess
 import time
 from datetime import datetime
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file (override=True ensures .env takes precedence over system env vars)
+load_dotenv(override=True)
 
 
 def generate_yaml_tools_file(mcp_tools, base_url="http://localhost:9321"):
