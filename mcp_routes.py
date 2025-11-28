@@ -43,33 +43,55 @@ def generate_yaml_tools_file(mcp_tools, base_url="http://localhost:9321"):
         method = tool['method'].upper()
         params = tool.get('parameters', [])
 
-        # Generate input schema with actual parameters
-        properties = {}
-        required = []
-        for param in params:
-            param_name = param.get('name', '')
-            param_type = param.get('type', 'string')
-            param_desc = param.get('description', '')
-            param_required = param.get('required', False)
+        # Check if inputSchema is already provided (e.g. by IntelligentMCPConverter)
+        input_schema = tool.get('inputSchema')
 
-            if param_name:
-                properties[param_name] = {
-                    "type": param_type,
-                    "description": param_desc
-                }
-                if param_required:
-                    required.append(param_name)
+        if not input_schema:
+            # Generate input schema with actual parameters
+            properties = {}
+            required = []
+            for param in params:
+                param_name = param.get('name', '')
+                param_type = param.get('type', 'string')
+                param_desc = param.get('description', '')
+                param_required = param.get('required', False)
+
+                if param_name:
+                    properties[param_name] = {
+                        "type": param_type,
+                        "description": param_desc
+                    }
+                    if param_required:
+                        required.append(param_name)
+
+            # Add request body fields
+            request_fields = tool.get('request_fields', [])
+            for field in request_fields:
+                field_name = field.get('name', '')
+                field_type = field.get('type', 'string')
+                field_desc = field.get('description', '')
+                field_required = field.get('required', False)
+
+                if field_name and field_name not in properties:
+                    properties[field_name] = {
+                        "type": field_type,
+                        "description": field_desc
+                    }
+                    if field_required:
+                        required.append(field_name)
+            
+            input_schema = {
+                'type': 'object',
+                'properties': properties,
+                'required': required
+            }
 
         tool_config = {
             'name': tool_name,
             'description': description,
             'endpoint': endpoint,
             'method': method,
-            'input_schema': {
-                'type': 'object',
-                'properties': properties,
-                'required': required
-            }
+            'input_schema': input_schema
         }
 
         tools_config['tools'].append(tool_config)
@@ -1191,13 +1213,15 @@ Respond in JSON:
                 docstring = endpoint_data.get('docstring', '')
                 description = plain_desc or docstring or f'Access {route}'
                 parameters = endpoint_data.get('parameters', [])
+                request_fields = endpoint_data.get('request_fields', [])
 
                 tool_definition = {
                     'name': function_name.replace('glic_', '').replace('_', '-'),
                     'description': description,
                     'endpoint': route,
                     'method': methods[0],
-                    'parameters': parameters
+                    'parameters': parameters,
+                    'request_fields': request_fields
                 }
 
                 mcp_tools.append(tool_definition)

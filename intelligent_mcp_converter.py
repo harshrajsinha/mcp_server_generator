@@ -656,7 +656,8 @@ class IntelligentCodeAnalyzer:
                             'required': False  # Determined by context
                         })
 
-        except Exception:
+        except Exception as e:
+            print(f"[ERROR] Failed to extract request fields: {e}")
             pass
 
         return fields
@@ -826,6 +827,7 @@ class IntelligentMCPConverter:
         self.project_root = Path(project_root)
         self.base_url = base_url
         self.analyzer = IntelligentCodeAnalyzer(project_root)
+        self.type_inference_rules = self.analyzer.type_inference_rules
         self.endpoints: List[EndpointUnderstanding] = []
         self.mcp_tools: List[MCPToolUnderstanding] = []
 
