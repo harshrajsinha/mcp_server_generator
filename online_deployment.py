@@ -366,9 +366,10 @@ class OnlineDeployer:
                     server_files['requirements.txt'] = "mcp\nhttpx\npyyaml\npython-dotenv\n"
                     self.log("  - requirements.txt (default)")
                 
-        elif server_type in ['api', 'codebase', 'swagger']:
+        elif server_type in ['api', 'codebase', 'swagger', 'github']:
             # API MCP server files
             self.log(f"Preparing API MCP server files from {server_path}")
+            self.log(f"DEBUG: server_type={server_type}, is_online_deployment={is_online_deployment}, yaml_file={yaml_file}")
             
             # Copy appropriate loader based on deployment type
             if is_online_deployment:
@@ -391,17 +392,26 @@ class OnlineDeployer:
             if yaml_file:
                 # Copy only the specific YAML file
                 yaml_path = base_path / yaml_file
+                self.log(f"DEBUG: Looking for specific YAML file at: {yaml_path}")
                 if yaml_path.exists():
                     with open(yaml_path, 'r', encoding='utf-8') as f:
                         server_files[yaml_file] = f.read()
                         self.log(f"  Added specific YAML file: {yaml_file}")
                 else:
                     self.log(f"  WARNING: Specified YAML file not found: {yaml_file}", "WARNING")
+                    self.log(f"  DEBUG: Checked path: {yaml_path}", "WARNING")
             else:
                 # Fallback: Copy all YAML tool files (legacy behavior)
                 yaml_files = list(base_path.glob('tools_*.yaml'))
+                self.log(f"DEBUG: Searching for YAML files in {base_path}, found {len(yaml_files)}")
                 if not yaml_files:
                     yaml_files = list((Path(__file__).parent / 'generated_servers').glob('tools_*.yaml'))
+                    self.log(f"DEBUG: Fallback search in generated_servers, found {len(yaml_files)}")
+                
+                for yaml_file_path in yaml_files:
+                    with open(yaml_file_path, 'r', encoding='utf-8') as f:
+                        server_files[yaml_file_path.name] = f.read()
+                        self.log(f"  Added YAML file: {yaml_file_path.name}")
                 
                 for yaml_file_path in yaml_files:
                     with open(yaml_file_path, 'r', encoding='utf-8') as f:
@@ -617,16 +627,47 @@ if __name__ == "__main__":
                 )
                 
                 # Add YAML tool loader class
+                # Add YAML tool loader class
                 yaml_loader_class = '''
+import logging
+import logging.handlers
+import sys
+import os
+
+# Configure logging
+log_dir = "logs"
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+log_file = os.path.join(log_dir, "mcp_server.log")
+
+logger = logging.getLogger("mcp-server")
+logger.setLevel(logging.INFO)
+
+# Create handlers
+c_handler = logging.StreamHandler(sys.stderr)
+f_handler = logging.handlers.TimedRotatingFileHandler(log_file, when='midnight', interval=1, backupCount=30)
+
+c_handler.setLevel(logging.INFO)
+f_handler.setLevel(logging.INFO)
+
+# Create formatters and add it to handlers
+log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+c_handler.setFormatter(log_format)
+f_handler.setFormatter(log_format)
+
+# Add handlers to the logger
+logger.addHandler(c_handler)
+logger.addHandler(f_handler)
 
 class YAMLToolLoader:
     """Load MCP tools from YAML files"""
-    
+
     def __init__(self, yaml_paths: List[str]):
         self.yaml_paths = yaml_paths
         self.tools = []
         self.load_tools()
-    
+
     def load_tools(self):
         """Load tools from all YAML files"""
         for yaml_path in self.yaml_paths:
@@ -666,7 +707,7 @@ class YAMLToolLoader:
                 logger.info(f"Loaded {len(tools_data)} tools from {yaml_path}")
             except Exception as e:
                 logger.error(f"Error loading YAML file {yaml_path}: {e}")
-    
+
     async def list_tools(self):
         """List all loaded tools"""
         return {"tools": [
@@ -677,11 +718,12 @@ class YAMLToolLoader:
             }
             for tool in self.tools
         ]}
-    
+
     async def call_tool(self, name: str, arguments: dict):
         """Call a tool by name"""
         tool = next((t for t in self.tools if t["name"] == name), None)
         if not tool:
+            logger.error(f"Tool not found: {name}")
             return {
                 "content": [{"type": "text", "text": f"Tool '{name}' not found"}],
                 "isError": True
@@ -693,24 +735,47 @@ class YAMLToolLoader:
             url = f"{base_url}/{endpoint}"
             method = tool['method'].upper()
             
+            logger.info(f"Executing tool '{name}' -> {method} {url}")
+            if arguments:
+                logger.info(f"Arguments: {json.dumps(arguments)}")
+            
             async with httpx.AsyncClient() as client:
+                response = None
                 if method == "GET":
-                    response = await client.get(url, params=arguments, timeout=30.0)
+                    response = await client.get(url, params=arguments, timeout=60.0)
                 elif method == "POST":
-                    response = await client.post(url, json=arguments, timeout=30.0)
+                    response = await client.post(url, json=arguments, timeout=60.0)
                 elif method == "PUT":
-                    response = await client.put(url, json=arguments, timeout=30.0)
+                    response = await client.put(url, json=arguments, timeout=60.0)
                 elif method == "DELETE":
-                    response = await client.delete(url, params=arguments, timeout=30.0)
+                    response = await client.delete(url, params=arguments, timeout=60.0)
+                elif method == "PATCH":
+                    response = await client.patch(url, json=arguments, timeout=60.0)
                 else:
+                    logger.error(f"Unsupported HTTP method: {method}")
                     return {
                         "content": [{"type": "text", "text": f"Unsupported HTTP method: {method}"}],
                         "isError": True
                     }
                 
-                response.raise_for_status()
-                result_text = response.text
+                logger.info(f"Response status: {response.status_code}")
                 
+                try:
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as e:
+                    error_msg = f"API Error: {e.response.status_code} - {e.response.text}"
+                    logger.error(error_msg)
+                    return {
+                        "content": [{"type": "text", "text": f"Error: {error_msg}"}],
+                        "isError": True
+                    }
+                
+                try:
+                    data = response.json()
+                    result_text = json.dumps(data, indent=2)
+                except json.JSONDecodeError:
+                    result_text = response.text
+                    
                 return {
                     "content": [{"type": "text", "text": result_text}],
                     "isError": False
@@ -932,6 +997,8 @@ if __name__ == "__main__":
             admin_password: Admin password for OAuth (for database online deployments)
         """
         # Determine server startup command based on type
+        self.log(f"DEBUG: generate_setup_script called with server_type={server_type}", "INFO")
+        self.log(f"DEBUG: server_files keys: {list(server_files.keys())}", "INFO")
         if server_type == 'database':
             # Check if remote_mcp_server_admin.py exists (online deployment)
             if 'remote_mcp_server_admin.py' in server_files:
@@ -947,15 +1014,22 @@ if __name__ == "__main__":
             else:
                 # Local deployment: use run_mcp_server.py
                 startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/run_mcp_server.py --config-file /opt/mcp-server/config.ini"
-        elif server_type in ['api', 'codebase', 'swagger']:
+        elif server_type in ['api', 'codebase', 'swagger', 'github']:
             # Find YAML files
             yaml_files = [f for f in server_files.keys() if f.endswith('.yaml')]
             self.log(f"Found {len(yaml_files)} YAML files for startup command: {yaml_files}", "INFO")
+            
             if yaml_files:
                 # Build --yaml-files arguments (one --yaml-files per file)
                 yaml_args = ' '.join([f"--yaml-files /opt/mcp-server/{f}" for f in yaml_files])
+                
+                # Add admin creation flag if credentials provided
+                admin_arg = ""
+                if admin_username and admin_password:
+                    admin_arg = f" --create-admin {admin_username}:{admin_password}"
+                
                 # Use HTTP mode with OAuth admin interface (same as database server)
-                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db {yaml_args}"
+                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db {yaml_args}{admin_arg} --debug"
                 self.log(f"Generated startup command (HTTP with OAuth admin): {startup_command}", "INFO")
             else:
                 startup_command = "/opt/mcp-server/venv/bin/python /opt/mcp-server/mcp_server_loader.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db"
@@ -1260,7 +1334,7 @@ echo ""
         # Update nginx proxy port for online database deployments
         # Server runs on 30210 internally, Nginx proxies from port 80 to 30210
         if (server_type == 'database' and 'remote_mcp_server_admin.py' in server_files) or \
-           (server_type in ['swagger', 'api', 'codebase'] and 'mcp_server_loader.py' in server_files):
+           (server_type in ['swagger', 'api', 'codebase', 'github'] and 'mcp_server_loader.py' in server_files):
             script = script.replace('{{SERVER_PORT}}', '30210')
             script = script.replace('echo "Server is running on port 8000"', 'echo "Server is running on port 30210 (internal), accessible via Nginx on port 80"')
         else:
@@ -1606,7 +1680,7 @@ echo ""
             admin_username = None
             admin_password = None
             if (server_type == 'database' and 'remote_mcp_server_admin.py' in server_files) or \
-               (server_type in ['swagger', 'api', 'codebase'] and 'mcp_server_loader.py' in server_files):
+               (server_type in ['swagger', 'api', 'codebase', 'github'] and 'mcp_server_loader.py' in server_files):
                 import secrets
                 import string
                 admin_username = 'admin'

@@ -11,6 +11,7 @@ import os
 import json
 import yaml
 import platform
+import subprocess
 import time
 from datetime import datetime
 
@@ -97,8 +98,37 @@ import httpx
 import yaml
 import sys
 import json
+import logging
+import logging.handlers
+import os
 from pathlib import Path
 from typing import List, Dict, Any
+
+# Configure logging
+log_dir = "logs"
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+log_file = os.path.join(log_dir, "mcp_server.log")
+
+logger = logging.getLogger("mcp-server")
+logger.setLevel(logging.INFO)
+
+# Create handlers
+c_handler = logging.StreamHandler(sys.stderr)
+f_handler = logging.handlers.TimedRotatingFileHandler(log_file, when='midnight', interval=1, backupCount=30)
+
+c_handler.setLevel(logging.INFO)
+f_handler.setLevel(logging.INFO)
+
+# Create formatters and add it to handlers
+log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+c_handler.setFormatter(log_format)
+f_handler.setFormatter(log_format)
+
+# Add handlers to the logger
+logger.addHandler(c_handler)
+logger.addHandler(f_handler)
 
 # Server instance with descriptive name and version
 # Following MCP SDK initialization pattern
@@ -109,13 +139,16 @@ all_tools: List[types.Tool] = []
 tool_handlers: Dict[str, Dict[str, Any]] = {}
 
 # Track server metadata
-SERVER_VERSION = "1.0.0"
-SERVER_DESCRIPTION = "Dynamic API to MCP Tools Loader"
 
 
 def log_message(level: str, message: str) -> None:
     """Log messages to stderr for debugging"""
-    print(f"[MCP Loader] [{level.upper()}] {message}", file=sys.stderr)
+    if level.lower() == 'error':
+        logger.error(message)
+    elif level.lower() == 'warning':
+        logger.warning(message)
+    else:
+        logger.info(message)
 
 
 def validate_tool_config(tool_config: Dict[str, Any], source_file: str) -> bool:
@@ -224,17 +257,15 @@ def load_yaml_tools(yaml_file_path: str) -> int:
 
                 # Store handler info
                 tool_handlers[tool_name] = {
-                    'base_url': base_url,
                     'endpoint': endpoint,
                     'method': method,
-                    'source': yaml_file_path
+                    'base_url': base_url
                 }
-
                 loaded_count += 1
                 log_message("info", f"Loaded tool: {tool_name} ({method} {endpoint})")
 
             except Exception as e:
-                log_message("error", f"Error loading tool #{idx + 1} from {yaml_file_path}: {str(e)}")
+                log_message("error", f"Error processing tool #{idx + 1} in {yaml_file_path}: {str(e)}")
                 continue
 
         log_message("info", f"Successfully loaded {loaded_count}/{len(tools)} tools from {yaml_file_path}")
@@ -261,7 +292,7 @@ else:
 
 
 @server.list_tools()
-async def list_tools() -> list[types.Tool]:
+async def handle_list_tools() -> list[types.Tool]:
     """
     List all loaded tools
 
@@ -270,44 +301,6 @@ async def list_tools() -> list[types.Tool]:
     return all_tools
 
 
-def validate_tool_arguments(tool_name: str, arguments: dict, input_schema: dict) -> tuple[bool, str]:
-    """
-    Validate tool arguments against input schema
-    Following MCP best practices for parameter validation
-
-    Args:
-        tool_name: Name of the tool being called
-        arguments: Arguments provided by the user
-        input_schema: JSON Schema for expected parameters
-
-    Returns:
-        Tuple of (is_valid, error_message)
-    """
-    try:
-        # Check required parameters
-        required_params = input_schema.get('required', [])
-        for param in required_params:
-            if param not in arguments:
-                return False, f"Missing required parameter: '{param}'"
-
-        # Validate parameter types (basic validation)
-        properties = input_schema.get('properties', {})
-        for arg_name, arg_value in arguments.items():
-            if arg_name in properties:
-                expected_type = properties[arg_name].get('type', 'string')
-
-                # Basic type checking
-                if expected_type == 'string' and not isinstance(arg_value, str):
-                    return False, f"Parameter '{arg_name}' must be a string"
-                elif expected_type == 'number' and not isinstance(arg_value, (int, float)):
-                    return False, f"Parameter '{arg_name}' must be a number"
-                elif expected_type == 'integer' and not isinstance(arg_value, int):
-                    return False, f"Parameter '{arg_name}' must be an integer"
-                elif expected_type == 'boolean' and not isinstance(arg_value, bool):
-                    return False, f"Parameter '{arg_name}' must be a boolean"
-                elif expected_type == 'array' and not isinstance(arg_value, list):
-                    return False, f"Parameter '{arg_name}' must be an array"
-                elif expected_type == 'object' and not isinstance(arg_value, dict):
                     return False, f"Parameter '{arg_name}' must be an object"
 
         return True, ""
@@ -710,6 +703,69 @@ def setup_mcp_routes(app):
             print(f"[SCAN] Starting codebase scan: {project_path}")
             print(f"[SCAN] Source file filter: {source_file or 'All files'}")
             print(f"[SCAN] API Base URL: {api_base_url}")
+
+            # Check if github_repo_url is provided (from frontend)
+            github_repo_url = data.get('github_repo_url')
+            if github_repo_url:
+                print(f"[SCAN] Found github_repo_url in payload: {github_repo_url}")
+                project_path = github_repo_url
+
+            # Ensure project_path is a string and strip whitespace
+            if project_path:
+                project_path = str(project_path).strip()
+            
+            print(f"[SCAN] Processed project path: '{project_path}'")
+
+            # Handle GitHub URLs
+            if project_path and project_path.startswith(('http://', 'https://', 'git@')):
+                print(f"[SCAN] Detected GitHub URL: {project_path}")
+                
+                # Create cloned_repos directory if it doesn't exist
+                cloned_repos_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cloned_repos')
+                os.makedirs(cloned_repos_dir, exist_ok=True)
+                
+                # Extract repo name from URL
+                repo_name = project_path.split('/')[-1]
+                if repo_name.endswith('.git'):
+                    repo_name = repo_name[:-4]
+                
+                # Handle GitHub Token for private repos
+                github_token = data.get('github_token')
+                clone_url = project_path
+                
+                if github_token and 'github.com' in project_path and 'https://' in project_path:
+                    # Insert token into URL: https://<token>@github.com/...
+                    scheme, rest = project_path.split('://', 1)
+                    clone_url = f"{scheme}://{github_token}@{rest}"
+                    print("[SCAN] Added GitHub token to clone URL")
+                
+                target_dir = os.path.join(cloned_repos_dir, repo_name)
+                
+                # Check if already cloned
+                if os.path.exists(target_dir):
+                    print(f"[SCAN] Repository already exists at {target_dir}, pulling latest changes...")
+                    try:
+                        subprocess.run(['git', '-C', target_dir, 'pull'], check=True, capture_output=True)
+                        print("[SCAN] Git pull successful")
+                    except Exception as e:
+                        print(f"[WARN] Git pull failed: {e}")
+                        # If pull fails, might be better to re-clone or just proceed
+                else:
+                    print(f"[SCAN] Cloning repository to {target_dir}...")
+                    try:
+                        subprocess.run(['git', 'clone', clone_url, target_dir], check=True, capture_output=True)
+                        print("[SCAN] Git clone successful")
+                    except subprocess.CalledProcessError as e:
+                        error_msg = f"Failed to clone repository: {e.stderr.decode() if e.stderr else str(e)}"
+                        print(f"[ERROR] {error_msg}")
+                        return jsonify({'error': error_msg, 'success': False}), 400
+                    except Exception as e:
+                        print(f"[ERROR] Clone error: {e}")
+                        return jsonify({'error': str(e), 'success': False}), 500
+                
+                # Update project_path to the local cloned directory
+                project_path = target_dir
+                print(f"[SCAN] Updated project path to: {project_path}")
 
             # Use intelligent MCP converter with detection reasoning
             converter = IntelligentMCPConverter(project_path, api_base_url)
