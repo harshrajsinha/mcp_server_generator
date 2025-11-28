@@ -730,8 +730,10 @@ class YAMLToolLoader:
             }
         
         try:
-            base_url = tool['base_url'].rstrip('/')
-            endpoint = tool['endpoint'].lstrip('/')
+            base_url_val = tool.get('base_url')
+            endpoint_val = tool.get('endpoint')
+            base_url = str(base_url_val).strip().rstrip('/') if base_url_val is not None else ""
+            endpoint = str(endpoint_val).strip().lstrip('/') if endpoint_val is not None else ""
             url = f"{base_url}/{endpoint}"
             method = tool['method'].upper()
             
@@ -1277,8 +1279,8 @@ echo "=========================================="
                 admin_username = 'admin'
             if not admin_password:
                 # Generate a secure random password
-                # Exclude '&' to prevent HTML entity issues in UI
-                alphabet = string.ascii_letters + string.digits + "!@#$%^*"
+                # Exclude special characters that cause issues in systemd/shell (%, ^, $)
+                alphabet = string.ascii_letters + string.digits + "-_!@"
                 admin_password = ''.join(secrets.choice(alphabet) for i in range(16))
             
             # Add admin user creation command
@@ -1710,8 +1712,8 @@ echo ""
                 import string
                 admin_username = 'admin'
                 # Generate a secure random password
-                # Exclude '&' to prevent HTML entity issues in UI
-                alphabet = string.ascii_letters + string.digits + "!@#$%^*"
+                # Exclude special characters that cause issues in systemd/shell (%, ^, $)
+                alphabet = string.ascii_letters + string.digits + "-_!@"
                 admin_password = ''.join(secrets.choice(alphabet) for i in range(16))
                 self.log(f"Generated admin credentials: username={admin_username}, password={admin_password}", "INFO")
                 # Log credentials prominently for user visibility
