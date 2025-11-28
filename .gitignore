@@ -240,4 +240,7 @@ test_*.py
 demo_*.py
 example_*.py
 scikiq mcp tools.zip
-scikiq_pkg_dbutils/config.ini 
+scikiq_pkg_dbutils/config.ini
+
+# Cloned repositories
+cloned_repos/

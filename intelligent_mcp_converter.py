@@ -859,14 +859,23 @@ class IntelligentMCPConverter:
 
     def convert_to_mcp_tools(self) -> List[MCPToolUnderstanding]:
         """Convert endpoints to intelligent MCP tools"""
-        print(f"[Intelligent Conversion] Converting {len(self.endpoints)} endpoints to MCP tools...")
+        try:
+            print(f"[Intelligent Conversion] Converting {len(self.endpoints)} endpoints to MCP tools...")
+        except BrokenPipeError:
+            pass
 
         for endpoint in self.endpoints:
             mcp_tool = self._create_intelligent_mcp_tool(endpoint)
             self.mcp_tools.append(mcp_tool)
-            print(f"  [OK] Created: {mcp_tool.name} - {mcp_tool.purpose_explanation}")
+            try:
+                print(f"  [OK] Created: {mcp_tool.name} - {mcp_tool.purpose_explanation}")
+            except BrokenPipeError:
+                pass
 
-        print(f"[Intelligent Conversion] Complete! Created {len(self.mcp_tools)} MCP tools")
+        try:
+            print(f"[Intelligent Conversion] Complete! Created {len(self.mcp_tools)} MCP tools")
+        except BrokenPipeError:
+            pass
         return self.mcp_tools
 
     def _create_intelligent_mcp_tool(self, endpoint: EndpointUnderstanding) -> MCPToolUnderstanding:

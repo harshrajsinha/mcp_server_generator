@@ -1740,33 +1740,67 @@
                         </button>
                     </div>
                     
-                    <!-- Minimum Score Filter -->
+                    <!-- Score Range Filter -->
                     <div style="background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem;">
                             <label style="color: rgba(255, 255, 255, 0.9); font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
                                 <i class="fas fa-filter" style="color: var(--anthropic-purple);"></i>
                                 Filter by Score:
                             </label>
-                            <div style="display: flex; align-items: center; gap: 0.8rem;">
-                                <span style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem;">Min:</span>
-                                <span id="apiMinScoreDisplay" style="background: var(--anthropic-purple); color: white; padding: 0.3rem 0.8rem; border-radius: 6px; font-weight: 700; font-size: 1rem; min-width: 50px; text-align: center;">0%</span>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span id="apiMinScoreDisplay" style="background: var(--anthropic-purple); color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: 700; font-size: 0.9rem; min-width: 45px; text-align: center;">0%</span>
+                                <span style="color: rgba(255, 255, 255, 0.5);">-</span>
+                                <span id="apiMaxScoreDisplay" style="background: var(--success-green); color: white; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: 700; font-size: 0.9rem; min-width: 45px; text-align: center;">100%</span>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="position: relative; height: 30px; margin-bottom: 0.5rem;">
+                            <div style="position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%); height: 8px; border-radius: 5px; background: linear-gradient(to right, #EF4444 0%, #F59E0B 25%, #10B981 50%, #059669 100%);"></div>
+                            <div id="rangeTrack" style="position: absolute; top: 50%; transform: translateY(-50%); height: 8px; background: rgba(124, 58, 237, 0.6); border-radius: 5px;"></div>
                             <input type="range" id="apiMinScoreSlider" min="0" max="100" value="0" step="5"
-                                oninput="updateAPIScoreFilter(this.value)"
-                                style="flex: 1; height: 8px; border-radius: 5px; background: linear-gradient(to right, #EF4444 0%, #F59E0B 25%, #10B981 50%, #059669 100%); outline: none; -webkit-appearance: none; cursor: pointer;">
+                                oninput="updateAPIRangeFilter()"
+                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; -webkit-appearance: none; appearance: none; background: transparent; pointer-events: none; z-index: 2;">
+                            <input type="range" id="apiMaxScoreSlider" min="0" max="100" value="100" step="5"
+                                oninput="updateAPIRangeFilter()"
+                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; -webkit-appearance: none; appearance: none; background: transparent; pointer-events: none; z-index: 3;">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                            <div style="display: flex; gap: 1rem; font-size: 0.8rem; color: rgba(255, 255, 255, 0.5);">
+                                <span>0%</span>
+                                <span>50%</span>
+                                <span>100%</span>
+                            </div>
                             <button onclick="resetAPIScoreFilter()" class="action-btn"
-                                style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255, 255, 255, 0.1); min-width: auto;">
+                                style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: rgba(255, 255, 255, 0.1); min-width: auto;">
                                 <i class="fas fa-undo"></i> Reset
                             </button>
                         </div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.8rem; color: rgba(255, 255, 255, 0.5);">
-                            <span>0%</span>
-                            <span>50%</span>
-                            <span>100%</span>
-                        </div>
                     </div>
+                    <style>
+                        #apiMinScoreSlider::-webkit-slider-thumb,
+                        #apiMaxScoreSlider::-webkit-slider-thumb {
+                            -webkit-appearance: none;
+                            appearance: none;
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 50%;
+                            background: white;
+                            cursor: pointer;
+                            pointer-events: auto;
+                            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+                            border: 2px solid var(--anthropic-purple);
+                        }
+                        #apiMinScoreSlider::-moz-range-thumb,
+                        #apiMaxScoreSlider::-moz-range-thumb {
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 50%;
+                            background: white;
+                            cursor: pointer;
+                            pointer-events: auto;
+                            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+                            border: 2px solid var(--anthropic-purple);
+                        }
+                    </style>
                     
                     <div
                         style="display: flex; align-items: center; gap: 1rem; padding: 0.5rem; background: rgba(0, 0, 0, 0.2); border-radius: 6px;">
@@ -1797,17 +1831,41 @@
 
             <!-- MCP Tools Tab -->
             <div id="mcp-tab" class="tab-content">
-                <div style="margin-bottom: 1.5rem;">
-                    <h4 style="font-family: 'Space Grotesk', sans-serif; color: var(--anthropic-orange);">
-                        <i class="fas fa-toolbox"></i> Generated MCP Tools
-                    </h4>
-                    <p style="color: rgba(255, 255, 255, 0.7);">
-                        MCP-compatible tools ready for AI integration
-                    </p>
+                <div style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h4 style="font-family: 'Space Grotesk', sans-serif; color: var(--anthropic-orange); margin: 0;">
+                                <i class="fas fa-toolbox"></i> Generated MCP Server YAML
+                            </h4>
+                            <p style="color: rgba(255, 255, 255, 0.7); margin: 0.5rem 0 0 0;">
+                                MCP server configuration file ready for deployment
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button onclick="copyYamlContent()" id="copyYamlBtn" class="action-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255, 255, 255, 0.1); display: none;">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <button onclick="downloadYamlFile()" id="downloadYamlBtn" class="action-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: linear-gradient(135deg, var(--success-green), #059669); display: none;">
+                                <i class="fas fa-download"></i> Download YAML
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div id="mcpToolsList">
                     <div class="text-center" style="padding: 3rem; color: rgba(255, 255, 255, 0.5);">
-                        <div>Click "Generate MCP Tools" to convert APIs</div>
+                        <div><i class="fas fa-file-code" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i></div>
+                        <div>Convert APIs to generate MCP server YAML file</div>
+                    </div>
+                </div>
+                <div id="mcpYamlContent" style="display: none;">
+                    <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; overflow: hidden;">
+                        <div style="background: rgba(255, 255, 255, 0.05); padding: 0.75rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--scikiq-light-blue); font-weight: 600; font-size: 0.9rem;">
+                                <i class="fas fa-file-code"></i> <span id="yamlFileName">mcp_server.yaml</span>
+                            </span>
+                            <span id="yamlToolCount" style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;"></span>
+                        </div>
+                        <pre id="yamlCodeContent" style="margin: 0; padding: 1rem; max-height: 500px; overflow-y: auto; font-family: 'Fira Code', monospace; font-size: 0.85rem; line-height: 1.5; color: #e0e0e0; white-space: pre-wrap; word-wrap: break-word;"></pre>
                     </div>
                 </div>
             </div>
@@ -3922,42 +3980,71 @@
             updateSelectionCount();
         }
 
-        // Score filter functions
-        function updateAPIScoreFilter(value) {
-            const display = document.getElementById('apiMinScoreDisplay');
-            display.textContent = value + '%';
-            
-            // Update slider background gradient based on value
-            const slider = document.getElementById('apiMinScoreSlider');
-            const percentage = value;
-            let color;
-            if (percentage < 25) color = '#EF4444';
-            else if (percentage < 50) color = '#F59E0B';
-            else if (percentage < 75) color = '#10B981';
-            else color = '#059669';
-            
-            display.style.background = color;
-            
-            // Filter and re-render APIs
-            filterAPIsByScore(value / 100);
+        // Score range filter functions
+        function updateAPIRangeFilter() {
+            const minSlider = document.getElementById('apiMinScoreSlider');
+            const maxSlider = document.getElementById('apiMaxScoreSlider');
+            const minDisplay = document.getElementById('apiMinScoreDisplay');
+            const maxDisplay = document.getElementById('apiMaxScoreDisplay');
+            const rangeTrack = document.getElementById('rangeTrack');
+
+            let minVal = parseInt(minSlider.value);
+            let maxVal = parseInt(maxSlider.value);
+
+            // Prevent min from exceeding max
+            if (minVal > maxVal) {
+                if (this === minSlider) {
+                    minSlider.value = maxVal;
+                    minVal = maxVal;
+                } else {
+                    maxSlider.value = minVal;
+                    maxVal = minVal;
+                }
+            }
+
+            // Update displays
+            minDisplay.textContent = minVal + '%';
+            maxDisplay.textContent = maxVal + '%';
+
+            // Update display colors based on values
+            function getColor(val) {
+                if (val < 25) return '#EF4444';
+                else if (val < 50) return '#F59E0B';
+                else if (val < 75) return '#10B981';
+                else return '#059669';
+            }
+            minDisplay.style.background = getColor(minVal);
+            maxDisplay.style.background = getColor(maxVal);
+
+            // Update range track position
+            const minPercent = minVal;
+            const maxPercent = maxVal;
+            rangeTrack.style.left = minPercent + '%';
+            rangeTrack.style.width = (maxPercent - minPercent) + '%';
+
+            // Filter APIs by range
+            filterAPIsByScoreRange(minVal / 100, maxVal / 100);
         }
 
         function resetAPIScoreFilter() {
-            const slider = document.getElementById('apiMinScoreSlider');
-            slider.value = 0;
-            updateAPIScoreFilter(0);
+            const minSlider = document.getElementById('apiMinScoreSlider');
+            const maxSlider = document.getElementById('apiMaxScoreSlider');
+            minSlider.value = 0;
+            maxSlider.value = 100;
+            updateAPIRangeFilter();
         }
 
-        function filterAPIsByScore(minScore) {
+        function filterAPIsByScoreRange(minScore, maxScore) {
             if (!window.allAPIs) return;
-            
-            // Hide APIs below threshold
+
+            // Hide APIs outside the score range
             window.allAPIs.forEach(api => {
                 const score = api.mcp_suitability_score || (api.confidence * 100) || 85;
                 const apiRow = document.querySelector(`[data-api-index="${api.index}"]`);
-                
+
                 if (apiRow) {
-                    if (score >= (minScore * 100)) {
+                    const scorePercent = score;
+                    if (scorePercent >= (minScore * 100) && scorePercent <= (maxScore * 100)) {
                         apiRow.style.display = '';
                     } else {
                         apiRow.style.display = 'none';
@@ -3970,18 +4057,26 @@
                     }
                 }
             });
-            
+
             updateSelectionCount();
-            
+
             // Show count of visible APIs
             const visibleCount = window.allAPIs.filter(api => {
                 const score = api.mcp_suitability_score || (api.confidence * 100) || 85;
-                return score >= (minScore * 100);
+                return score >= (minScore * 100) && score <= (maxScore * 100);
             }).length;
-            
-            // Update a status message if needed
-            console.log(`Showing ${visibleCount} of ${window.allAPIs.length} APIs (min score: ${(minScore * 100).toFixed(0)}%)`);
+
+            console.log(`Showing ${visibleCount} of ${window.allAPIs.length} APIs (score range: ${(minScore * 100).toFixed(0)}% - ${(maxScore * 100).toFixed(0)}%)`);
         }
+
+        // Initialize range track on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const rangeTrack = document.getElementById('rangeTrack');
+            if (rangeTrack) {
+                rangeTrack.style.left = '0%';
+                rangeTrack.style.width = '100%';
+            }
+        });
 
         async function analyzeSelectedAPIs() {
             if (window.selectedAPIs.size === 0) return;
@@ -4064,7 +4159,12 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    alert(`✅ Success!\\n\\nConverted ${result.converted_count} APIs to MCP tools.\\n\\nOutput: ${result.output_file}`);
+                    // Store yaml_path for later use
+                    if (result.yaml_path) {
+                        window.lastGeneratedYamlPath = result.yaml_path;
+                        // Display the generated YAML in the MCP Tools tab
+                        displayGeneratedYaml(result.yaml_path, result.converted_count);
+                    }
                     btn.innerHTML = '<i class="fas fa-check"></i> Converted!';
                 } else {
                     throw new Error(result.error);
@@ -5199,6 +5299,9 @@
                     window.lastGeneratedYamlPath = result.yaml_path;
                     window.currentApiDomain = baseUrl;  // Store API domain for server naming
 
+                    // Display the generated YAML in the MCP Tools tab
+                    displayGeneratedYaml(result.yaml_path, result.converted_count);
+
                     // Show detailed setup modal instead of simple alert
                     showMCPSetupModal(result);
 
@@ -5218,6 +5321,106 @@
                     convertBtn.disabled = false;
                     convertBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed - Try Again';
                 }
+            }
+        }
+
+        // YAML display functions for MCP Tools tab
+        async function displayGeneratedYaml(yamlPath, toolCount) {
+            try {
+                const response = await fetch('/api/read-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: yamlPath })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Store the content for copy/download
+                    window.generatedYamlContent = result.content;
+                    window.generatedYamlPath = yamlPath;
+
+                    // Get filename from path
+                    const fileName = yamlPath.split('/').pop().split('\\').pop();
+
+                    // Hide placeholder, show YAML content
+                    document.getElementById('mcpToolsList').style.display = 'none';
+                    document.getElementById('mcpYamlContent').style.display = 'block';
+
+                    // Update filename and tool count
+                    document.getElementById('yamlFileName').textContent = fileName;
+                    document.getElementById('yamlToolCount').textContent = `${toolCount} tools defined`;
+
+                    // Apply syntax highlighting to YAML
+                    const highlightedYaml = highlightYamlSyntax(result.content);
+                    document.getElementById('yamlCodeContent').innerHTML = highlightedYaml;
+
+                    // Show copy/download buttons
+                    document.getElementById('copyYamlBtn').style.display = 'inline-flex';
+                    document.getElementById('downloadYamlBtn').style.display = 'inline-flex';
+
+                    // Update MCP Tools stat
+                    document.getElementById('mcpTools').textContent = toolCount;
+
+                    // Switch to MCP Tools tab
+                    switchToMcpTab();
+                }
+            } catch (error) {
+                console.error('Error loading YAML:', error);
+            }
+        }
+
+        function highlightYamlSyntax(yaml) {
+            // Simple YAML syntax highlighting
+            return yaml
+                .replace(/^(\s*)(#.*)$/gm, '$1<span style="color: #6a9955;">$2</span>') // Comments
+                .replace(/^(\s*)([a-zA-Z_][a-zA-Z0-9_]*)(:)/gm, '$1<span style="color: #9cdcfe;">$2</span><span style="color: #d4d4d4;">$3</span>') // Keys
+                .replace(/:\s*("[^"]*")/g, ': <span style="color: #ce9178;">$1</span>') // String values in quotes
+                .replace(/:\s*('[^']*')/g, ': <span style="color: #ce9178;">$1</span>') // String values in single quotes
+                .replace(/:\s*(true|false)/gi, ': <span style="color: #569cd6;">$1</span>') // Booleans
+                .replace(/:\s*(\d+\.?\d*)/g, ': <span style="color: #b5cea8;">$1</span>') // Numbers
+                .replace(/^(\s*-\s)/gm, '<span style="color: #d4d4d4;">$1</span>'); // List items
+        }
+
+        function switchToMcpTab() {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            const mcpTabBtn = document.querySelector('.tab[onclick*="mcp"]');
+            if (mcpTabBtn) mcpTabBtn.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            const mcpTab = document.getElementById('mcp-tab');
+            if (mcpTab) mcpTab.classList.add('active');
+        }
+
+        function copyYamlContent() {
+            if (window.generatedYamlContent) {
+                navigator.clipboard.writeText(window.generatedYamlContent).then(() => {
+                    const btn = document.getElementById('copyYamlBtn');
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    btn.style.background = 'var(--success-green)';
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                    }, 2000);
+                });
+            }
+        }
+
+        function downloadYamlFile() {
+            if (window.generatedYamlContent && window.generatedYamlPath) {
+                const fileName = window.generatedYamlPath.split('/').pop().split('\\').pop();
+                const blob = new Blob([window.generatedYamlContent], { type: 'text/yaml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             }
         }
 

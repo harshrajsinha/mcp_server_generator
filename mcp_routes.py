@@ -880,9 +880,18 @@ def setup_mcp_routes(app):
 
             return jsonify(combined_results)
 
+        except BrokenPipeError:
+            # Client disconnected - this is not a real error
+            return jsonify({
+                'success': False,
+                'error': 'Client disconnected'
+            }), 499
         except Exception as e:
             import traceback
-            traceback.print_exc()
+            try:
+                traceback.print_exc()
+            except BrokenPipeError:
+                pass  # Ignore broken pipe when printing traceback
             return jsonify({
                 'success': False,
                 'error': str(e)
