@@ -3,7 +3,7 @@ MCP Studio Routes
 Standalone API to MCP conversion tool
 """
 
-from flask import render_template, request, jsonify, send_from_directory, Response
+from flask import render_template, request, jsonify, send_from_directory, Response, send_file
 from flask import stream_with_context
 from pathlib import Path
 from dotenv import load_dotenv
@@ -2090,12 +2090,41 @@ Respond in JSON:
     def mcp_get_database_config():
         """Get the content of a database config.ini file"""
         try:
-            config_path = request.args.get('path')
+            import base64
+            from urllib.parse import unquote
             
-            if not config_path or not Path(config_path).exists():
+            config_path = request.args.get('path')
+            is_encoded = request.args.get('encoded', 'false').lower() == 'true'
+            
+            if not config_path:
                 return jsonify({
                     'success': False,
-                    'error': 'Config file not found'
+                    'error': 'Path parameter is required'
+                }), 400
+            
+            # Decode base64 if encoded, otherwise use URL decode
+            if is_encoded:
+                try:
+                    config_path = base64.b64decode(config_path).decode('utf-8')
+                except Exception as e:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Invalid encoded path: {str(e)}'
+                    }), 400
+            else:
+                # Properly decode the URL-encoded path
+                config_path = unquote(config_path)
+            
+            # Normalize path separators for Windows
+            if os.name == 'nt':  # Windows
+                config_path = config_path.replace('/', '\\')
+            
+            config_path = Path(config_path)
+            
+            if not config_path.exists():
+                return jsonify({
+                    'success': False,
+                    'error': f'Config file not found: {config_path}'
                 }), 404
             
             with open(config_path, 'r', encoding='utf-8') as f:
@@ -2107,6 +2136,67 @@ Respond in JSON:
             })
             
         except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    @app.route('/api/download-database-config', methods=['GET'])
+    def mcp_download_database_config():
+        """Download a database config.ini file"""
+        try:
+            import base64
+            from urllib.parse import unquote
+            
+            config_path = request.args.get('path')
+            is_encoded = request.args.get('encoded', 'false').lower() == 'true'
+            
+            if not config_path:
+                return jsonify({
+                    'success': False,
+                    'error': 'Path parameter is required'
+                }), 400
+            
+            # Decode base64 if encoded, otherwise use URL decode
+            if is_encoded:
+                try:
+                    config_path = base64.b64decode(config_path).decode('utf-8')
+                except Exception as e:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Invalid encoded path: {str(e)}'
+                    }), 400
+            else:
+                # Properly decode the URL-encoded path
+                config_path = unquote(config_path)
+            
+            # Normalize path separators for Windows
+            if os.name == 'nt':  # Windows
+                config_path = config_path.replace('/', '\\')
+            
+            config_path = Path(config_path)
+            
+            if not config_path.exists():
+                return jsonify({
+                    'success': False,
+                    'error': f'Config file not found: {config_path}'
+                }), 404
+            
+            # Extract filename
+            filename = config_path.name
+            
+            return send_file(
+                str(config_path),
+                mimetype='text/plain',
+                as_attachment=True,
+                download_name=filename
+            )
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'success': False,
                 'error': str(e)

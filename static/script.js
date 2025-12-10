@@ -1091,7 +1091,15 @@
                                     <i class="fas fa-chevron-down" style="margin-left: auto; transition: transform 0.3s ease;"></i>
                                 </summary>
                                 <div style="padding: 0 1rem 1rem 1rem;">
-                                    <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1.5rem; max-height: 300px; overflow-y: auto;">
+                                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; justify-content: flex-end;">
+                                        <button class="copy-config-btn" data-config-path="${configPath.replace(/\\/g, '/')}" style="background: rgba(0, 163, 224, 0.2); border: 1px solid var(--scikiq-light-blue); border-radius: 6px; color: var(--scikiq-light-blue); padding: 0.5rem 1rem; cursor: pointer; font-weight: 500; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(0, 163, 224, 0.3)'" onmouseout="this.style.background='rgba(0, 163, 224, 0.2)'">
+                                            <i class="fas fa-copy"></i> Copy
+                                        </button>
+                                        <button class="download-config-btn" data-config-path="${configPath.replace(/\\/g, '/')}" style="background: rgba(16, 185, 129, 0.2); border: 1px solid var(--scikiq-green); border-radius: 6px; color: var(--scikiq-green); padding: 0.5rem 1rem; cursor: pointer; font-weight: 500; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(16, 185, 129, 0.3)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.2)'">
+                                            <i class="fas fa-download"></i> Download
+                                        </button>
+                                    </div>
+                                    <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1.5rem; max-height: 300px; overflow-y: auto; position: relative;">
                                         <pre style="margin: 0; color: rgba(255, 255, 255, 0.9); font-family: 'Fira Code', monospace; font-size: 0.9rem;" id="databaseConfigPreview">Loading configuration...</pre>
                                     </div>
                                     <div style="margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;">
@@ -1249,12 +1257,9 @@
                             </div>
 
                             <!-- Action Buttons -->
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem;">
-                                <button onclick="window.open('${configPath}', '_blank')" style="padding: 1rem; background: linear-gradient(135deg, var(--scikiq-green), #059669); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
-                                    <i class="fas fa-external-link-alt"></i> Open Config File
-                                </button>
-                                <button onclick="this.closest('[style*=fixed]').remove()" style="padding: 1rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
-                                    <i class="fas fa-check"></i> Done
+                            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="this.closest('[style*=fixed]').remove()" style="padding: 1rem 2rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                                    <i class="fas fa-times"></i> Close
                                 </button>
                             </div>
 
@@ -1264,6 +1269,29 @@
             `;
 
             document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Attach event listeners for copy and download buttons
+            const modal = document.getElementById('database-mcp-modal');
+            const copyBtn = modal.querySelector('.copy-config-btn');
+            const downloadBtn = modal.querySelector('.download-config-btn');
+            
+            if (copyBtn) {
+                copyBtn.addEventListener('click', function() {
+                    const path = this.getAttribute('data-config-path');
+                    // Convert forward slashes back to backslashes for Windows
+                    const windowsPath = path.replace(/\//g, '\\');
+                    copyDatabaseConfigContent(windowsPath);
+                });
+            }
+            
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', function() {
+                    const path = this.getAttribute('data-config-path');
+                    // Convert forward slashes back to backslashes for Windows
+                    const windowsPath = path.replace(/\//g, '\\');
+                    downloadDatabaseConfig(windowsPath);
+                });
+            }
 
             // Load the actual configuration
             loadDatabaseConfig(configPath);
@@ -1279,9 +1307,129 @@
                     if (preview) {
                         preview.textContent = result.config_content;
                     }
+                    // Store config content globally for copy/download functions
+                    window.databaseConfigContent = result.config_content;
                 }
             } catch (error) {
                 console.error('Error loading database config:', error);
+            }
+        }
+
+        async function copyDatabaseConfigContent(configPath) {
+            const button = event.target.closest('button');
+            const originalContent = button.innerHTML;
+            
+            try {
+                // Get config content if not already loaded
+                if (!window.databaseConfigContent) {
+                    // Use base64 encoding to avoid URL encoding issues
+                    const encodedPath = btoa(unescape(encodeURIComponent(configPath)));
+                    const response = await fetch(`/api/get-database-config?path=${encodedPath}&encoded=true`);
+                    const result = await response.json();
+                    if (result.success) {
+                        window.databaseConfigContent = result.config_content;
+                    } else {
+                        throw new Error(result.error || 'Failed to load config content');
+                    }
+                }
+
+                // Try modern clipboard API first
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    try {
+                        await navigator.clipboard.writeText(window.databaseConfigContent);
+                    } catch (clipboardError) {
+                        // Fallback to textarea method if clipboard API fails
+                        throw new Error('Clipboard API failed, using fallback');
+                    }
+                } else {
+                    // Fallback: Use textarea method for older browsers or HTTP
+                    const textarea = document.createElement('textarea');
+                    textarea.value = window.databaseConfigContent;
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '-999999px';
+                    textarea.style.top = '-999999px';
+                    document.body.appendChild(textarea);
+                    textarea.focus();
+                    textarea.select();
+                    
+                    try {
+                        const successful = document.execCommand('copy');
+                        if (!successful) {
+                            throw new Error('execCommand copy failed');
+                        }
+                    } finally {
+                        document.body.removeChild(textarea);
+                    }
+                }
+                
+                // Visual feedback
+                button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                button.style.background = 'rgba(16, 185, 129, 0.3)';
+                button.style.borderColor = 'var(--scikiq-green)';
+
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.style.background = 'rgba(0, 163, 224, 0.2)';
+                    button.style.borderColor = 'var(--scikiq-light-blue)';
+                }, 2000);
+            } catch (error) {
+                console.error('Failed to copy config:', error);
+                button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
+                button.style.background = 'rgba(239, 68, 68, 0.3)';
+                button.style.borderColor = '#EF4444';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.style.background = 'rgba(0, 163, 224, 0.2)';
+                    button.style.borderColor = 'var(--scikiq-light-blue)';
+                }, 3000);
+                
+                alert('Failed to copy configuration to clipboard. Please select and copy manually from the preview above.');
+            }
+        }
+
+        async function downloadDatabaseConfig(configPath) {
+            const button = event.target.closest('button');
+            const originalContent = button.innerHTML;
+            
+            try {
+                // Use base64 encoding to avoid URL encoding issues with special characters
+                const encodedPath = btoa(unescape(encodeURIComponent(configPath)));
+                const downloadUrl = `/api/download-database-config?path=${encodedPath}&encoded=true`;
+                
+                // Create a temporary link and trigger download
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                
+                // Clean up after a short delay
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                }, 100);
+
+                // Visual feedback
+                button.innerHTML = '<i class="fas fa-check"></i> Downloaded!';
+                button.style.background = 'rgba(16, 185, 129, 0.3)';
+
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.style.background = 'rgba(16, 185, 129, 0.2)';
+                }, 2000);
+            } catch (error) {
+                console.error('Failed to download config:', error);
+                button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed';
+                button.style.background = 'rgba(239, 68, 68, 0.3)';
+                button.style.borderColor = '#EF4444';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.style.background = 'rgba(16, 185, 129, 0.2)';
+                    button.style.borderColor = 'var(--scikiq-green)';
+                }, 3000);
+                
+                alert('Failed to download configuration file. You can copy the content manually from the preview above.');
             }
         }
 
