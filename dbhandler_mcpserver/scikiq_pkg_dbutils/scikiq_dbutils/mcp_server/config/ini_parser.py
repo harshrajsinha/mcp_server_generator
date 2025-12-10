@@ -298,11 +298,17 @@ class IniConfigParser:
         Returns:
             Server configuration dictionary or None
         """
-        # ConfigParser converts section names to lowercase, so check lowercase
-        # But we set optionxform=str so option names preserve case
-        if 'server' in self.config:
-            server_config = dict(self.config['server'])
-            self.logger.info(f"Found SERVER section with keys: {list(server_config.keys())}")
+        # Find SERVER section (case-insensitive)
+        # ConfigParser's sections() returns original case, but access is case-insensitive
+        server_section = None
+        for section in self.config.sections():
+            if section.upper() == 'SERVER':
+                server_section = section
+                break
+        
+        if server_section:
+            server_config = dict(self.config[server_section])
+            self.logger.info(f"Found SERVER section '{server_section}' with keys: {list(server_config.keys())}")
             # Parse enabled_tools if present (option names preserve case due to optionxform=str)
             enabled_tools_str = None
             if 'ENABLED_TOOLS' in server_config:
@@ -319,7 +325,7 @@ class IniConfigParser:
                 self.logger.warning("ENABLED_TOOLS not found in SERVER section")
             return server_config
         else:
-            self.logger.warning("SERVER section not found in config file")
+            self.logger.warning(f"SERVER section not found in config file. Available sections: {self.config.sections()}")
         return None
     
     def get_enabled_tools(self) -> Optional[List[str]]:
