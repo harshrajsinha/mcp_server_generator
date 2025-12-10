@@ -344,36 +344,29 @@
                             <i class="fas fa-times"></i>
                         </button>
                         <h3><i class="fas fa-database"></i> Database MCP Server Configuration</h3>
-                        <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1.5rem;">
+                        <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 1rem;">
                             Configure database connections for your MCP server. You can add multiple databases and the server will provide tools to interact with them through Claude.
                         </p>
                         
                         <!-- Server Configuration -->
-                        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-                            <h4 style="margin-bottom: 1rem; color: var(--scikiq-light-blue);">
+                        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
+                            <h4 style="margin-bottom: 0.75rem; color: var(--scikiq-light-blue); font-size: 1rem;">
                                 <i class="fas fa-cog"></i> Server Configuration
                             </h4>
-                            <div class="input-group">
+                            <div class="input-group" style="margin-bottom: 0;">
                                 <label>Server Name</label>
                                 <input type="text" id="dbServerName" placeholder="database-mcp-server" value="database-mcp-server" />
-                                <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
+                                <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.25rem; display: block; font-size: 0.75rem;">
                                     Used as identifier in Claude Desktop configuration
-                                </small>
-                            </div>
-                            <div class="input-group">
-                                <label>Server Path</label>
-                                <input type="text" id="dbServerPath" placeholder="C:/path/to/dbhandler_mcpserver" value="C:/DAAS/MCP POC/gaurav/dbhandler_mcpserver/scikiq_pkg_dbutils" />
-                                <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
-                                    Path to the database MCP server codebase
                                 </small>
                             </div>
                         </div>
 
                         <!-- Database Connections -->
-                        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                                 <h4 style="margin: 0; color: var(--scikiq-light-blue);">
-                                    <i class="fas fa-plug"></i> Database Connections
+                                    <i class="fas fa-database"></i> Database Connections
                                 </h4>
                                 <button onclick="addDatabaseConnection()" style="background: var(--scikiq-light-blue); border: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
                                     <i class="fas fa-plus"></i> Add Database
@@ -384,12 +377,12 @@
                             </div>
                         </div>
 
-                        <div class="input-buttons">
-                            <button class="btn-secondary-custom" onclick="closeDatabaseModal()">
+                        <div class="input-buttons" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+                            <button class="btn-secondary-custom" onclick="closeDatabaseModal()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 500;">
                                 Cancel
                             </button>
-                            <button class="btn-primary-custom" onclick="generateDatabaseMCP()">
-                                <i class="fas fa-rocket"></i> Generate & Deploy MCP Server
+                            <button class="btn-primary-custom" onclick="generateDatabaseMCP()" style="background: var(--scikiq-light-blue); border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                Save Configuration
                             </button>
                         </div>
                     </div>
@@ -414,20 +407,15 @@
             const connectionId = 'db_connection_' + dbConnectionCounter;
 
             const connectionHTML = `
-                <div class="database-connection" id="${connectionId}" style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; position: relative;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h5 style="margin: 0; color: var(--scikiq-green);">Connection ${dbConnectionCounter}</h5>
-                        <button onclick="removeDatabaseConnection('${connectionId}')" style="background: #EF4444; border: none; color: white; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                <div class="database-connection" id="${connectionId}" style="border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <h5 style="margin: 0; color: var(--scikiq-green); font-size: 0.95rem;">Connection ${dbConnectionCounter}</h5>
+                        <button onclick="removeDatabaseConnection('${connectionId}')" style="background: #EF4444; border: none; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="input-group">
-                            <label>Connection Name</label>
-                            <input type="text" name="connection_name" placeholder="prod_mysql" value="connection_${dbConnectionCounter}" />
-                           
-                        </div>
                         <div class="input-group">
                             <label>Database Type</label>
                             <select name="db_type" onchange="updateDatabaseTypeFields('${connectionId}', this.value)">
@@ -442,6 +430,10 @@
                                 <option value="BIGQUERY">Google BigQuery</option>
                                 <option value="DUCKDB">DuckDB (Local/S3)</option>
                             </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Connection Name</label>
+                            <input type="text" name="connection_name" placeholder="prod_mysql" value="connection_${dbConnectionCounter}" />
                         </div>
                     </div>
                     
@@ -467,8 +459,22 @@
             let fieldsHTML = '';
 
             // Common fields for most databases
+            // Check if schema field is needed
+            const needsSchema = ['VERTICA', 'POSTGRES', 'SQLSERVER'].includes(dbType);
+            const schemaField = needsSchema ? `
+                <div class="input-group">
+                    <label>Schema <span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">(Optional)</span></label>
+                    <input type="text" name="schema" placeholder="${getDefaultSchema(dbType)}" value="${getDefaultSchema(dbType)}" />
+                    <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.25rem; display: block; font-size: 0.75rem;">
+                        ${dbType === 'VERTICA' ? 'Vertica schema name (default: public)' :
+                          dbType === 'POSTGRES' ? 'PostgreSQL schema name (default: public)' :
+                          'SQL Server schema name (default: dbo)'}
+                    </small>
+                </div>
+            ` : '';
+            
             const commonFields = `
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem;">
                     <div class="input-group">
                         <label>Host</label>
                         <input type="text" name="host" placeholder="localhost" value="localhost" />
@@ -478,19 +484,22 @@
                         <input type="number" name="port" placeholder="${getDefaultPort(dbType)}" value="${getDefaultPort(dbType)}" />
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: ${needsSchema ? '1fr 1fr' : '1fr'}; gap: 1rem; margin-top: 0.75rem;">
                     <div class="input-group">
                         <label>Database</label>
                         <input type="text" name="database" placeholder="${getDatabasePlaceholder(dbType)}" />
                     </div>
+                    ${schemaField}
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem;">
                     <div class="input-group">
                         <label>Username</label>
                         <input type="text" name="username" placeholder="username" />
                     </div>
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" name="password" placeholder="password" />
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" name="password" placeholder="password" />
+                    </div>
                 </div>
             `;
 
@@ -536,29 +545,16 @@
                 `;
             }
 
-            // Add Schema field for VERTICA, POSTGRES, and SQLSERVER
-            if (['VERTICA', 'POSTGRES', 'SQLSERVER'].includes(dbType)) {
-                fieldsHTML += `
-                    <div class="input-group" style="margin-top: 1rem;">
-                        <label>Schema <span style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">(Optional)</span></label>
-                        <input type="text" name="schema" placeholder="${getDefaultSchema(dbType)}" value="${getDefaultSchema(dbType)}" />
-                        <small style="color: rgba(255, 255, 255, 0.5); margin-top: 0.5rem; display: block;">
-                            ${dbType === 'VERTICA' ? 'Vertica schema name (default: public)' :
-                              dbType === 'POSTGRES' ? 'PostgreSQL schema name (default: public)' :
-                              'SQL Server schema name (default: dbo)'}
-                        </small>
-                    </div>
-                `;
-            }
+            // Schema field is now included in commonFields above, no need to add separately
 
             // Add SSL/Security options for applicable databases
             if (['POSTGRES', 'MYSQL', 'SQLSERVER', 'VERTICA'].includes(dbType)) {
                 fieldsHTML += `
-                    <details style="margin-top: 1rem;">
-                        <summary style="cursor: pointer; color: var(--scikiq-light-blue); margin-bottom: 0.5rem;">
+                    <details style="margin-top: 0.75rem;">
+                        <summary style="cursor: pointer; color: var(--scikiq-light-blue); margin-bottom: 0.5rem; font-size: 0.9rem;">
                             <i class="fas fa-lock"></i> SSL/Security Options (Optional)
                         </summary>
-                        <div style="background: rgba(255, 255, 255, 0.03); padding: 1rem; border-radius: 4px;">
+                        <div style="background: rgba(255, 255, 255, 0.03); padding: 0.75rem; border-radius: 4px;">
                             <div class="input-group">
                                 <label>SSL Mode</label>
                                 <select name="ssl_mode">
@@ -689,12 +685,14 @@
             try {
                 // Collect server configuration
                 const serverName = document.getElementById('dbServerName').value;
-                const serverPath = document.getElementById('dbServerPath').value;
 
-                if (!serverName || !serverPath) {
-                    alert('Please provide server name and path');
+                if (!serverName) {
+                    alert('Please provide server name');
                     return;
                 }
+
+                // Server path will be auto-detected by the backend
+                // No need to send it from frontend
 
                 // Collect database connections
                 const connections = [];
@@ -725,11 +723,15 @@
                     return;
                 }
 
-                // Show loading
-                const button = event.target;
-                const originalText = button.innerHTML;
-                button.innerHTML = '<div class="loading-spinner"></div> Generating...';
-                button.disabled = true;
+                // Show loading - find the button that triggered this
+                const modal = document.getElementById('databaseModal');
+                const button = modal ? modal.querySelector('button.btn-primary-custom') : null;
+                let originalText = '';
+                if (button) {
+                    originalText = button.innerHTML;
+                    button.innerHTML = '<div class="loading-spinner"></div> Generating...';
+                    button.disabled = true;
+                }
 
                 // Send to backend to generate config.ini and deploy
                 const response = await fetch('/api/generate-database-mcp', {
@@ -739,7 +741,6 @@
                     },
                     body: JSON.stringify({
                         server_name: serverName,
-                        server_path: serverPath,
                         connections: connections
                     })
                 });
@@ -750,8 +751,8 @@
                     // Close the modal
                     closeDatabaseModal();
 
-                    // Show success modal with deployment information
-                    showDatabaseMCPSetupModal(result);
+                    // Show tool selection modal instead of deployment modal
+                    showDatabaseToolSelectionModal(result);
                 } else {
                     throw new Error(result.error || 'Failed to generate database MCP server');
                 }
@@ -761,12 +762,270 @@
                 alert('Error: ' + error.message);
             } finally {
                 // Reset button
-                const button = event.target;
-                if (button) {
+                const modal = document.getElementById('databaseModal');
+                const button = modal ? modal.querySelector('button.btn-primary-custom') : null;
+                if (button && originalText) {
                     button.innerHTML = originalText;
                     button.disabled = false;
                 }
             }
+        }
+
+        async function showDatabaseToolSelectionModal(result) {
+            try {
+                // Fetch available tools from backend
+                const toolsResponse = await fetch('/api/get-database-tools');
+                const toolsData = await toolsResponse.json();
+                
+                if (!toolsData.success) {
+                    throw new Error('Failed to load available tools');
+                }
+                
+                const tools = toolsData.tools;
+                const configPath = result.config_path;
+                const serverPath = result.server_path;
+                const pythonPath = result.python_path || 'python';
+                const serverName = result.server_name;
+                
+                // Build tool selection HTML
+                let toolsHTML = '';
+                for (const [category, categoryTools] of Object.entries(tools)) {
+                    toolsHTML += `
+                        <div style="margin-bottom: 1.5rem;">
+                            <h5 style="color: var(--scikiq-light-blue); margin-bottom: 0.75rem; font-size: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 0.5rem;">
+                                ${category}
+                            </h5>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem;">
+                    `;
+                    
+                    for (const tool of categoryTools) {
+                        toolsHTML += `
+                            <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 0.75rem; cursor: pointer; transition: all 0.2s;" 
+                                 onclick="toggleToolSelection('${tool.id}')" 
+                                 id="tool_${tool.id}"
+                                 onmouseover="this.style.borderColor='var(--scikiq-light-blue)'; this.style.background='rgba(0, 163, 224, 0.1)'"
+                                 onmouseout="if(!document.getElementById('tool_check_${tool.id}').checked) { this.style.borderColor='rgba(255, 255, 255, 0.1)'; this.style.background='rgba(255, 255, 255, 0.05)'; }">
+                                <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                                    <input type="checkbox" 
+                                           id="tool_check_${tool.id}" 
+                                           value="${tool.id}"
+                                           onclick="event.stopPropagation(); toggleToolSelection('${tool.id}')"
+                                           style="margin-top: 0.2rem; cursor: pointer;">
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; color: white; margin-bottom: 0.25rem; font-size: 0.9rem;">
+                                            ${tool.name}
+                                        </div>
+                                        <div style="color: rgba(255, 255, 255, 0.6); font-size: 0.8rem; line-height: 1.4;">
+                                            ${tool.description}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    toolsHTML += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                const modalHTML = `
+                    <div id="databaseToolSelectionModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+                        <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 1000px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
+                            
+                            <!-- Header -->
+                            <div style="background: linear-gradient(135deg, var(--scikiq-light-blue), var(--scikiq-green)); padding: 1.5rem; text-align: center; border-radius: 14px 14px 0 0; position: relative;">
+                                <button onclick="document.getElementById('databaseToolSelectionModal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <i class="fas fa-tools" style="font-size: 2.5rem; margin-bottom: 0.75rem; color: white;"></i>
+                                <h2 style="margin: 0; color: white; font-family: 'Space Grotesk', sans-serif;">
+                                    Select Database Tools
+                                </h2>
+                                <p style="margin: 0.5rem 0 0; color: rgba(255, 255, 255, 0.9); font-size: 1rem;">
+                                    Choose which database tools to include in your MCP server
+                                </p>
+                            </div>
+
+                            <div style="padding: 2rem;">
+                                <!-- Selection Controls -->
+                                <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                                    <button onclick="selectAllDatabaseTools()" style="background: var(--scikiq-light-blue); border: none; color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;">
+                                        <i class="fas fa-check-double"></i> Select All
+                                    </button>
+                                    <button onclick="deselectAllDatabaseTools()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500;">
+                                        <i class="fas fa-times"></i> Deselect All
+                                    </button>
+                                    <div style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem; color: rgba(255, 255, 255, 0.8); font-size: 0.9rem;">
+                                        <span id="selectedToolsCount" style="color: var(--scikiq-light-blue); font-weight: 600;">0</span>
+                                        <span>tools selected</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Tools List -->
+                                <div id="databaseToolsList">
+                                    ${toolsHTML}
+                                </div>
+                                
+                                <!-- Action Buttons -->
+                                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                                    <button onclick="document.getElementById('databaseToolSelectionModal').remove()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                                        Cancel
+                                    </button>
+                                    <button onclick="proceedToDeployment('${configPath}', '${serverPath}', '${serverName}', '${pythonPath}')" id="proceedToDeploymentBtn" disabled style="background: var(--scikiq-light-blue); border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                        Proceed to Deployment
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+                
+                // Store result data for later use
+                window.databaseMCPResult = result;
+                
+                // Update selected count
+                updateSelectedToolsCount();
+                
+            } catch (error) {
+                console.error('Error showing tool selection modal:', error);
+                alert('Error: ' + error.message);
+                // Fallback to direct deployment if tool selection fails
+                showDatabaseMCPSetupModal(result);
+            }
+        }
+        
+        function toggleToolSelection(toolId) {
+            const checkbox = document.getElementById(`tool_check_${toolId}`);
+            const toolCard = document.getElementById(`tool_${toolId}`);
+            
+            checkbox.checked = !checkbox.checked;
+            
+            if (checkbox.checked) {
+                toolCard.style.borderColor = 'var(--scikiq-light-blue)';
+                toolCard.style.background = 'rgba(0, 163, 224, 0.15)';
+            } else {
+                toolCard.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                toolCard.style.background = 'rgba(255, 255, 255, 0.05)';
+            }
+            
+            updateSelectedToolsCount();
+        }
+        
+        function selectAllDatabaseTools() {
+            document.querySelectorAll('#databaseToolsList input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = true;
+                const toolId = checkbox.value;
+                const toolCard = document.getElementById(`tool_${toolId}`);
+                if (toolCard) {
+                    toolCard.style.borderColor = 'var(--scikiq-light-blue)';
+                    toolCard.style.background = 'rgba(0, 163, 224, 0.15)';
+                }
+            });
+            updateSelectedToolsCount();
+        }
+        
+        function deselectAllDatabaseTools() {
+            document.querySelectorAll('#databaseToolsList input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+                const toolId = checkbox.value;
+                const toolCard = document.getElementById(`tool_${toolId}`);
+                if (toolCard) {
+                    toolCard.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    toolCard.style.background = 'rgba(255, 255, 255, 0.05)';
+                }
+            });
+            updateSelectedToolsCount();
+        }
+        
+        function updateSelectedToolsCount() {
+            const selectedCount = document.querySelectorAll('#databaseToolsList input[type="checkbox"]:checked').length;
+            const countElement = document.getElementById('selectedToolsCount');
+            const proceedBtn = document.getElementById('proceedToDeploymentBtn');
+            
+            if (countElement) {
+                countElement.textContent = selectedCount;
+            }
+            
+            if (proceedBtn) {
+                proceedBtn.disabled = selectedCount === 0;
+                proceedBtn.style.opacity = selectedCount === 0 ? '0.5' : '1';
+                proceedBtn.style.cursor = selectedCount === 0 ? 'not-allowed' : 'pointer';
+            }
+        }
+        
+        async function proceedToDeployment(configPath, serverPath, serverName, pythonPath) {
+            // Get selected tools
+            const selectedTools = [];
+            document.querySelectorAll('#databaseToolsList input[type="checkbox"]:checked').forEach(checkbox => {
+                selectedTools.push(checkbox.value);
+            });
+            
+            if (selectedTools.length === 0) {
+                alert('Please select at least one tool to deploy');
+                return;
+            }
+            
+            // Update config.ini with selected tools
+            try {
+                console.log('[DEPLOY] Updating config with selected tools:', {
+                    configPath: configPath,
+                    selectedTools: selectedTools,
+                    toolsCount: selectedTools.length
+                });
+                
+                const updateResponse = await fetch('/api/update-database-config-tools', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        config_path: configPath,
+                        selected_tools: selectedTools
+                    })
+                });
+                
+                if (!updateResponse.ok) {
+                    const errorText = await updateResponse.text();
+                    console.error('[DEPLOY] API response error:', updateResponse.status, errorText);
+                    throw new Error(`API returned ${updateResponse.status}: ${errorText}`);
+                }
+                
+                const updateResult = await updateResponse.json();
+                console.log('[DEPLOY] Update result:', updateResult);
+                
+                if (!updateResult.success) {
+                    console.error('[DEPLOY] Failed to update config:', updateResult.error);
+                    if (updateResult.traceback) {
+                        console.error('[DEPLOY] Traceback:', updateResult.traceback);
+                    }
+                    alert(`Failed to update configuration: ${updateResult.error || 'Unknown error'}`);
+                    return;
+                }
+                
+                console.log('[DEPLOY] Config updated successfully:', updateResult.message);
+            } catch (error) {
+                console.error('[DEPLOY] Error updating config with selected tools:', error);
+                alert(`Error updating configuration: ${error.message || 'Unknown error'}`);
+                return;
+            }
+            
+            // Close tool selection modal
+            document.getElementById('databaseToolSelectionModal').remove();
+            
+            // Show deployment modal with selected tools
+            const result = window.databaseMCPResult || {
+                config_path: configPath,
+                server_path: serverPath,
+                server_name: serverName,
+                python_path: pythonPath
+            };
+            result.selected_tools = selectedTools;
+            
+            showDatabaseMCPSetupModal(result);
         }
 
         function showDatabaseMCPSetupModal(result) {
@@ -774,6 +1033,9 @@
             const serverPath = result.server_path;
             const pythonPath = result.python_path || 'python';
             const serverName = result.server_name;
+            
+            // Store selected tools globally for deployment functions
+            window.databaseMCPSelectedTools = result.selected_tools || [];
 
             // Ensure proper Windows path formatting for display
             const normalizedConfigPath = configPath.replace(/\//g, '\\');
@@ -798,6 +1060,17 @@
                         </div>
 
                         <div style="padding: 2rem;">
+                            ${result.selected_tools && result.selected_tools.length > 0 ? `
+                                <div style="background: rgba(0, 163, 224, 0.1); border-left: 4px solid var(--scikiq-light-blue); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <i class="fas fa-check-circle" style="color: var(--scikiq-green);"></i>
+                                        <strong style="color: var(--scikiq-light-blue);">Selected Tools: ${result.selected_tools.length}</strong>
+                                    </div>
+                                    <div style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                        ${result.selected_tools.map(tool => `<span style="background: rgba(255, 255, 255, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px;">${tool.replace('db_', '').replace(/_/g, ' ')}</span>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
 
                             <!-- Deployment Method Selection -->
                             <div style="margin-bottom: 2rem;">
@@ -833,7 +1106,7 @@
                                         <p style="margin: 0 0 1rem; color: rgba(255, 255, 255, 0.8);">
                                             We can automatically add this server to your Claude Desktop configuration.
                                         </p>
-                                        <button onclick="autoDeployDatabaseMCP('${configPath}', '${serverPath}', '${serverName}')" style="background: var(--scikiq-light-blue); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                        <button onclick="autoDeployDatabaseMCP('${configPath}', '${serverPath}', '${serverName}', window.databaseMCPSelectedTools || [])" style="background: var(--scikiq-light-blue); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
                                             <i class="fas fa-rocket"></i> Auto-Deploy to Claude Desktop
                                         </button>
                                     </div>
@@ -906,7 +1179,7 @@
                                             <input type="text" id="dbAwsDomain" placeholder="mcp.example.com" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
                                             <small style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; display: block; margin-top: 0.5rem;">Leave empty to use IP address. Format: subdomain.domain.com (no http:// or https://). Requires Route 53 hosted zone.</small>
                                         </div>
-                                        <button onclick="deployDatabaseOnline('aws', '${configPath}', '${serverPath}', '${serverName}')" style="background: linear-gradient(135deg, #FF9900, #CC7A00); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
+                                        <button onclick="deployDatabaseOnline('aws', '${configPath}', '${serverPath}', '${serverName}', window.databaseMCPSelectedTools || [])" style="background: linear-gradient(135deg, #FF9900, #CC7A00); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
                                             <i class="fas fa-cloud-upload-alt"></i> Deploy to AWS EC2
                                         </button>
                                     </div>
@@ -921,7 +1194,7 @@
                                             <label>Client ID <span style="color: var(--anthropic-orange);">*</span></label>
                                             <input type="text" id="dbAzureClientId" placeholder="Application (client) ID" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
                                         </div>
-                                        <button onclick="deployDatabaseOnline('azure', '${configPath}', '${serverPath}', '${serverName}')" style="background: linear-gradient(135deg, #0078D4, #005A9E); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
+                                        <button onclick="deployDatabaseOnline('azure', '${configPath}', '${serverPath}', '${serverName}', window.databaseMCPSelectedTools || [])" style="background: linear-gradient(135deg, #0078D4, #005A9E); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
                                             <i class="fas fa-cloud-upload-alt"></i> Deploy to Azure VM
                                         </button>
                                     </div>
@@ -940,7 +1213,7 @@
                                             <label>Password</label>
                                             <input type="password" id="dbRemotePassword" placeholder="Server password" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
                                         </div>
-                                        <button onclick="deployDatabaseOnline('remote', '${configPath}', '${serverPath}', '${serverName}')" style="background: linear-gradient(135deg, var(--scikiq-green), #059669); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
+                                        <button onclick="deployDatabaseOnline('remote', '${configPath}', '${serverPath}', '${serverName}', window.databaseMCPSelectedTools || [])" style="background: linear-gradient(135deg, var(--scikiq-green), #059669); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
                                             <i class="fas fa-cloud-upload-alt"></i> Deploy to Remote Server
                                         </button>
                                     </div>
@@ -1099,7 +1372,7 @@
             });
         }
 
-        async function autoDeployDatabaseMCP(configPath, serverPath, serverName) {
+        async function autoDeployDatabaseMCP(configPath, serverPath, serverName, selectedTools = []) {
             try {
                 const button = event.target;
                 const originalText = button.innerHTML;
@@ -1114,7 +1387,8 @@
                     body: JSON.stringify({
                         config_path: configPath,
                         server_path: serverPath,
-                        server_name: serverName
+                        server_name: serverName,
+                        selected_tools: selectedTools
                     })
                 });
 
@@ -4343,12 +4617,13 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
 
         function installDatabaseMCP() {
             const serverName = document.getElementById('dbServerName').value;
-            const serverPath = document.getElementById('dbServerPath').value;
 
-            if (!serverName || !serverPath) {
-                alert('Please provide server name and path');
+            if (!serverName) {
+                alert('Please provide server name');
                 return;
             }
+
+            // Server path will be auto-detected by the backend
 
             // Collect database connections
             const connections = [];
@@ -4374,7 +4649,6 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
 
             const serverConfig = {
                 server_name: serverName,
-                server_path: serverPath,
                 connections: connections
             };
 
@@ -5426,7 +5700,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             document.getElementById(`${tab}-online-tab`).style.display = 'block';
         }
 
-        async function deployDatabaseOnline(platform, configPath, serverPath, serverName) {
+        async function deployDatabaseOnline(platform, configPath, serverPath, serverName, selectedTools = []) {
             console.log(`[DEPLOY] Starting deployment to ${platform} for ${serverName}`);
             console.log(`[DEPLOY] Config path: ${configPath}`);
             console.log(`[DEPLOY] Server path: ${serverPath}`);
@@ -5454,7 +5728,8 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         config_path: configPath,
                         server_path: serverPath,
                         server_name: serverName,
-                        domain: domain
+                        domain: domain,
+                        selected_tools: selectedTools
                     };
                 } else if (platform === 'azure') {
                     endpoint = '/api/deploy/azure';
@@ -5468,7 +5743,8 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         server_type: 'database',
                         config_path: configPath,
                         server_path: serverPath,
-                        server_name: serverName
+                        server_name: serverName,
+                        selected_tools: selectedTools
                     };
                 } else if (platform === 'remote') {
                     endpoint = '/api/deploy/remote';
@@ -5479,7 +5755,8 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         server_type: 'database',
                         config_path: configPath,
                         server_path: serverPath,
-                        server_name: serverName
+                        server_name: serverName,
+                        selected_tools: selectedTools
                     };
                 }
 

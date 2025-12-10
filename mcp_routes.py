@@ -1795,11 +1795,11 @@ Respond in JSON:
             server_path = data.get('server_path', '')
             connections = data.get('connections', [])
             
+            # Auto-detect server path if not provided
+            # Database MCP server is always at dbhandler_mcpserver/scikiq_pkg_dbutils relative to project root
             if not server_path:
-                return jsonify({
-                    'success': False,
-                    'error': 'Server path is required'
-                }), 400
+                project_root = os.path.dirname(os.path.abspath(__file__))
+                server_path = os.path.join(project_root, 'dbhandler_mcpserver', 'scikiq_pkg_dbutils')
             
             if not connections:
                 return jsonify({
@@ -1807,8 +1807,11 @@ Respond in JSON:
                     'error': 'At least one database connection is required'
                 }), 400
             
+            # Get selected tools from request
+            selected_tools = data.get('selected_tools', [])
+            
             # Generate config.ini content
-            config_content = generate_database_config_ini(connections)
+            config_content = generate_database_config_ini(connections, selected_tools)
             
             # Save config.ini file
             config_dir = Path(server_path)
@@ -1840,6 +1843,247 @@ Respond in JSON:
             return jsonify({
                 'success': False,
                 'error': str(e)
+            }), 500
+
+    @app.route('/api/get-database-tools', methods=['GET'])
+    def mcp_get_database_tools():
+        """Get list of available database MCP tools"""
+        try:
+            # Define all available database tools with their categories
+            tools = {
+                'Connection Management': [
+                    {'id': 'db_create_connection', 'name': 'Create Connection', 'description': 'Create a new database connection with the specified configuration'},
+                    {'id': 'db_test_connection', 'name': 'Test Connection', 'description': 'Test database connection without creating a persistent connection'},
+                    {'id': 'db_close_connection', 'name': 'Close Connection', 'description': 'Close and remove an existing database connection'},
+                    {'id': 'db_list_connections', 'name': 'List Connections', 'description': 'List all active database connections'}
+                ],
+                'Query Operations': [
+                    {'id': 'db_execute_query', 'name': 'Execute Query', 'description': 'Execute a SELECT query and return the results as structured data'},
+                    {'id': 'db_execute_sql', 'name': 'Execute SQL', 'description': 'Execute SQL statements (INSERT, UPDATE, DELETE, DDL, etc.)'},
+                    {'id': 'db_generate_query', 'name': 'Generate Query', 'description': 'Generate SQL query based on specified parameters'}
+                ],
+                'Table Operations': [
+                    {'id': 'db_get_all_tables', 'name': 'Get All Tables', 'description': 'Get a list of all tables in the database'},
+                    {'id': 'db_get_table_columns', 'name': 'Get Table Columns', 'description': 'Get column names and basic information for a specific table'},
+                    {'id': 'db_get_table_columns_details', 'name': 'Get Table Columns Details', 'description': 'Get detailed column information including data types, constraints, etc.'},
+                    {'id': 'db_read_table', 'name': 'Read Table', 'description': 'Read data from a table and return as structured data'},
+                    {'id': 'db_get_table_details', 'name': 'Get Table Details', 'description': 'Get comprehensive details about a table including metadata'},
+                    {'id': 'db_get_table_relationships', 'name': 'Get Table Relationships', 'description': 'Get foreign key relationships for a table'}
+                ],
+                'Column Operations': [
+                    {'id': 'db_get_column_lov', 'name': 'Get Column LOV', 'description': 'Get list of unique values (LOV) for a specific column'},
+                    {'id': 'db_get_columns_profile', 'name': 'Get Columns Profile', 'description': 'Get statistical profiling information for table columns'},
+                    {'id': 'db_update_column_comment', 'name': 'Update Column Comment', 'description': 'Update the comment/description for a table column'}
+                ],
+                'Table Management': [
+                    {'id': 'db_create_table', 'name': 'Create Table', 'description': 'Create a new table in the database'},
+                    {'id': 'db_truncate_table', 'name': 'Truncate Table', 'description': 'Remove all data from a table (TRUNCATE)'},
+                    {'id': 'db_create_view', 'name': 'Create View', 'description': 'Create a database view from SQL query'}
+                ],
+                'Data Management': [
+                    {'id': 'db_get_incremental_columns', 'name': 'Get Incremental Columns', 'description': 'Get columns suitable for incremental data loading (timestamps, IDs, etc.)'},
+                    {'id': 'db_fetch_delta_columns', 'name': 'Fetch Delta Columns', 'description': 'Fetch delta columns for change data capture operations'},
+                    {'id': 'db_get_filtered_row_count', 'name': 'Get Filtered Row Count', 'description': 'Get count of rows matching a filter condition'}
+                ]
+            }
+            
+            return jsonify({
+                'success': True,
+                'tools': tools
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    @app.route('/api/update-database-config-tools', methods=['POST'])
+    def update_database_config_tools():
+        """Update config.ini file with selected tools"""
+        try:
+            data = request.get_json()
+            config_path = data.get('config_path')
+            selected_tools = data.get('selected_tools', [])
+            
+            if not config_path:
+                return jsonify({
+                    'success': False,
+                    'error': 'Config path is required'
+                }), 400
+            
+            # Resolve config path - handle both relative and absolute paths
+            project_root = Path(__file__).parent
+            project_root_str = str(project_root)
+            
+            # Fix malformed paths - check if path has concatenated project root (like "DAASMCP POCgaurav")
+            config_path_str = str(config_path).strip()
+            
+            # Check for malformed path pattern: "DAASMCP POCgaurav" or similar concatenation
+            if 'DAASMCP POCgaurav' in config_path_str or (project_root_str.replace(' ', '') in config_path_str.replace(' ', '') and 'dbhandler_mcpserver' in config_path_str):
+                # Extract the relative part - look for "dbhandler_mcpserver" or "scikiq_pkg_dbutils"
+                if 'dbhandler_mcpserver' in config_path_str:
+                    idx = config_path_str.find('dbhandler_mcpserver')
+                    rel_part = config_path_str[idx:]
+                    config_path_str = str(project_root / rel_part.replace('\\', '/').replace('//', '/'))
+                elif 'scikiq_pkg_dbutils' in config_path_str:
+                    idx = config_path_str.find('scikiq_pkg_dbutils')
+                    # Need to add dbhandler_mcpserver before it
+                    rel_part = config_path_str[idx:]
+                    config_path_str = str(project_root / 'dbhandler_mcpserver' / rel_part.replace('\\', '/').replace('//', '/'))
+            
+            # Normalize the path
+            config_path_normalized = config_path_str.replace('\\', '/').replace('//', '/')
+            
+            # If path contains project root duplicated, fix it
+            project_root_normalized = project_root_str.replace('\\', '/')
+            if project_root_normalized in config_path_normalized and config_path_normalized.count(project_root_normalized) > 1:
+                # Remove duplicate project root
+                parts = config_path_normalized.split(project_root_normalized)
+                config_path_normalized = project_root_normalized + ''.join(parts[1:])
+            
+            config_file = Path(config_path_normalized.replace('/', os.sep))
+            
+            # If not absolute, try relative to project root
+            if not config_file.is_absolute():
+                project_root = Path(__file__).parent
+                config_file = (project_root / config_path_normalized).resolve()
+            else:
+                config_file = config_file.resolve()
+            
+            if not config_file.exists():
+                # Try alternative paths - most common location first
+                project_root = Path(__file__).parent
+                standard_config_path = project_root / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'config.ini'
+                
+                if standard_config_path.exists():
+                    config_file = standard_config_path
+                    print(f"[DEBUG] Using standard config path: {config_file}")
+                else:
+                    # Try other alternatives
+                    alt_paths = [
+                        Path(config_path_normalized).resolve() if Path(config_path_normalized).is_absolute() else None,
+                        project_root / config_path_normalized if not Path(config_path_normalized).is_absolute() else None,
+                    ]
+                    
+                    # Filter out None values
+                    alt_paths = [p for p in alt_paths if p is not None]
+                    
+                    found = False
+                    for alt_path in alt_paths:
+                        try:
+                            alt_path_resolved = alt_path.resolve()
+                            if alt_path_resolved.exists():
+                                config_file = alt_path_resolved
+                                found = True
+                                break
+                        except:
+                            continue
+                    
+                    if not found:
+                        return jsonify({
+                            'success': False,
+                            'error': f'Config file not found. Original: {config_path}. Tried standard location: {standard_config_path}. Please ensure config.ini exists.'
+                        }), 404
+            
+            # Read existing config file to preserve format
+            with open(config_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Parse config for validation
+            import configparser
+            config = configparser.ConfigParser()
+            config.optionxform = str  # Preserve case sensitivity
+            config.read_string(content)
+            
+            # Ensure SERVER section exists
+            if 'SERVER' not in config:
+                config.add_section('SERVER')
+            
+            # Update ENABLED_TOOLS value
+            enabled_tools_value = ','.join(selected_tools) if selected_tools and len(selected_tools) > 0 else None
+            
+            # Update content by finding/replacing or adding SERVER section
+            lines = content.split('\n')
+            new_lines = []
+            in_server_section = False
+            enabled_tools_found = False
+            i = 0
+            
+            while i < len(lines):
+                line = lines[i]
+                stripped = line.strip()
+                
+                # Check if we're entering SERVER section
+                if stripped.upper() == '[SERVER]':
+                    in_server_section = True
+                    new_lines.append('[SERVER]')
+                    i += 1
+                    # Process SERVER section content
+                    while i < len(lines) and (not lines[i].strip() or not lines[i].strip().startswith('[')):
+                        if i >= len(lines):
+                            break
+                        current_line = lines[i]
+                        current_stripped = current_line.strip().upper()
+                        
+                        # Skip existing ENABLED_TOOLS line
+                        if current_stripped.startswith('ENABLED_TOOLS'):
+                            enabled_tools_found = True
+                            if enabled_tools_value:
+                                new_lines.append(f"ENABLED_TOOLS={enabled_tools_value}")
+                            i += 1
+                            continue
+                        
+                        # Skip empty lines at end of section
+                        if not current_stripped and i < len(lines) - 1:
+                            next_stripped = lines[i + 1].strip() if i + 1 < len(lines) else ''
+                            if next_stripped and next_stripped.startswith('['):
+                                i += 1
+                                continue
+                        
+                        new_lines.append(current_line)
+                        i += 1
+                    
+                    # Add ENABLED_TOOLS if not found and we have tools
+                    if not enabled_tools_found and enabled_tools_value:
+                        new_lines.append(f"ENABLED_TOOLS={enabled_tools_value}")
+                    
+                    in_server_section = False
+                    continue
+                
+                new_lines.append(line)
+                i += 1
+            
+            # If SERVER section wasn't found, add it at the end
+            if not in_server_section and enabled_tools_value:
+                # Remove trailing empty lines
+                while new_lines and not new_lines[-1].strip():
+                    new_lines.pop()
+                # Add SERVER section
+                if new_lines and new_lines[-1].strip():
+                    new_lines.append('')
+                new_lines.append('[SERVER]')
+                new_lines.append(f"ENABLED_TOOLS={enabled_tools_value}")
+            
+            # Write updated content
+            with open(config_file, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(new_lines))
+            
+            return jsonify({
+                'success': True,
+                'message': f'Updated config.ini with {len(selected_tools)} enabled tools',
+                'config_path': str(config_file)
+            })
+            
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"[ERROR] Failed to update config: {str(e)}")
+            print(f"[ERROR] Traceback: {error_trace}")
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'traceback': error_trace
             }), 500
 
     @app.route('/api/get-database-config', methods=['GET'])
@@ -1877,10 +2121,15 @@ Respond in JSON:
             server_path = data.get('server_path')
             server_name = data.get('server_name')
             
-            if not all([config_path, server_path, server_name]):
+            # Auto-detect server path if not provided
+            if not server_path:
+                project_root = os.path.dirname(os.path.abspath(__file__))
+                server_path = os.path.join(project_root, 'dbhandler_mcpserver', 'scikiq_pkg_dbutils')
+            
+            if not all([config_path, server_name]):
                 return jsonify({
                     'success': False,
-                    'error': 'Missing required parameters'
+                    'error': 'Missing required parameters: config_path and server_name are required'
                 }), 400
             
             # Detect Python path
@@ -1987,13 +2236,20 @@ Respond in JSON:
             raise Exception(f"Unsupported operating system: {system}")
 
 
-    def generate_database_config_ini(connections):
+    def generate_database_config_ini(connections, selected_tools=None):
         """Generate config.ini content from database connections"""
         config_lines = []
         config_lines.append("# Database MCP Server Configuration")
         config_lines.append("# Generated by MCP Studio")
         config_lines.append(f"# Created: {datetime.now().isoformat()}")
         config_lines.append("")
+        
+        # Add SERVER section with enabled tools if provided
+        if selected_tools and len(selected_tools) > 0:
+            config_lines.append("[SERVER]")
+            config_lines.append("# Enabled MCP tools (comma-separated list)")
+            config_lines.append(f"ENABLED_TOOLS={','.join(selected_tools)}")
+            config_lines.append("")
         
         for conn in connections:
             connection_name = conn.get('connection_name', 'database')
@@ -2029,7 +2285,9 @@ Respond in JSON:
                         config_lines.append(f"DATABASE_PATH={database_path}")
             else:
                 # Standard database configuration
-                host = conn.get('host', 'localhost')
+                # Check for hostname in multiple possible keys (hostname, host, HOSTNAME, HOST)
+                host = (conn.get('hostname') or conn.get('host') or 
+                       conn.get('HOSTNAME') or conn.get('HOST') or 'localhost')
                 port = conn.get('port', get_default_port_for_db(db_type))
                 database = conn.get('database', '')
                 username = conn.get('username', '')
@@ -2389,6 +2647,12 @@ Respond in JSON:
                     domain = data.get('domain') or data.get('awsDomain')
                     yaml_file = data.get('yaml_file')  # Specific YAML filename for this deployment
                     
+                    # Auto-detect server path for database servers if not provided
+                    if not server_path and server_type == 'database':
+                        project_root = os.path.dirname(os.path.abspath(__file__))
+                        server_path = os.path.join(project_root, 'dbhandler_mcpserver', 'scikiq_pkg_dbutils')
+                        yield f"[LOG] Auto-detected database server path: {server_path}\n"
+                    
                     # Prepare server files based on type
                     if server_type and server_path:
                         yield f"[LOG] Preparing {server_type} MCP server files from {server_path}\n"
@@ -2407,14 +2671,142 @@ Respond in JSON:
                     if not config_path and server_type == 'database' and server_path:
                         potential_config = Path(server_path) / 'scikiq_pkg_dbutils' / 'config.ini'
                         if potential_config.exists():
-                            config_path = str(potential_config)
+                            config_path = str(potential_config.resolve())
                             yield f"[LOG] Auto-detected config file: {config_path}\n"
                         else:
                              # Try directly in server_path
                             potential_config_direct = Path(server_path) / 'config.ini'
                             if potential_config_direct.exists():
-                                config_path = str(potential_config_direct)
+                                config_path = str(potential_config_direct.resolve())
                                 yield f"[LOG] Auto-detected config file: {config_path}\n"
+                    
+                    # Ensure config_path is absolute for database deployments
+                    if server_type == 'database' and config_path:
+                        project_root = Path(__file__).parent
+                        project_root_str = str(project_root)
+                        config_path_str = str(config_path).strip()
+                        
+                        # Fix malformed paths - check if path has concatenated project root
+                        # Pattern: "DAASMCP POCgaurav" or duplicated project root segments
+                        project_root_no_spaces = project_root_str.replace(' ', '').replace('\\', '/')
+                        config_path_no_spaces = config_path_str.replace(' ', '').replace('\\', '/')
+                        
+                        if 'DAASMCP POCgaurav' in config_path_str or (project_root_no_spaces in config_path_no_spaces and config_path_no_spaces.count(project_root_no_spaces) > 1):
+                            # Extract the relative part - look for "dbhandler_mcpserver" or "config.ini"
+                            if 'dbhandler_mcpserver' in config_path_str:
+                                idx = config_path_str.find('dbhandler_mcpserver')
+                                rel_part = config_path_str[idx:]
+                                # Ensure proper path separators
+                                rel_part = rel_part.replace('\\', '/').replace('//', '/')
+                                config_path_str = str((project_root / rel_part).resolve())
+                            elif 'scikiq_pkg_dbutils' in config_path_str:
+                                idx = config_path_str.find('scikiq_pkg_dbutils')
+                                rel_part = config_path_str[idx:]
+                                rel_part = rel_part.replace('\\', '/').replace('//', '/')
+                                config_path_str = str((project_root / 'dbhandler_mcpserver' / rel_part).resolve())
+                            elif 'config.ini' in config_path_str:
+                                # If we can find config.ini, try to extract path from it
+                                idx = config_path_str.find('config.ini')
+                                # Look backwards for dbhandler_mcpserver
+                                before_config = config_path_str[:idx]
+                                if 'dbhandler_mcpserver' in before_config:
+                                    db_idx = before_config.find('dbhandler_mcpserver')
+                                    rel_part = config_path_str[db_idx:]
+                                    rel_part = rel_part.replace('\\', '/').replace('//', '/')
+                                    config_path_str = str((project_root / rel_part).resolve())
+                                else:
+                                    # Fallback to standard location
+                                    config_path_str = str((project_root / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'config.ini').resolve())
+                        
+                        # Normalize the path
+                        config_path_normalized = config_path_str.replace('\\', '/').replace('//', '/')
+                        
+                        # If path contains project root duplicated, fix it
+                        project_root_normalized = project_root_str.replace('\\', '/')
+                        if project_root_normalized in config_path_normalized and config_path_normalized.count(project_root_normalized) > 1:
+                            # Remove duplicate project root
+                            parts = config_path_normalized.split(project_root_normalized)
+                            config_path_normalized = project_root_normalized + ''.join(parts[1:])
+                        
+                        # Use Path's native path handling - Path handles platform-specific separators automatically
+                        config_path_abs = Path(config_path_normalized)
+                        
+                        # If still not absolute or doesn't exist, try standard location
+                        if not config_path_abs.is_absolute() or not config_path_abs.exists():
+                            standard_config_path = project_root / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'config.ini'
+                            if standard_config_path.exists():
+                                config_path = str(standard_config_path.resolve())
+                                yield f"[LOG] Fixed malformed path, using standard location: {config_path}\n"
+                            else:
+                                # Try relative resolution
+                                if not config_path_abs.is_absolute():
+                                    config_path = str((project_root / config_path_normalized).resolve())
+                                else:
+                                    config_path = str(config_path_abs.resolve())
+                        else:
+                            config_path = str(config_path_abs.resolve())
+                        
+                        yield f"[LOG] Using config file: {config_path}\n"
+                        
+                        # Final check: if file doesn't exist, try standard location
+                        import os as os_module  # Import locally to avoid scoping issues
+                        if not os_module.path.exists(config_path):
+                            standard_config_path = project_root / 'dbhandler_mcpserver' / 'scikiq_pkg_dbutils' / 'config.ini'
+                            if standard_config_path.exists():
+                                config_path = str(standard_config_path.resolve())
+                                yield f"[LOG] Config file not found at specified path, using standard location: {config_path}\n"
+                            else:
+                                yield f"[LOG] WARNING: Config file not found at {config_path} and standard location also not found\n"
+                    
+                    # For database servers, read connections and selected_tools from config
+                    connections = None
+                    selected_tools = None
+                    if server_type == 'database' and config_path:
+                        try:
+                            import configparser
+                            import os
+                            yield f"[LOG] Reading connections from config file: {config_path}\n"
+                            yield f"[LOG] Config file exists: {os.path.exists(config_path)}\n"
+                            
+                            config = configparser.ConfigParser()
+                            config.read(config_path, encoding='utf-8')
+                            
+                            yield f"[LOG] Config sections found: {config.sections()}\n"
+                            
+                            # Extract connections from config
+                            connections = []
+                            for section in config.sections():
+                                if section.upper() != 'SERVER':
+                                    conn = {}
+                                    conn['connection_name'] = section
+                                    for key, value in config[section].items():
+                                        conn[key.lower()] = value
+                                    connections.append(conn)
+                            
+                            yield f"[LOG] Extracted {len(connections)} connections from config\n"
+                            
+                            # Validate that connections exist (mandatory for database servers)
+                            if len(connections) == 0:
+                                yield f"[LOG] ERROR: No database connections found in config file. Connections are mandatory for database MCP server.\n"
+                                raise ValueError("No database connections found in config file. Please configure at least one database connection before deploying.")
+                            
+                            # Extract selected tools from SERVER section
+                            if 'SERVER' in config and 'ENABLED_TOOLS' in config['SERVER']:
+                                selected_tools = [t.strip() for t in config['SERVER']['ENABLED_TOOLS'].split(',') if t.strip()]
+                                yield f"[LOG] Extracted {len(selected_tools)} selected tools: {selected_tools}\n"
+                            else:
+                                yield f"[LOG] No ENABLED_TOOLS found in SERVER section\n"
+                        except ValueError as ve:
+                            # Re-raise ValueError (validation errors)
+                            yield f"[LOG] ERROR: {str(ve)}\n"
+                            raise
+                        except Exception as e:
+                            yield f"[LOG] Warning: Could not read connections from config: {e}\n"
+                            import traceback
+                            yield f"[LOG] Traceback: {traceback.format_exc()}\n"
+                            # If config file exists but couldn't be read, still raise error
+                            if os.path.exists(config_path):
+                                raise ValueError(f"Failed to read database connections from config file: {e}")
                     
                     result = deployer.deploy_to_aws(
                         aws_access_key=data.get('access_key'),
@@ -2427,7 +2819,9 @@ Respond in JSON:
                         config_path=config_path,
                         domain=domain,
                         server_name=data.get('server_name'),
-                        yaml_file=yaml_file
+                        yaml_file=yaml_file,
+                        connections=connections,
+                        selected_tools=selected_tools
                     )
                     
                     yield "[LOG] Deployment method called\n"
@@ -2739,10 +3133,67 @@ Respond in JSON:
                 config_path = data.get('config_path')
                 yaml_file = data.get('yaml_file')
                 
+                # Auto-detect server path for database servers if not provided
+                if not server_path and server_type == 'database':
+                    project_root = os.path.dirname(os.path.abspath(__file__))
+                    server_path = os.path.join(project_root, 'dbhandler_mcpserver', 'scikiq_pkg_dbutils')
+                    yield f"[LOG] Auto-detected database server path: {server_path}\n"
+                
                 if server_type and server_path:
                     yield f"[LOG] Preparing {server_type} MCP server files from {server_path}\n"
                     if yaml_file:
                         yield f"[LOG] Using specific YAML file: {yaml_file}\n"
+                    
+                    # For database servers, read connections and selected_tools from config
+                    connections = None
+                    selected_tools = None
+                    if server_type == 'database' and config_path:
+                        try:
+                            import configparser
+                            import os
+                            yield f"[LOG] Reading connections from config file: {config_path}\n"
+                            yield f"[LOG] Config file exists: {os.path.exists(config_path)}\n"
+                            
+                            config = configparser.ConfigParser()
+                            config.read(config_path, encoding='utf-8')
+                            
+                            yield f"[LOG] Config sections found: {config.sections()}\n"
+                            
+                            # Extract connections from config
+                            connections = []
+                            for section in config.sections():
+                                if section.upper() != 'SERVER':
+                                    conn = {}
+                                    conn['connection_name'] = section
+                                    for key, value in config[section].items():
+                                        conn[key.lower()] = value
+                                    connections.append(conn)
+                            
+                            yield f"[LOG] Extracted {len(connections)} connections from config\n"
+                            
+                            # Validate that connections exist (mandatory for database servers)
+                            if len(connections) == 0:
+                                yield f"[LOG] ERROR: No database connections found in config file. Connections are mandatory for database MCP server.\n"
+                                raise ValueError("No database connections found in config file. Please configure at least one database connection before deploying.")
+                            
+                            # Extract selected tools from SERVER section
+                            if 'SERVER' in config and 'ENABLED_TOOLS' in config['SERVER']:
+                                selected_tools = [t.strip() for t in config['SERVER']['ENABLED_TOOLS'].split(',') if t.strip()]
+                                yield f"[LOG] Extracted {len(selected_tools)} selected tools: {selected_tools}\n"
+                            else:
+                                yield f"[LOG] No ENABLED_TOOLS found in SERVER section\n"
+                        except ValueError as ve:
+                            # Re-raise ValueError (validation errors)
+                            yield f"[LOG] ERROR: {str(ve)}\n"
+                            raise
+                        except Exception as e:
+                            yield f"[LOG] Warning: Could not read connections from config: {e}\n"
+                            import traceback
+                            yield f"[LOG] Traceback: {traceback.format_exc()}\n"
+                            # If config file exists but couldn't be read, still raise error
+                            if os.path.exists(config_path):
+                                raise ValueError(f"Failed to read database connections from config file: {e}")
+                    
                     # Prepare server files based on type
                     from online_deployment import OnlineDeployer
                     temp_deployer = OnlineDeployer()
@@ -2766,7 +3217,10 @@ Respond in JSON:
                     tenant_id=data.get('tenant_id'),
                     resource_group=data.get('resource_group', 'mcp-server-rg'),
                     location=data.get('location', 'eastus'),
-                    server_files=server_files
+                    server_files=server_files,
+                    server_type=server_type,
+                    connections=connections,
+                    selected_tools=selected_tools
                 )
                 
                 max_iterations = 1000
@@ -2818,10 +3272,67 @@ Respond in JSON:
                 config_path = data.get('config_path')
                 yaml_file = data.get('yaml_file')
                 
+                # Auto-detect server path for database servers if not provided
+                if not server_path and server_type == 'database':
+                    project_root = os.path.dirname(os.path.abspath(__file__))
+                    server_path = os.path.join(project_root, 'dbhandler_mcpserver', 'scikiq_pkg_dbutils')
+                    yield f"[LOG] Auto-detected database server path: {server_path}\n"
+                
                 if server_type and server_path:
                     yield f"[LOG] Preparing {server_type} MCP server files from {server_path}\n"
                     if yaml_file:
                         yield f"[LOG] Using specific YAML file: {yaml_file}\n"
+                    
+                    # For database servers, read connections and selected_tools from config
+                    connections = None
+                    selected_tools = None
+                    if server_type == 'database' and config_path:
+                        try:
+                            import configparser
+                            import os
+                            yield f"[LOG] Reading connections from config file: {config_path}\n"
+                            yield f"[LOG] Config file exists: {os.path.exists(config_path)}\n"
+                            
+                            config = configparser.ConfigParser()
+                            config.read(config_path, encoding='utf-8')
+                            
+                            yield f"[LOG] Config sections found: {config.sections()}\n"
+                            
+                            # Extract connections from config
+                            connections = []
+                            for section in config.sections():
+                                if section.upper() != 'SERVER':
+                                    conn = {}
+                                    conn['connection_name'] = section
+                                    for key, value in config[section].items():
+                                        conn[key.lower()] = value
+                                    connections.append(conn)
+                            
+                            yield f"[LOG] Extracted {len(connections)} connections from config\n"
+                            
+                            # Validate that connections exist (mandatory for database servers)
+                            if len(connections) == 0:
+                                yield f"[LOG] ERROR: No database connections found in config file. Connections are mandatory for database MCP server.\n"
+                                raise ValueError("No database connections found in config file. Please configure at least one database connection before deploying.")
+                            
+                            # Extract selected tools from SERVER section
+                            if 'SERVER' in config and 'ENABLED_TOOLS' in config['SERVER']:
+                                selected_tools = [t.strip() for t in config['SERVER']['ENABLED_TOOLS'].split(',') if t.strip()]
+                                yield f"[LOG] Extracted {len(selected_tools)} selected tools: {selected_tools}\n"
+                            else:
+                                yield f"[LOG] No ENABLED_TOOLS found in SERVER section\n"
+                        except ValueError as ve:
+                            # Re-raise ValueError (validation errors)
+                            yield f"[LOG] ERROR: {str(ve)}\n"
+                            raise
+                        except Exception as e:
+                            yield f"[LOG] Warning: Could not read connections from config: {e}\n"
+                            import traceback
+                            yield f"[LOG] Traceback: {traceback.format_exc()}\n"
+                            # If config file exists but couldn't be read, still raise error
+                            if os.path.exists(config_path):
+                                raise ValueError(f"Failed to read database connections from config file: {e}")
+                    
                     # Prepare server files based on type
                     from online_deployment import OnlineDeployer
                     temp_deployer = OnlineDeployer()
@@ -2843,7 +3354,10 @@ Respond in JSON:
                     username=data.get('username'),
                     password=data.get('password', ''),
                     ssh_key_path=data.get('ssh_key_path'),
-                    server_files=server_files
+                    server_files=server_files,
+                    server_type=server_type,
+                    connections=connections,
+                    selected_tools=selected_tools
                 )
                 
                 max_iterations = 1000
@@ -3269,7 +3783,7 @@ if __name__ == "__main__":
                 connections = server_config.get('connections', [])
                 
                 # Generate config.ini
-                config_content = generate_database_config_ini(connections)
+                config_content = generate_database_config_ini(connections, selected_tools=None)
                 config_filename = "config.ini"
                 config_path = os.path.join('generated_servers', config_filename)
                 

@@ -186,8 +186,11 @@ Examples:
                 
                 # Apply server configuration
                 server_config = config_parser.get_server_config()
+                enabled_tools = config_parser.get_enabled_tools() if hasattr(config_parser, 'get_enabled_tools') else None
                 if server_config:
                     logger.info(f"Applied server configuration from environment: {server_config}")
+                if enabled_tools:
+                    logger.info(f"Enabled tools filter: {len(enabled_tools)} tools enabled")
                 
             except Exception as e:
                 logger.error(f"Failed to load environment file: {str(e)}")
@@ -209,8 +212,11 @@ Examples:
                 
                 # Apply server configuration
                 server_config = config_parser.get_server_config()
+                enabled_tools = config_parser.get_enabled_tools()
                 if server_config:
                     logger.info(f"Applied server configuration from INI file: {server_config}")
+                if enabled_tools:
+                    logger.info(f"Enabled tools filter: {len(enabled_tools)} tools enabled")
                 
             except Exception as e:
                 logger.error(f"Failed to load INI configuration file: {str(e)}")
@@ -331,11 +337,17 @@ Examples:
         
         # Prepare connection configurations
         connection_configs = None
+        enabled_tools = None
         if config_parser:
             connection_configs = config_parser.parse_all_connections()
+            # Get enabled tools from config if available
+            if hasattr(config_parser, 'get_enabled_tools'):
+                enabled_tools = config_parser.get_enabled_tools()
         
         # Create and configure server
-        server = MCPServer(name=args.name, version=args.version, connection_configs=connection_configs)
+        server = MCPServer(name=args.name, version=args.version, 
+                          connection_configs=connection_configs,
+                          enabled_tools=enabled_tools)
         
         # Setup signal handlers for graceful shutdown
         setup_signal_handlers(server)

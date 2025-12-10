@@ -36,7 +36,8 @@ def health_check():
 @app.route('/favicon.ico')
 def favicon():
     """Return empty response for favicon to prevent 404 errors"""
-    return '', 204
+    from flask import Response
+    return Response(status=204)
 
 @app.route('/about')
 def about():

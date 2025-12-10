@@ -51,6 +51,9 @@ source venv/bin/activate || { echo "ERROR: Failed to activate virtual environmen
 echo "Upgrading pip..."
 pip install --upgrade pip || { echo "WARNING: pip upgrade failed, continuing..."; }
 
+# Generate config.ini for database servers (if connections data provided)
+{{CONFIG_GENERATION_CODE}}
+
 # Create server files FIRST so requirements.txt is available
 echo "Creating server files..."
 python3 << 'PYTHON_EOF'
@@ -135,7 +138,7 @@ if [ -f "requirements.txt" ]; then
             echo "ERROR: Failed to install requirements.txt dependencies after retry"
             echo "Attempting to install critical packages individually..."
             # Install critical packages that are definitely needed
-            pip install mcp uvicorn starlette fastapi click httpx requests pyyaml python-dotenv pandas pypika sqlalchemy pymysql psycopg2-binary pymongo boto3 || {
+            pip install mcp uvicorn starlette fastapi click httpx requests pyyaml python-dotenv pandas pypika sqlalchemy pymysql psycopg2-binary pymongo boto3 vertica-python || {
                 echo "ERROR: Failed to install critical packages"
                 exit 1
             }
@@ -149,7 +152,7 @@ else
     # Install database-specific dependencies if needed
     if [ "$SERVER_TYPE" = "database" ]; then
         echo "Installing database-specific dependencies..."
-        pip install pymysql psycopg2-binary cx-Oracle pyodbc pymongo snowflake-connector-python google-cloud-bigquery boto3 || { echo "WARNING: Some database dependencies failed to install, continuing..."; }
+        pip install pymysql psycopg2-binary cx-Oracle pyodbc pymongo snowflake-connector-python google-cloud-bigquery boto3 vertica-python || { echo "WARNING: Some database dependencies failed to install, continuing..."; }
     fi
 fi
 
@@ -158,10 +161,75 @@ echo ""
 echo "Verifying critical packages..."
 python3 -c "import mcp,httpx,requests,pandas,pypika,sqlalchemy,numpy,yaml,dotenv,pymysql,psycopg2,pymongo,boto3" && echo "✓ Critical packages OK" || {
     echo "ERROR: Missing packages. Installing..."
-    pip install mcp uvicorn starlette fastapi click httpx requests pandas pypika sqlalchemy numpy pyyaml python-dotenv pymysql psycopg2-binary pymongo boto3 || exit 1
+    pip install mcp uvicorn starlette fastapi click httpx requests pandas pypika sqlalchemy numpy pyyaml python-dotenv pymysql psycopg2-binary pymongo boto3 vertica-python || exit 1
 }
 
 echo "Python dependencies installation completed"
+
+# Install database-specific drivers based on config.ini if it exists
+if [ -f "config.ini" ] && [ "$SERVER_TYPE" = "database" ]; then
+    echo ""
+    echo "=========================================="
+    echo "Installing database-specific drivers from config.ini..."
+    echo "=========================================="
+    
+    # Extract database types from config.ini and install corresponding drivers
+    python3 << 'PYTHON_EOF'
+import configparser
+import subprocess
+import sys
+
+try:
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    
+    db_drivers = {
+        'MYSQL': 'pymysql',
+        'POSTGRES': 'psycopg2-binary',
+        'ORACLE': 'cx-Oracle',
+        'SQLSERVER': 'pyodbc',
+        'MONGODB': 'pymongo',
+        'SNOWFLAKE': 'snowflake-connector-python',
+        'BIGQUERY': 'google-cloud-bigquery',
+        'REDSHIFT': 'psycopg2-binary',
+        'VERTICA': 'vertica-python',
+        'DB2': 'ibm-db',
+        'TERADATA': 'teradatasql',
+        'SAPHANA': 'hdbcli',
+    }
+    
+    db_types_found = set()
+    for section in config.sections():
+        if section.upper() != 'SERVER':
+            db_type = config.get(section, 'DB_TYPE', fallback='').upper()
+            if db_type:
+                db_types_found.add(db_type)
+    
+    print(f"Found database types in config.ini: {', '.join(db_types_found)}")
+    
+    for db_type in db_types_found:
+        if db_type in db_drivers:
+            driver = db_drivers[db_type]
+            print(f"Installing driver for {db_type}: {driver}")
+            try:
+                result = subprocess.run([sys.executable, '-m', 'pip', 'install', driver], 
+                                      capture_output=True, text=True, timeout=300)
+                if result.returncode == 0:
+                    print(f"✓ Successfully installed {driver}")
+                else:
+                    print(f"⚠ Warning: Failed to install {driver}: {result.stderr}")
+            except Exception as e:
+                print(f"⚠ Warning: Error installing {driver}: {e}")
+        else:
+            print(f"⚠ Warning: No driver mapping found for {db_type}")
+    
+    print("Database driver installation check completed")
+except Exception as e:
+    print(f"⚠ Warning: Could not parse config.ini or install drivers: {e}")
+    import traceback
+    traceback.print_exc()
+PYTHON_EOF
+fi
 
 # Configure Nginx for all HTTP-based MCP servers
 # All online deployments now use HTTP transport with OAuth (database, api, swagger)
@@ -330,8 +398,14 @@ if [ -n "$DOMAIN" ]; then
             # Backup current config
             sudo cp /etc/nginx/sites-available/mcp-server /etc/nginx/sites-available/mcp-server.backup
             
-            # Add SSL configuration manually with complete security settings
-            sudo tee /etc/nginx/sites-available/mcp-server > /dev/null << NGINX_SSL_EOF
+            # Check if certificates exist before adding SSL config
+            if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+                echo "ERROR: SSL certificates not found. Certbot may have failed."
+                echo "Skipping manual SSL configuration. Please run certbot manually later."
+                ssl_success=false
+            else
+                # Add SSL configuration manually with complete security settings
+                sudo tee /etc/nginx/sites-available/mcp-server > /dev/null << NGINX_SSL_EOF
 # HTTP server - redirect to HTTPS
 server {
     listen 80;
@@ -351,12 +425,13 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
     
     # Include Let's Encrypt SSL options (these are created by certbot)
+    # Note: options-ssl-nginx.conf already contains ssl_session_timeout, so we don't duplicate it
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
     
     # Additional SSL security settings (ssl_protocols and ssl_ciphers are in options-ssl-nginx.conf)
     ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
+    # ssl_session_timeout is already in options-ssl-nginx.conf, don't duplicate
     ssl_session_tickets off;
     
     # OCSP stapling for better security and performance
@@ -400,16 +475,44 @@ server {
 }
 NGINX_SSL_EOF
             
-            # Test and reload Nginx
-            sudo nginx -t && sudo systemctl reload nginx && echo "✓ SSL configuration added manually" || {
-                echo "ERROR: Failed to add SSL config. Restoring backup..."
-                sudo cp /etc/nginx/sites-available/mcp-server.backup /etc/nginx/sites-available/mcp-server
-            }
+                # Test and reload Nginx - handle duplicate directive errors
+                nginx_test_output=$(sudo nginx -t 2>&1)
+                if echo "$nginx_test_output" | grep -q "ssl_session_timeout.*duplicate"; then
+                    echo "WARNING: Duplicate ssl_session_timeout detected. Removing duplicate..."
+                    # Remove duplicate ssl_session_timeout lines (keep only the first occurrence)
+                    sudo sed -i '/ssl_session_timeout/{:a;N;$!ba;s/ssl_session_timeout[^\n]*\n//2}' /etc/nginx/sites-available/mcp-server
+                    sudo nginx -t && sudo systemctl reload nginx && echo "✓ SSL configuration added manually (duplicate removed)" || {
+                        echo "ERROR: Failed to add SSL config. Restoring backup..."
+                        sudo cp /etc/nginx/sites-available/mcp-server.backup /etc/nginx/sites-available/mcp-server
+                        ssl_success=false
+                    }
+                else
+                    sudo nginx -t && sudo systemctl reload nginx && echo "✓ SSL configuration added manually" || {
+                        echo "ERROR: Failed to add SSL config. Restoring backup..."
+                        sudo cp /etc/nginx/sites-available/mcp-server.backup /etc/nginx/sites-available/mcp-server
+                        ssl_success=false
+                    }
+                fi
+            fi
         fi
         break
     else
         certbot_exit_code=${PIPESTATUS[0]}
         echo "Certbot exited with code: $certbot_exit_code"
+        
+        # Check if it's a rate limit error
+        if grep -q "too many requests" /tmp/certbot.log 2>/dev/null || grep -q "rate limit" /tmp/certbot.log 2>/dev/null; then
+            echo ""
+            echo "⚠ Let's Encrypt rate limit reached. SSL certificate cannot be obtained automatically."
+            echo "This is a temporary restriction. You can:"
+            echo "  1. Wait a few hours and run: sudo certbot --nginx -d $DOMAIN"
+            echo "  2. Use a different subdomain"
+            echo "  3. Continue without SSL (server will work on HTTP)"
+            echo ""
+            ssl_success=false
+            break  # Don't retry on rate limit errors
+        fi
+        
         retry_count=$((retry_count + 1))
         
         if [ $retry_count -lt $max_retries ]; then
@@ -429,6 +532,7 @@ NGINX_SSL_EOF
             echo ""
             echo "Certbot logs: /tmp/certbot.log"
             echo "Let's Encrypt logs: /var/log/letsencrypt/letsencrypt.log"
+            ssl_success=false
         fi
     fi
     done
@@ -476,12 +580,13 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
     
     # Include Let's Encrypt SSL options (these are created by certbot)
+    # Note: options-ssl-nginx.conf already contains ssl_session_timeout, so we don't duplicate it
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
     
     # Additional SSL security settings (ssl_protocols and ssl_ciphers are in options-ssl-nginx.conf)
     ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
+    # ssl_session_timeout is already in options-ssl-nginx.conf, don't duplicate
     ssl_session_tickets off;
     
     # OCSP stapling

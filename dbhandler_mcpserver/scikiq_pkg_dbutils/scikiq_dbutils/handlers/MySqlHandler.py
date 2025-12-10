@@ -1,5 +1,13 @@
 # PYTHON PACKAGES
-import MySQLdb  ## MySQL
+# Try to import MySQLdb (from mysqlclient), fall back to PyMySQL if not available
+try:
+    import MySQLdb  ## MySQL
+except ImportError:
+    # PyMySQL is a drop-in replacement for MySQLdb
+    import pymysql
+    # Make pymysql compatible with MySQLdb API
+    pymysql.install_as_MySQLdb()
+    import MySQLdb
 
 import pandas as pd
 import uuid

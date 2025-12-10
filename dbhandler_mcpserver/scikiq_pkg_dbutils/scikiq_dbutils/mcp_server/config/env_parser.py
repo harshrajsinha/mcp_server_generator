@@ -276,7 +276,25 @@ class EnvironmentConfigParser:
                 except (ValueError, TypeError) as e:
                     self.logger.warning(f"Invalid value for {env_key}: {self._env_vars[env_key]}")
         
+        # Parse enabled tools if present
+        if 'MCP_SERVER_ENABLED_TOOLS' in self._env_vars:
+            enabled_tools_str = self._env_vars['MCP_SERVER_ENABLED_TOOLS']
+            enabled_tools = [tool.strip() for tool in enabled_tools_str.split(',') if tool.strip()]
+            server_config['enabled_tools'] = enabled_tools
+        
         return server_config
+    
+    def get_enabled_tools(self) -> Optional[List[str]]:
+        """
+        Get list of enabled tools from environment variables
+        
+        Returns:
+            List of enabled tool IDs or None if not specified
+        """
+        server_config = self.get_server_config()
+        if server_config and 'enabled_tools' in server_config:
+            return server_config['enabled_tools']
+        return None
     
     def validate_environment(self) -> Dict[str, List[str]]:
         """

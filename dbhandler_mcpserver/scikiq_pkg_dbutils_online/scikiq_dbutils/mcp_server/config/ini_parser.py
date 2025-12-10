@@ -295,7 +295,26 @@ class IniConfigParser:
             Server configuration dictionary or None
         """
         if 'SERVER' in self.config:
-            return dict(self.config['SERVER'])
+            server_config = dict(self.config['SERVER'])
+            # Parse enabled_tools if present
+            if 'ENABLED_TOOLS' in server_config:
+                enabled_tools_str = server_config['ENABLED_TOOLS']
+                # Split comma-separated list and strip whitespace
+                enabled_tools = [tool.strip() for tool in enabled_tools_str.split(',') if tool.strip()]
+                server_config['enabled_tools'] = enabled_tools
+            return server_config
+        return None
+    
+    def get_enabled_tools(self) -> Optional[List[str]]:
+        """
+        Get list of enabled tools from SERVER section
+        
+        Returns:
+            List of enabled tool IDs or None if not specified
+        """
+        server_config = self.get_server_config()
+        if server_config and 'enabled_tools' in server_config:
+            return server_config['enabled_tools']
         return None
     
     def validate_connections(self) -> Dict[str, List[str]]:

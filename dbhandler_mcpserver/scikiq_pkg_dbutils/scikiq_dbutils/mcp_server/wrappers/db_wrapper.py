@@ -63,15 +63,26 @@ class DatabaseWrapper:
         Returns:
             MCPToolResult with success or error
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
+            logger.info(f"_handle_tool_execution called: operation={operation_name}, connection_id={connection_id}")
+            
+            logger.info(f"Calling ensure_connection for '{connection_id}'...")
             connection = self.connection_manager.ensure_connection(connection_id)
+            
             if not connection:
+                logger.error(f"Connection '{connection_id}' not found or failed to connect")
                 return MCPToolResult.error(f"Connection '{connection_id}' not found or failed to connect")
             
+            logger.info(f"Connection obtained, executing operation '{operation_name}'...")
             result = operation_func(connection)
+            logger.info(f"Operation '{operation_name}' completed successfully")
             return MCPToolResult.success(result)
             
         except Exception as e:
+            logger.error(f"Error in {operation_name}: {str(e)}", exc_info=True)
             error_msg = f"Error in {operation_name}: {str(e)}"
             return MCPToolResult.error(error_msg)
     

@@ -31,12 +31,13 @@ class MCPServer:
     """
     
     def __init__(self, name: str = "ScikiQ Database MCP Server", version: str = "1.0.0", 
-                 connection_configs: Optional[Dict[str, Any]] = None):
+                 connection_configs: Optional[Dict[str, Any]] = None,
+                 enabled_tools: Optional[List[str]] = None):
         self.name = name
         self.version = version
         self.connection_manager = ConnectionManager(connection_configs)
         self.db_wrapper = DatabaseWrapper(self.connection_manager)
-        self.tool_registry = ToolRegistry(self.db_wrapper)
+        self.tool_registry = ToolRegistry(self.db_wrapper, enabled_tools=enabled_tools)
         
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -135,6 +136,8 @@ class MCPServer:
         Returns:
             JSON-RPC response
         """
+        self.logger.info(f"Routing request: method={request.method}, id={request.id}")
+        
         method_handlers = {
             "initialize": self._handle_initialize,
             "tools/list": self._handle_tools_list,
@@ -145,6 +148,7 @@ class MCPServer:
         }
         
         if request.method not in method_handlers:
+            self.logger.error(f"Method not found: {request.method}")
             return JsonRpcResponse.error(
                 id=request.id,
                 error=create_method_not_found_error(request.method)
@@ -152,11 +156,13 @@ class MCPServer:
         
         try:
             handler = method_handlers[request.method]
+            self.logger.info(f"Calling handler for method: {request.method}")
             result = await handler(request.params or {})
+            self.logger.info(f"Handler completed for method: {request.method}")
             return JsonRpcResponse.success(id=request.id, result=result)
             
         except Exception as e:
-            self.logger.error(f"Error in method '{request.method}': {str(e)}")
+            self.logger.error(f"Error in method '{request.method}': {str(e)}", exc_info=True)
             self.logger.error(traceback.format_exc())
             
             return JsonRpcResponse.error(
@@ -187,10 +193,14 @@ class MCPServer:
     async def _handle_tools_call(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle tools/call request"""
         try:
+            self.logger.info(f"Tool call handler called with params: {params}")
+            
             # Validate required parameters
             if "name" not in params:
+                self.logger.error("Missing required parameter: name")
                 raise ValueError("Missing required parameter: name")
             if "arguments" not in params:
+                self.logger.error("Missing required parameter: arguments")
                 raise ValueError("Missing required parameter: arguments")
             
             # Create tool call
@@ -199,10 +209,12 @@ class MCPServer:
                 arguments=params["arguments"]
             )
             
-            self.logger.info(f"Executing tool: {tool_call.name}")
+            self.logger.info(f"Executing tool: {tool_call.name} with arguments: {tool_call.arguments}")
             
             # Execute tool
             result = self.tool_registry.execute_tool(tool_call)
+            
+            self.logger.info(f"Tool execution completed. Result is_error: {result.is_error}")
             
             return {
                 "content": [
@@ -215,9 +227,10 @@ class MCPServer:
             }
             
         except ValueError as e:
+            self.logger.error(f"ValueError in tool call: {str(e)}")
             raise ValueError(f"Invalid tool call parameters: {str(e)}")
         except Exception as e:
-            self.logger.error(f"Error executing tool: {str(e)}")
+            self.logger.error(f"Error executing tool: {str(e)}", exc_info=True)
             return {
                 "content": [
                     {

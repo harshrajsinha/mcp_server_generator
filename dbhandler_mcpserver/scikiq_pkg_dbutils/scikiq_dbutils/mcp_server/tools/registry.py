@@ -23,20 +23,29 @@ class ToolRegistry:
     Registry for MCP tools that handles tool registration, validation, and execution
     """
     
-    def __init__(self, db_wrapper: DatabaseWrapper):
+    def __init__(self, db_wrapper: DatabaseWrapper, enabled_tools: Optional[List[str]] = None):
         self.db_wrapper = db_wrapper
         self._tools: Dict[str, ToolSchema] = {}
         self._handlers: Dict[str, Callable] = {}
+        self.enabled_tools = enabled_tools  # List of tool IDs to enable (None = all enabled)
         self._initialize_tools()
     
     def _initialize_tools(self):
-        """Initialize all database tools"""
+        """Initialize database tools, filtering by enabled_tools if provided"""
         # Get all tool definitions
         tool_definitions = DatabaseToolDefinitions.get_all_tools()
         
-        # Register each tool with its handler
-        for tool_name, tool_schema in tool_definitions.items():
-            self.register_tool(tool_name, tool_schema, self._get_handler_for_tool(tool_name))
+        # Filter tools if enabled_tools is specified
+        if self.enabled_tools is not None and len(self.enabled_tools) > 0:
+            # Only register enabled tools
+            for tool_name in self.enabled_tools:
+                if tool_name in tool_definitions:
+                    tool_schema = tool_definitions[tool_name]
+                    self.register_tool(tool_name, tool_schema, self._get_handler_for_tool(tool_name))
+        else:
+            # Register all tools if no filter specified
+            for tool_name, tool_schema in tool_definitions.items():
+                self.register_tool(tool_name, tool_schema, self._get_handler_for_tool(tool_name))
     
     def _get_handler_for_tool(self, tool_name: str) -> Callable:
         """Map tool names to their corresponding handler methods"""
@@ -215,26 +224,39 @@ class ToolRegistry:
         Returns:
             MCPToolResult with the execution result
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
+            logger.info(f"execute_tool called for: {tool_call.name} with args: {tool_call.arguments}")
+            
             # Validate tool exists
             if tool_call.name not in self._tools:
+                logger.error(f"Tool '{tool_call.name}' not found. Available tools: {list(self._tools.keys())}")
                 return MCPToolResult.error({
                     "error": "tool_not_found",
                     "message": f"Tool '{tool_call.name}' not found",
                     "available_tools": list(self._tools.keys())
                 })
             
+            logger.info(f"Tool '{tool_call.name}' found, validating parameters...")
+            
             # Validate parameters
             validation_error = self.validate_tool_call(tool_call)
             if validation_error:
+                logger.error(f"Parameter validation failed: {validation_error}")
                 return MCPToolResult.error({
                     "error": "invalid_parameters",
                     "message": validation_error,
                     "tool_schema": self._tools[tool_call.name].to_dict()
                 })
             
+            logger.info(f"Parameters validated, getting handler for '{tool_call.name}'...")
+            
             # Get handler and execute
             handler = self._handlers[tool_call.name]
+            
+            logger.info(f"Handler obtained, executing tool '{tool_call.name}'...")
             
             # Extract arguments and call handler
             try:
@@ -242,6 +264,7 @@ class ToolRegistry:
                 sig = inspect.signature(handler)
                 if any(param.kind == param.VAR_KEYWORD for param in sig.parameters.values()):
                     # Handler accepts **kwargs, pass all arguments
+                    logger.info(f"Calling handler with **kwargs: {tool_call.arguments}")
                     result = handler(**tool_call.arguments)
                 else:
                     # Handler has specific parameters, filter arguments

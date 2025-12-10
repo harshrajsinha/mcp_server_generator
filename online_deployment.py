@@ -210,51 +210,30 @@ class OnlineDeployer:
                 config_filename = "config.ini"
                 if config_path:
                     config_filename = os.path.basename(config_path)
-                
-                if config_path and Path(config_path).exists():
-                    import configparser
-                    try:
-                        config = configparser.ConfigParser()
-                        config.read(config_path, encoding='utf-8')
-                        
-                        # Filter to only database sections
-                        filtered_config = configparser.ConfigParser()
-                        for section in config.sections():
-                            # Only include sections that look like database connections
-                            # Exclude [Server Configuration] and other non-database sections
-                            section_lower = section.lower()
-                            if (not section_lower.startswith('server') and 
-                                not section_lower.startswith('general') and
-                                not section_lower.startswith('logging')):
-                                # Check if section has database-related keys
-                                section_keys = [key.lower() for key in config[section].keys()]
-                                if any(key in ['db_type', 'hostname', 'host', 'database', 'username', 'password'] 
-                                       for key in section_keys):
-                                    filtered_config.add_section(section)
-                                    for key, value in config[section].items():
-                                        filtered_config.set(section, key, value)
-                        
-                        # Write filtered config to string
-                        from io import StringIO
-                        config_string = StringIO()
-                        filtered_config.write(config_string)
-                        server_files[config_filename] = config_string.getvalue()
-                        self.log(f"  - {config_filename} ({len(server_files[config_filename])} bytes, filtered to database sections only)")
-                    except Exception as e:
-                        # Fallback: use original file if parsing fails
-                        self.log(f"  - Warning: Could not filter config.ini: {e}. Using original file.", "WARNING")
-                        with open(config_path, 'r', encoding='utf-8') as f:
-                            server_files[config_filename] = f.read()
-                        self.log(f"  - {config_filename} ({len(server_files[config_filename])} bytes)")
-                else:
-                    # Try to find config.ini in online package
-                    config_online_path = online_pkg_path / 'config.ini'
-                    if config_online_path.exists():
-                        with open(config_online_path, 'r', encoding='utf-8') as f:
-                            server_files['config.ini'] = f.read()
-                            self.log(f"  - config.ini ({len(server_files['config.ini'])} bytes) from online package")
+                    # Normalize and resolve config_path
+                    config_path_normalized = str(config_path).replace('\\', '/').replace('//', '/')
+                    config_path_obj = Path(config_path_normalized)
+                    
+                    # If path contains project root duplicated, fix it
+                    project_root_str = str(Path(__file__).parent).replace('\\', '/')
+                    if project_root_str in config_path_normalized and config_path_normalized.count(project_root_str) > 1:
+                        # Remove duplicate project root
+                        parts = config_path_normalized.split(project_root_str)
+                        config_path_normalized = project_root_str + ''.join(parts[1:])
+                        config_path_obj = Path(config_path_normalized.replace('/', os.sep))
+                    
+                    # Resolve path properly
+                    if not config_path_obj.is_absolute():
+                        project_root = Path(__file__).parent
+                        config_path_obj = (project_root / config_path_normalized).resolve()
                     else:
-                        self.log("  - config.ini not found, will be created on server", "WARNING")
+                        config_path_obj = config_path_obj.resolve()
+                    
+                    config_path = str(config_path_obj)
+                
+                # For database deployments, config.ini will be generated in the EC2 setup script
+                # Don't include it in server_files - it will be created from connections data
+                self.log("  - config.ini will be generated in EC2 setup script from connections data", "INFO")
                 
                 # Copy remote_mcp_server_admin.py (main file for online deployment)
                 admin_server_path = online_pkg_path / 'remote_mcp_server_admin.py'
@@ -300,12 +279,20 @@ class OnlineDeployer:
                         config = configparser.ConfigParser()
                         config.read(config_path, encoding='utf-8')
                         
-                        # Filter to only database sections
+                        # Filter to only database sections, but preserve [SERVER] section with ENABLED_TOOLS
                         filtered_config = configparser.ConfigParser()
                         for section in config.sections():
-                            # Only include sections that look like database connections
-                            # Exclude [Server Configuration] and other non-database sections
                             section_lower = section.lower()
+                            
+                            # Always preserve [SERVER] section if it contains ENABLED_TOOLS
+                            if section_lower == 'server':
+                                if 'ENABLED_TOOLS' in config[section] or 'enabled_tools' in config[section]:
+                                    filtered_config.add_section(section)
+                                    for key, value in config[section].items():
+                                        filtered_config.set(section, key, value)
+                                    continue
+                            
+                            # Exclude other server/general/logging sections
                             if (not section_lower.startswith('server') and 
                                 not section_lower.startswith('general') and
                                 not section_lower.startswith('logging')):
@@ -1008,7 +995,7 @@ if __name__ == "__main__":
     
     def generate_setup_script(self, server_files, python_version="3.10", server_type=None, domain=None, public_ip=None,
                              s3_bucket=None, s3_prefix=None, aws_access_key=None, aws_secret_key=None, region=None,
-                             admin_username=None, admin_password=None):
+                             admin_username=None, admin_password=None, connections=None, selected_tools=None):
         """
         Generate a bash script to set up the MCP server on a remote machine
         
@@ -1040,9 +1027,8 @@ if __name__ == "__main__":
                     # Use public IP if no domain (will be replaced after instance launch)
                     server_base_url = f"http://{public_ip or 'SERVER_IP'}"
                 
-                # Find config file (ends with .ini)
-                config_file = next((f for f in server_files.keys() if f.endswith('.ini')), 'config.ini')
-                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/remote_mcp_server_admin.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db --config-path /opt/mcp-server/{config_file} --debug"
+                # Use fixed config path - config.ini will be generated in setup script
+                startup_command = f"/opt/mcp-server/venv/bin/python /opt/mcp-server/remote_mcp_server_admin.py --host 0.0.0.0 --port 30210 --db-path /opt/mcp-server/mcp_auth.db --config-path /opt/mcp-server/config.ini --debug"
             else:
                 # Local deployment: use run_mcp_server.py
                 # Find config file (ends with .ini)
@@ -1346,9 +1332,148 @@ echo ""
         else:
             admin_creation_cmd = ""
         
+        # Generate config.ini for database servers (connections are mandatory)
+        config_generation_code = ""
+        if server_type == 'database':
+            # Log debug info
+            self.log(f"DEBUG: Generating config.ini for database server", "INFO")
+            self.log(f"DEBUG: connections={connections}", "INFO")
+            self.log(f"DEBUG: selected_tools={selected_tools}", "INFO")
+            
+            # Connections are mandatory for database servers
+            if not connections or len(connections) == 0:
+                self.log("ERROR: No database connections provided. Connections are mandatory for database MCP server.", "ERROR")
+                raise ValueError("Database connections are mandatory for database MCP server deployment. Please configure at least one database connection.")
+            # Generate config.ini content inline (duplicate logic from mcp_routes to avoid circular import)
+            from datetime import datetime
+            config_lines = []
+            config_lines.append("# Database MCP Server Configuration")
+            config_lines.append("# Generated by MCP Studio")
+            config_lines.append(f"# Created: {datetime.now().isoformat()}")
+            config_lines.append("")
+            
+            # Add SERVER section with enabled tools if provided
+            if selected_tools and len(selected_tools) > 0:
+                config_lines.append("[SERVER]")
+                config_lines.append("# Enabled MCP tools (comma-separated list)")
+                config_lines.append(f"ENABLED_TOOLS={','.join(selected_tools)}")
+                config_lines.append("")
+            
+            # Helper function to get default port
+            def get_default_port(db_type):
+                ports = {'MYSQL': 3306, 'POSTGRES': 5432, 'SQLSERVER': 1433, 'ORACLE': 1521, 
+                        'MONGODB': 27017, 'VERTICA': 5433, 'DUCKDB': 0}
+                return ports.get(db_type.upper(), 3306)
+            
+            for conn in connections:
+                connection_name = conn.get('connection_name', 'database')
+                db_type = conn.get('db_type', conn.get('DB_TYPE', 'MYSQL')).upper()
+                
+                config_lines.append(f"[{connection_name}]")
+                config_lines.append(f"DB_TYPE={db_type}")
+                
+                if db_type == 'DUCKDB':
+                    connection_type = conn.get('duckdb_connection_type', 'local')
+                    if connection_type == 's3':
+                        for key in ['aws_access_key_id', 'aws_secret_access_key', 'region_name', 'bucket_name']:
+                            if conn.get(key):
+                                config_lines.append(f"{key}={conn[key]}")
+                    else:
+                        if conn.get('database_path'):
+                            config_lines.append(f"DATABASE_PATH={conn['database_path']}")
+                else:
+                    # Check for hostname in multiple possible keys (hostname, host, HOSTNAME, HOST)
+                    host = (conn.get('hostname') or conn.get('host') or 
+                           conn.get('HOSTNAME') or conn.get('HOST') or 'localhost')
+                    port = conn.get('port', conn.get('PORT', get_default_port(db_type)))
+                    database = conn.get('database', conn.get('DATABASE', ''))
+                    username = conn.get('username', conn.get('USERNAME', ''))
+                    password = conn.get('password', conn.get('PASSWORD', ''))
+                    
+                    config_lines.append(f"HOSTNAME={host}")
+                    config_lines.append(f"PORT={port}")
+                    config_lines.append(f"DATABASE={database}")
+                    config_lines.append(f"USERNAME={username}")
+                    config_lines.append(f"PASSWORD={password}")
+                    config_lines.append("PASSWORD_ENCRYPTED=0")
+                    
+                    if db_type == 'ORACLE' and conn.get('service_name'):
+                        config_lines.append(f"SERVICE_NAME={conn['service_name']}")
+                    elif db_type == 'MONGODB':
+                        config_lines.append(f"AUTH_DATABASE={conn.get('auth_database', 'admin')}")
+                    elif db_type in ['POSTGRES', 'SQLSERVER', 'VERTICA']:
+                        schema = conn.get('schema', conn.get('SCHEMA', ''))
+                        if not schema:
+                            schema = 'public' if db_type in ['POSTGRES', 'VERTICA'] else 'dbo'
+                        config_lines.append(f"SCHEMA={schema}")
+                
+                config_lines.append("")
+            
+            config_content = "\n".join(config_lines)
+            # Base64 encode to avoid escaping issues
+            import base64
+            config_b64 = base64.b64encode(config_content.encode('utf-8')).decode('ascii')
+            
+            config_generation_code = f"""
+# Generate config.ini from connections data
+echo "=========================================="
+echo "Generating config.ini file..."
+echo "=========================================="
+cd /opt/mcp-server || {{ echo "ERROR: Failed to cd to /opt/mcp-server"; exit 1; }}
+python3 << 'CONFIG_EOF'
+import base64
+import os
+import sys
+
+try:
+    config_b64 = "{config_b64}"
+    config_content = base64.b64decode(config_b64).decode('utf-8')
+    
+    # Ensure we're in the right directory
+    os.chdir('/opt/mcp-server')
+    
+    # Write config file
+    with open('config.ini', 'w', encoding='utf-8') as f:
+        f.write(config_content)
+    
+    # Verify file was created
+    if os.path.exists('config.ini'):
+        file_size = os.path.getsize('config.ini')
+        print("✓ config.ini created successfully")
+        print(f"Config file size: {{file_size}} bytes")
+        print(f"Config file path: {{os.path.abspath('config.ini')}}")
+    else:
+        print("ERROR: config.ini was not created!")
+        sys.exit(1)
+except Exception as e:
+    print(f"ERROR: Failed to create config.ini: {{e}}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+CONFIG_EOF
+
+# Verify config.ini was created
+if [ -f /opt/mcp-server/config.ini ]; then
+    echo "✓ Verified: config.ini exists at /opt/mcp-server/config.ini"
+    echo "Config.ini contents (first 20 lines):"
+    head -n 20 /opt/mcp-server/config.ini || echo "Could not read config.ini"
+else
+    echo "ERROR: config.ini was not created!"
+    exit 1
+fi
+"""
+        
         # Replace other placeholders
         script = script_template.replace('{{STARTUP_COMMAND}}', startup_command)
         script = script.replace('{{SERVER_TYPE}}', server_type or '')
+        script = script.replace('{{CONFIG_GENERATION_CODE}}', config_generation_code)
+        
+        # Insert config generation code before file creation section (for database servers)
+        if config_generation_code:
+            # Find the file creation section and insert config generation before it
+            import re
+            pattern = r'(# Create server files FIRST)'
+            script = re.sub(pattern, config_generation_code + r'\1', script, count=1)
         
         # Insert admin user creation before starting the service (if needed)
         if admin_creation_cmd:
@@ -1573,7 +1698,7 @@ echo ""
         except Exception as e:
             self.log(f"Error setting up Route 53: {str(e)}", "WARNING")
 
-    def deploy_to_remote(self, host, username, password=None, key_path=None, server_files=None):
+    def deploy_to_remote(self, host, username, password=None, key_path=None, server_files=None, server_type=None, connections=None, selected_tools=None):
         """
         Deploy to a remote machine via SSH
         """
@@ -1591,7 +1716,12 @@ echo ""
             self.log("SSH Connection established.")
             
             # Generate setup script
-            setup_script = self.generate_setup_script(server_files)
+            setup_script = self.generate_setup_script(
+                server_files,
+                server_type=server_type,
+                connections=connections,
+                selected_tools=selected_tools
+            )
             
             # Upload setup script
             sftp = ssh.open_sftp()
@@ -1628,7 +1758,8 @@ echo ""
             ssh.close()
 
     def deploy_to_aws(self, aws_access_key, aws_secret_key, region, instance_type, server_files, 
-                     server_type=None, server_path=None, config_path=None, domain=None, server_name=None, yaml_file=None):
+                     server_type=None, server_path=None, config_path=None, domain=None, server_name=None, yaml_file=None,
+                     connections=None, selected_tools=None):
         # Initialize admin credentials to None - will be set if database deployment
         admin_username = None
         admin_password = None
@@ -1749,7 +1880,9 @@ echo ""
                 aws_secret_key=aws_secret_key,
                 region=region,
                 admin_username=admin_username,
-                admin_password=admin_password
+                admin_password=admin_password,
+                connections=connections,
+                selected_tools=selected_tools
             )
             
             # Check user-data size (AWS limit is 16KB for base64-encoded user-data)
@@ -2633,7 +2766,7 @@ echo ""
             self.log(f"Error with security group: {str(e)}", "ERROR")
             return None
 
-    def deploy_to_azure(self, subscription_id, client_id, client_secret, tenant_id, resource_group, location, server_files):
+    def deploy_to_azure(self, subscription_id, client_id, client_secret, tenant_id, resource_group, location, server_files, server_type=None, connections=None, selected_tools=None):
         """
         Deploy to Azure VM
         """
