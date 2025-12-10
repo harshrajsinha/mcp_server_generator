@@ -1042,7 +1042,7 @@
             const normalizedServerPath = serverPath.replace(/\//g, '\\');
 
             const modalHTML = `
-                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+                <div id="database-mcp-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem;">
                     <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
                         
                         <!-- Header -->
@@ -1060,17 +1060,45 @@
                         </div>
 
                         <div style="padding: 2rem;">
+                            <style>
+                                #database-mcp-modal details[open] summary .fa-chevron-down {
+                                    transform: rotate(180deg);
+                                }
+                                #database-mcp-modal details summary::-webkit-details-marker {
+                                    display: none;
+                                }
+                            </style>
+                            
+                            <!-- Selected Tools Accordion -->
                             ${result.selected_tools && result.selected_tools.length > 0 ? `
-                                <div style="background: rgba(0, 163, 224, 0.1); border-left: 4px solid var(--scikiq-light-blue); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                        <i class="fas fa-check-circle" style="color: var(--scikiq-green);"></i>
-                                        <strong style="color: var(--scikiq-light-blue);">Selected Tools: ${result.selected_tools.length}</strong>
-                                    </div>
-                                    <div style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                <details style="background: rgba(0, 163, 224, 0.1); border-left: 4px solid var(--scikiq-light-blue); border-radius: 8px; margin-bottom: 1rem;">
+                                    <summary style="cursor: pointer; padding: 1rem; font-weight: 600; color: var(--scikiq-light-blue); list-style: none; display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Selected Tools: ${result.selected_tools.length}</span>
+                                        <i class="fas fa-chevron-down" style="margin-left: auto; transition: transform 0.3s ease;"></i>
+                                    </summary>
+                                    <div style="padding: 0 1rem 1rem 1rem; color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
                                         ${result.selected_tools.map(tool => `<span style="background: rgba(255, 255, 255, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px;">${tool.replace('db_', '').replace(/_/g, ' ')}</span>`).join('')}
                                     </div>
-                                </div>
+                                </details>
                             ` : ''}
+
+                            <!-- Configuration Summary Accordion -->
+                            <details style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; margin-bottom: 2rem;">
+                                <summary style="cursor: pointer; padding: 1rem; font-weight: 600; color: var(--scikiq-green); list-style: none; display: flex; align-items: center; gap: 0.5rem;">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span>Generated Configuration</span>
+                                    <i class="fas fa-chevron-down" style="margin-left: auto; transition: transform 0.3s ease;"></i>
+                                </summary>
+                                <div style="padding: 0 1rem 1rem 1rem;">
+                                    <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1.5rem; max-height: 300px; overflow-y: auto;">
+                                        <pre style="margin: 0; color: rgba(255, 255, 255, 0.9); font-family: 'Fira Code', monospace; font-size: 0.9rem;" id="databaseConfigPreview">Loading configuration...</pre>
+                                    </div>
+                                    <div style="margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;">
+                                        <i class="fas fa-map-marker-alt"></i> Configuration saved to: ${configPath}
+                                    </div>
+                                </div>
+                            </details>
 
                             <!-- Deployment Method Selection -->
                             <div style="margin-bottom: 2rem;">
@@ -1217,86 +1245,6 @@
                                             <i class="fas fa-cloud-upload-alt"></i> Deploy to Remote Server
                                         </button>
                                     </div>
-                                </div>
-                            </div>
-
-                            <!-- Manual Setup Instructions -->
-                            <details style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 1rem; margin-bottom: 2rem;">
-                                <summary style="cursor: pointer; font-weight: 600; color: var(--anthropic-orange); margin-bottom: 1rem;">
-                                    <i class="fas fa-tools"></i> Manual Setup Instructions
-                                </summary>
-
-                            <!-- Step 2 -->
-                            <div style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--anthropic-orange); padding: 1.5rem; margin-bottom: 1rem; border-radius: 8px;">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="background: var(--anthropic-orange); width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">2</div>
-                                    <div style="flex: 1;">
-                                        <h4 style="margin: 0 0 0.5rem; color: var(--anthropic-orange);">Add to Claude Desktop Configuration</h4>
-                                        <p style="margin: 0 0 1rem; color: rgba(255, 255, 255, 0.8);">
-                                            Add this configuration to your Claude Desktop settings:
-                                        </p>
-                                        <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1rem; position: relative; font-family: 'Fira Code', monospace;">
-<code style="color: rgba(255, 255, 255, 0.9);">{
-  "mcpServers": {
-    "${serverName}": {
-      "command": "${pythonPath}",
-      "args": [
-        "${normalizedServerPath}\\run_mcp_server.py",
-        "--config-file",
-        "${normalizedConfigPath}"
-      ]
-    }
-  }
-}</code>
-                                            <button onclick="copyDatabaseConfig('${configPath}', '${serverPath}', '${serverName}', '${pythonPath}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(255, 255, 255, 0.1); border: none; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                                                <i class="fas fa-copy"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Step 3 -->
-                            <div style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--anthropic-purple); padding: 1.5rem; margin-bottom: 1rem; border-radius: 8px;">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="background: var(--anthropic-purple); width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">3</div>
-                                    <div style="flex: 1;">
-                                        <h4 style="margin: 0 0 0.5rem; color: var(--anthropic-purple);">Restart Claude Desktop</h4>
-                                        <p style="margin: 0; color: rgba(255, 255, 255, 0.8);">
-                                            Restart Claude Desktop application to load the new MCP server.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Step 4 -->
-                            <div style="background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--success-green); padding: 1.5rem; margin-bottom: 2rem; border-radius: 8px;">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="background: var(--success-green); width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">4</div>
-                                    <div style="flex: 1;">
-                                        <h4 style="margin: 0 0 0.5rem; color: var(--success-green);">Test Database Connection</h4>
-                                        <p style="margin: 0; color: rgba(255, 255, 255, 0.8);">
-                                            Ask Claude to list your databases or run a simple query to test the connection.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                                </div>
-                            </details>
-
-                            <!-- Configuration Summary -->
-                            <div style="margin-top: 2rem; border-top: 2px solid rgba(255, 255, 255, 0.1); padding-top: 2rem;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                                    <h4 style="margin: 0; color: var(--scikiq-green);">
-                                        <i class="fas fa-file-alt"></i> Generated Configuration
-                                    </h4>
-                                </div>
-                                <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1.5rem; max-height: 300px; overflow-y: auto;">
-                                    <pre style="margin: 0; color: rgba(255, 255, 255, 0.9); font-family: 'Fira Code', monospace; font-size: 0.9rem;" id="databaseConfigPreview">Loading configuration...</pre>
-                                </div>
-                                <div style="margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;">
-                                    <i class="fas fa-map-marker-alt"></i> Configuration saved to: ${configPath}
                                 </div>
                             </div>
 
