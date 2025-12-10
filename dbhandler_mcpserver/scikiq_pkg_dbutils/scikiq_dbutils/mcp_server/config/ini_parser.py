@@ -36,9 +36,13 @@ class IniConfigParser:
             raise FileNotFoundError(f"INI file not found: {self.ini_file_path}")
         
         try:
+            # ConfigParser by default converts section names to lowercase
+            # We need to preserve case for section names, so use ConfigParser with case sensitivity
+            self.config = configparser.ConfigParser()
+            self.config.optionxform = str  # Preserve case for option names
             self.config.read(self.ini_file_path)
             self.logger.info(f"Loaded INI configuration from {self.ini_file_path}")
-            self.logger.info(f"Found {len(self.config.sections())} sections in INI file")
+            self.logger.info(f"Found {len(self.config.sections())} sections in INI file: {self.config.sections()}")
         except Exception as e:
             raise ValueError(f"Error reading INI file {self.ini_file_path}: {str(e)}")
     
@@ -294,15 +298,28 @@ class IniConfigParser:
         Returns:
             Server configuration dictionary or None
         """
-        if 'SERVER' in self.config:
-            server_config = dict(self.config['SERVER'])
-            # Parse enabled_tools if present
+        # ConfigParser converts section names to lowercase, so check lowercase
+        # But we set optionxform=str so option names preserve case
+        if 'server' in self.config:
+            server_config = dict(self.config['server'])
+            self.logger.info(f"Found SERVER section with keys: {list(server_config.keys())}")
+            # Parse enabled_tools if present (option names preserve case due to optionxform=str)
+            enabled_tools_str = None
             if 'ENABLED_TOOLS' in server_config:
                 enabled_tools_str = server_config['ENABLED_TOOLS']
+            elif 'enabled_tools' in server_config:
+                enabled_tools_str = server_config['enabled_tools']
+            
+            if enabled_tools_str:
                 # Split comma-separated list and strip whitespace
                 enabled_tools = [tool.strip() for tool in enabled_tools_str.split(',') if tool.strip()]
                 server_config['enabled_tools'] = enabled_tools
+                self.logger.info(f"Parsed {len(enabled_tools)} enabled tools from config: {enabled_tools}")
+            else:
+                self.logger.warning("ENABLED_TOOLS not found in SERVER section")
             return server_config
+        else:
+            self.logger.warning("SERVER section not found in config file")
         return None
     
     def get_enabled_tools(self) -> Optional[List[str]]:

@@ -54,16 +54,22 @@ class FastMCPServer:
         
         # Initialize our existing components
         try:
+            enabled_tools = None
             if os.path.exists(config_path):
                 parser = IniConfigParser(config_path)
                 connection_configs = parser.parse_all_connections()
+                # Get enabled tools from config if available
+                if hasattr(parser, 'get_enabled_tools'):
+                    enabled_tools = parser.get_enabled_tools()
+                    if enabled_tools:
+                        logger.info(f"Loaded enabled tools filter: {len(enabled_tools)} tools enabled")
             else:
                 logger.warning(f"Config file {config_path} not found, using empty configuration")
                 connection_configs = {}
                 
             self.connection_manager = ConnectionManager(connection_configs)
             self.db_wrapper = DatabaseWrapper(self.connection_manager)
-            self.tool_registry = ToolRegistry(self.db_wrapper)
+            self.tool_registry = ToolRegistry(self.db_wrapper, enabled_tools=enabled_tools)
             
         except Exception as e:
             logger.error(f"Failed to initialize MCP server: {e}")

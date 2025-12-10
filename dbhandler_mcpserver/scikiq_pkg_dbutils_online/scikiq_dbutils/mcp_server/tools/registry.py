@@ -32,20 +32,32 @@ class ToolRegistry:
     
     def _initialize_tools(self):
         """Initialize database tools, filtering by enabled_tools if provided"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         # Get all tool definitions
         tool_definitions = DatabaseToolDefinitions.get_all_tools()
+        logger.info(f"Total tool definitions available: {len(tool_definitions)}")
         
         # Filter tools if enabled_tools is specified
         if self.enabled_tools is not None and len(self.enabled_tools) > 0:
+            logger.info(f"Filtering tools: {len(self.enabled_tools)} tools enabled: {self.enabled_tools}")
             # Only register enabled tools
+            registered_count = 0
             for tool_name in self.enabled_tools:
                 if tool_name in tool_definitions:
                     tool_schema = tool_definitions[tool_name]
                     self.register_tool(tool_name, tool_schema, self._get_handler_for_tool(tool_name))
+                    registered_count += 1
+                else:
+                    logger.warning(f"Tool '{tool_name}' from enabled_tools list not found in tool definitions")
+            logger.info(f"Registered {registered_count} tools from enabled_tools list")
         else:
+            logger.info("No enabled_tools filter specified, registering all tools")
             # Register all tools if no filter specified
             for tool_name, tool_schema in tool_definitions.items():
                 self.register_tool(tool_name, tool_schema, self._get_handler_for_tool(tool_name))
+            logger.info(f"Registered all {len(tool_definitions)} tools")
     
     def _get_handler_for_tool(self, tool_name: str) -> Callable:
         """Map tool names to their corresponding handler methods"""
