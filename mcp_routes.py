@@ -3417,7 +3417,7 @@ from pathlib import Path
 INSTALLATION_PATH = r"{installation_path}"
 SERVER_NAME = "{server_name}"
 SERVER_TYPE = "{server_type}"
-HOSTED_SERVICE_URL = "http://localhost:9555"  # Replace with actual hosted URL
+HOSTED_SERVICE_URL = "http://localhost:30211"  # Replace with actual hosted URL
 PYTHON_REQUIREMENTS = [
     "mcp>=1.0.0",
     "httpx>=0.24.0",

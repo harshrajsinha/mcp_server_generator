@@ -6,7 +6,7 @@ import shutil
 
 def test_github_scan():
     # URL of the running application
-    api_url = "http://localhost:9555/api/scan-project"
+    api_url = "http://localhost:30211/api/scan-project"
     
     payload = {
         "project_path": "",

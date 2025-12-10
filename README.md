@@ -69,7 +69,7 @@ CLAUDE_DESKTOP_PATH=C:\Users\YourUser\AppData\Local\Programs\Claude
 
 2. **Open browser**
    ```
-   http://localhost:9555
+   http://localhost:30211
    ```
 
 3. **Scan your project**
