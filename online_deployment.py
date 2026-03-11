@@ -1268,7 +1268,7 @@ echo "=========================================="
         
         # Generate admin user credentials if needed (for online deployments with admin interface)
         if (server_type == 'database' and 'remote_mcp_server_admin.py' in server_files) or \
-           (server_type in ['api', 'codebase', 'swagger'] and 'mcp_server_loader.py' in server_files):
+           (server_type in ['api', 'codebase', 'swagger', 'github'] and 'mcp_server_loader.py' in server_files):
             import secrets
             import string
             if not admin_username:
