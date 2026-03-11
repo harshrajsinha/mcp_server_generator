@@ -13,6 +13,7 @@ import yaml
 import platform
 import subprocess
 import time
+import sqlite3
 from datetime import datetime
 
 # Load environment variables from .env file (override=True ensures .env takes precedence over system env vars)
@@ -1474,6 +1475,31 @@ Respond in JSON:
     def serve_generated_file(filename):
         """Serve generated MCP server files"""
         return send_from_directory('generated_servers', filename, mimetype='text/plain; charset=utf-8')
+    
+    @app.route('/mcp_server_loader.py')
+    def serve_mcp_server_loader():
+        """Serve mcp_server_loader.py from generated_servers directory"""
+        try:
+            loader_path = os.path.join('generated_servers', 'mcp_server_loader.py')
+            if os.path.exists(loader_path):
+                return send_file(
+                    loader_path,
+                    mimetype='text/x-python; charset=utf-8',
+                    as_attachment=False
+                )
+            else:
+                # Try to find it in any subdirectory
+                generated_dir = Path('generated_servers')
+                if generated_dir.exists():
+                    for loader_file in generated_dir.rglob('mcp_server_loader.py'):
+                        return send_file(
+                            str(loader_file),
+                            mimetype='text/x-python; charset=utf-8',
+                            as_attachment=False
+                        )
+                return jsonify({'error': 'mcp_server_loader.py not found'}), 404
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
     @app.route('/glic/mcp-deployment')
     def mcp_deployment_page():
@@ -1588,6 +1614,105 @@ Respond in JSON:
                 'message': f'Successfully parsed {len(endpoints)} endpoints from Swagger spec'
             })
 
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    @app.route('/api/rescan-apis', methods=['POST'])
+    def rescan_apis():
+        """Rescan APIs from saved source information (Swagger URL or project path)"""
+        try:
+            data = request.get_json()
+            source_info = data.get('source_info', {})
+            
+            if not source_info:
+                return jsonify({
+                    'success': False,
+                    'error': 'Source information is required'
+                }), 400
+            
+            # Check if it's Swagger or codebase
+            if 'swagger_url' in source_info:
+                # Rescan from Swagger
+                from swagger_parser import SwaggerParser
+                swagger_url = source_info['swagger_url']
+                api_base_url = source_info.get('api_base_url', '')
+                
+                if not api_base_url:
+                    from urllib.parse import urlparse
+                    parsed = urlparse(swagger_url)
+                    api_base_url = f"{parsed.scheme}://{parsed.netloc}"
+                
+                parser = SwaggerParser(swagger_url, api_base_url)
+                parser.fetch_swagger_spec()
+                endpoints = parser.extract_endpoints()
+                
+                # Normalize Swagger endpoints to match expected format
+                normalized_endpoints = []
+                for endpoint in endpoints:
+                    # SwaggerParser returns 'route' and 'methods' array, normalize to 'path' and 'method'
+                    route = endpoint.get('route', endpoint.get('path', ''))
+                    methods = endpoint.get('methods', [])
+                    method = methods[0] if methods else endpoint.get('method', 'GET')
+                    
+                    normalized_endpoint = {
+                        'path': route,
+                        'method': method.upper(),
+                        'summary': endpoint.get('summary', endpoint.get('docstring', '')),
+                        'description': endpoint.get('description', endpoint.get('docstring', '')),
+                        'parameters': endpoint.get('parameters', []),
+                        'id': f"{method.upper()}_{route}".replace('/', '_').replace('{', '').replace('}', '')
+                    }
+                    normalized_endpoints.append(normalized_endpoint)
+                
+                return jsonify({
+                    'success': True,
+                    'api_definitions': normalized_endpoints,
+                    'total_apis': len(normalized_endpoints),
+                    'api_base_url': api_base_url,
+                    'source_type': 'swagger'
+                })
+            elif 'project_path' in source_info:
+                # Rescan from codebase
+                from intelligent_mcp_converter import IntelligentMCPConverter
+                project_path = source_info['project_path']
+                source_file = source_info.get('source_file', '')
+                api_base_url = source_info.get('api_base_url', 'http://localhost:5000')
+                
+                converter = IntelligentMCPConverter(project_path, api_base_url)
+                endpoints = converter.analyze_codebase(source_file)
+                
+                # Convert endpoints to API definitions format
+                api_definitions = []
+                for endpoint in endpoints:
+                    api_def = {
+                        'path': endpoint.path,
+                        'method': endpoint.method,
+                        'summary': getattr(endpoint, 'summary', ''),
+                        'description': getattr(endpoint, 'description', ''),
+                        'parameters': getattr(endpoint, 'parameters', []),
+                        'domain': getattr(endpoint, 'domain', 'default'),
+                        'id': f"{endpoint.method}_{endpoint.path}".replace('/', '_').replace('{', '').replace('}', '')
+                    }
+                    api_definitions.append(api_def)
+                
+                return jsonify({
+                    'success': True,
+                    'api_definitions': api_definitions,
+                    'total_apis': len(api_definitions),
+                    'api_base_url': api_base_url,
+                    'source_type': 'codebase'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid source information. Must contain swagger_url or project_path'
+                }), 400
+                
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -2143,6 +2268,1519 @@ Respond in JSON:
                 'error': str(e)
             }), 500
 
+    # ==================== SAVED CONFIGURATIONS API (SQLite3) ====================
+    
+    def get_db_path():
+        """Get the path to the SQLite database file"""
+        import os
+        # Use absolute path to ensure database is created in the correct location
+        db_dir = os.path.dirname(os.path.abspath(__file__))
+        db_path = os.path.join(db_dir, 'saved_mcp_configs.db')
+        return db_path
+    
+    def init_db():
+        """Initialize the SQLite database and create tables if they don't exist"""
+        db_path = get_db_path()
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Create table for saved configurations
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS saved_configs (
+                id TEXT PRIMARY KEY,
+                type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                config_data TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        ''')
+        
+        # Create table for deployment history
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS deployments (
+                id TEXT PRIMARY KEY,
+                config_id TEXT NOT NULL,
+                platform TEXT NOT NULL,
+                deployment_data TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'unknown',
+                deployed_at TEXT NOT NULL,
+                FOREIGN KEY (config_id) REFERENCES saved_configs(id) ON DELETE CASCADE
+            )
+        ''')
+        
+        # Add status column if it doesn't exist (for existing databases)
+        try:
+            cursor.execute('ALTER TABLE deployments ADD COLUMN status TEXT DEFAULT "unknown"')
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        
+        # Create indexes for faster queries
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_config_type ON saved_configs(type)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_deployment_config_id ON deployments(config_id)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_deployment_platform ON deployments(platform)
+        ''')
+        
+        conn.commit()
+        conn.close()
+    
+    def get_db_connection():
+        """Get a database connection"""
+        init_db()  # Ensure database is initialized
+        return sqlite3.connect(get_db_path())
+    
+    # Initialize database when routes are set up
+    try:
+        init_db()
+        print("[INFO] Database initialized successfully")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize database: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    @app.route('/api/saved-configs', methods=['GET'])
+    def get_saved_configs():
+        """Get all saved MCP server configurations"""
+        try:
+            print(f"[DEBUG] get_saved_configs called, db path: {get_db_path()}")
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT id, type, name, config_data, created_at, updated_at
+                FROM saved_configs
+                ORDER BY updated_at DESC
+            ''')
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            configs = []
+            for row in rows:
+                config_id, config_type, name, config_data_json, created_at, updated_at = row
+                try:
+                    config_data = json.loads(config_data_json) if config_data_json else {}
+                except (json.JSONDecodeError, TypeError) as e:
+                    print(f"[WARNING] Failed to parse config_data for config {config_id}: {e}")
+                    config_data = {}
+                
+                configs.append({
+                    'id': config_id,
+                    'type': config_type,
+                    'name': name,
+                    'config': config_data,
+                    'created_at': created_at,
+                    'updated_at': updated_at
+                })
+            
+            print(f"[DEBUG] Returning {len(configs)} configurations")
+            return jsonify({
+                'success': True,
+                'configs': configs
+            })
+        except Exception as e:
+            import traceback
+            print(f"[ERROR] Exception in get_saved_configs: {e}")
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/saved-configs', methods=['POST'])
+    def save_mcp_config():
+        """Save an MCP server configuration"""
+        try:
+            data = request.get_json()
+            config_type = data.get('type')  # 'swagger', 'codebase', or 'database'
+            config_name = data.get('name', 'Untitled Configuration')
+            config_data = data.get('config', {})
+            
+            if not config_type:
+                return jsonify({
+                    'success': False,
+                    'error': 'Configuration type is required'
+                }), 400
+            
+            # Generate unique ID
+            config_id = str(int(time.time() * 1000))
+            created_at = datetime.now().isoformat()
+            updated_at = created_at
+            
+            # Convert config_data to JSON string
+            config_data_json = json.dumps(config_data, ensure_ascii=False)
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT INTO saved_configs (id, type, name, config_data, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (config_id, config_type, config_name, config_data_json, created_at, updated_at))
+            
+            conn.commit()
+            conn.close()
+            
+            new_config = {
+                'id': config_id,
+                'type': config_type,
+                'name': config_name,
+                'config': config_data,
+                'created_at': created_at,
+                'updated_at': updated_at
+            }
+            
+            return jsonify({
+                'success': True,
+                'config': new_config,
+                'message': 'Configuration saved successfully'
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/saved-configs/<config_id>', methods=['PUT'])
+    def update_saved_config(config_id):
+        """Update a saved MCP server configuration"""
+        try:
+            data = request.get_json()
+            config_name = data.get('name')
+            config_data = data.get('config')
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Check if config exists
+            cursor.execute('SELECT id FROM saved_configs WHERE id = ?', (config_id,))
+            if not cursor.fetchone():
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Configuration not found'
+                }), 404
+            
+            # Build update query dynamically
+            updates = []
+            params = []
+            
+            if config_name:
+                updates.append('name = ?')
+                params.append(config_name)
+            
+            if config_data:
+                updates.append('config_data = ?')
+                params.append(json.dumps(config_data, ensure_ascii=False))
+            
+            if not updates:
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'No fields to update'
+                }), 400
+            
+            updates.append('updated_at = ?')
+            params.append(datetime.now().isoformat())
+            params.append(config_id)  # For WHERE clause
+            
+            query = f'UPDATE saved_configs SET {", ".join(updates)} WHERE id = ?'
+            cursor.execute(query, params)
+            conn.commit()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Configuration updated successfully'
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/saved-configs/<config_id>/yaml', methods=['GET'])
+    def get_config_yaml(config_id):
+        """Get YAML file content for a saved configuration"""
+        try:
+            print(f"[DEBUG] get_config_yaml called for config_id: {config_id}")
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Get config
+            cursor.execute('SELECT config_data, type FROM saved_configs WHERE id = ?', (config_id,))
+            row = cursor.fetchone()
+            conn.close()
+            
+            if not row:
+                print(f"[DEBUG] Configuration {config_id} not found in database")
+                return jsonify({
+                    'success': False,
+                    'error': 'Configuration not found'
+                }), 404
+            
+            config_data_json, config_type = row
+            print(f"[DEBUG] Config type: {config_type}, Config data: {config_data_json[:200] if config_data_json else 'None'}...")
+            
+            try:
+                config_data = json.loads(config_data_json) if config_data_json else {}
+            except json.JSONDecodeError as e:
+                print(f"[DEBUG] Failed to parse config_data JSON: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid configuration data format: {str(e)}'
+                }), 500
+            
+            print(f"[DEBUG] Parsed config_data keys: {list(config_data.keys())}")
+            
+            # Get YAML file path
+            yaml_file = config_data.get('yaml_file')
+            server_path = config_data.get('server_path', '')
+            
+            # If no YAML file, try to construct YAML data from config_data
+            if not yaml_file:
+                print(f"[DEBUG] No yaml_file found in config_data. Available keys: {list(config_data.keys())}")
+                
+                # For database configurations or configurations without YAML files,
+                # try to construct a basic YAML structure from config_data
+                if config_type == 'database':
+                    return jsonify({
+                        'success': False,
+                        'error': 'Database configurations cannot be edited through YAML. Please use the database configuration editor.'
+                    }), 400
+                
+                # For swagger/codebase configs without YAML, create empty structure
+                yaml_data = {
+                    'base_url': config_data.get('base_url', 'http://localhost:9321'),
+                    'tools': config_data.get('tools', []),
+                    'generated_at': config_data.get('generated_at', datetime.now().isoformat())
+                }
+                
+                return jsonify({
+                    'success': True,
+                    'yaml_content': yaml.dump(yaml_data, default_flow_style=False),
+                    'yaml_data': yaml_data,
+                    'yaml_path': None,
+                    'note': 'YAML file not found, using configuration data'
+                })
+            
+            print(f"[DEBUG] YAML file from config: {yaml_file}")
+            print(f"[DEBUG] Server path from config: {server_path}")
+            
+            # Construct full path if yaml_file is just a filename
+            if not os.path.isabs(yaml_file):
+                # yaml_file is just a filename, need to combine with server_path
+                if server_path:
+                    yaml_file = os.path.join(server_path, yaml_file)
+                    print(f"[DEBUG] Constructed full YAML path: {yaml_file}")
+                else:
+                    # Try to find in generated_servers directory
+                    generated_servers_dir = os.path.join(os.getcwd(), 'generated_servers')
+                    if os.path.exists(generated_servers_dir):
+                        yaml_file = os.path.join(generated_servers_dir, yaml_file)
+                        print(f"[DEBUG] Using generated_servers directory: {yaml_file}")
+                    else:
+                        print(f"[DEBUG] WARNING: Cannot construct full path, server_path is missing")
+            
+            # Normalize path (handle Windows backslashes)
+            yaml_file = os.path.normpath(yaml_file)
+            print(f"[DEBUG] Final normalized YAML file path: {yaml_file}")
+            
+            # Check if file exists
+            if not os.path.exists(yaml_file):
+                print(f"[DEBUG] YAML file does not exist at: {yaml_file}")
+                # Try alternative locations
+                alt_paths = [
+                    os.path.join(os.getcwd(), 'generated_servers', os.path.basename(yaml_file)),
+                    os.path.join(os.getcwd(), os.path.basename(yaml_file)),
+                ]
+                
+                found_path = None
+                for alt_path in alt_paths:
+                    if os.path.exists(alt_path):
+                        found_path = alt_path
+                        print(f"[DEBUG] Found YAML file at alternative path: {found_path}")
+                        break
+                
+                if found_path:
+                    yaml_file = found_path
+                else:
+                    print(f"[DEBUG] YAML file not found in any location, using config_data fallback")
+                    # Try to construct from config_data as fallback
+                    yaml_data = {
+                        'base_url': config_data.get('base_url', 'http://localhost:9321'),
+                        'tools': config_data.get('tools', []),
+                        'generated_at': config_data.get('generated_at', datetime.now().isoformat())
+                    }
+                    
+                    return jsonify({
+                        'success': True,
+                        'yaml_content': yaml.dump(yaml_data, default_flow_style=False),
+                        'yaml_data': yaml_data,
+                        'yaml_path': yaml_file,
+                        'note': 'YAML file not found at path, using configuration data'
+                    })
+            
+            # Read YAML content
+            try:
+                with open(yaml_file, 'r', encoding='utf-8') as f:
+                    yaml_content = f.read()
+            except Exception as e:
+                print(f"[DEBUG] Failed to read YAML file: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to read YAML file: {str(e)}'
+                }), 500
+            
+            # Parse YAML to get structure
+            try:
+                yaml_data = yaml.safe_load(yaml_content)
+                if not yaml_data:
+                    yaml_data = {}
+                
+                print(f"[DEBUG] Parsed YAML data keys: {list(yaml_data.keys())}")
+                print(f"[DEBUG] YAML data type: {type(yaml_data)}")
+                
+                # Ensure tools is a list
+                if 'tools' in yaml_data:
+                    tools = yaml_data['tools']
+                    print(f"[DEBUG] Tools found in YAML: {len(tools) if isinstance(tools, list) else 'not a list'}")
+                    print(f"[DEBUG] Tools type: {type(tools)}")
+                    if isinstance(tools, list):
+                        print(f"[DEBUG] Number of tools: {len(tools)}")
+                        if tools:
+                            print(f"[DEBUG] First tool keys: {list(tools[0].keys()) if isinstance(tools[0], dict) else 'not a dict'}")
+                            print(f"[DEBUG] First tool sample: {str(tools[0])[:200] if tools else 'empty list'}")
+                        # Ensure tools list is valid
+                        if len(tools) == 0:
+                            print(f"[DEBUG] Tools list is empty")
+                    else:
+                        print(f"[DEBUG] Tools is not a list, type is: {type(tools)}, value: {tools}")
+                        # Try to convert to list if it's a dict or other structure
+                        if isinstance(tools, dict):
+                            print(f"[DEBUG] Tools is a dict, converting values to list")
+                            yaml_data['tools'] = list(tools.values()) if tools else []
+                        elif tools is None:
+                            print(f"[DEBUG] Tools is None, setting to empty list")
+                            yaml_data['tools'] = []
+                        else:
+                            print(f"[DEBUG] Tools is unexpected type, setting to empty list")
+                            yaml_data['tools'] = []
+                else:
+                    print(f"[DEBUG] No 'tools' key found in YAML data. Available keys: {list(yaml_data.keys())}")
+                    # Check if tools might be under a different key
+                    if 'tool' in yaml_data:
+                        print(f"[DEBUG] Found 'tool' key (singular), converting to 'tools' list")
+                        yaml_data['tools'] = [yaml_data['tool']] if yaml_data['tool'] else []
+                    else:
+                        print(f"[DEBUG] Creating empty tools list")
+                        yaml_data['tools'] = []
+                
+                # Final validation - ensure tools is always a list
+                if not isinstance(yaml_data.get('tools'), list):
+                    print(f"[DEBUG] WARNING: tools is not a list after processing, fixing...")
+                    yaml_data['tools'] = []
+                    
+            except Exception as e:
+                print(f"[DEBUG] Failed to parse YAML: {e}")
+                import traceback
+                traceback.print_exc()
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to parse YAML file: {str(e)}'
+                }), 500
+            
+            print(f"[DEBUG] Final YAML data tools count: {len(yaml_data.get('tools', []))}")
+            
+            return jsonify({
+                'success': True,
+                'yaml_content': yaml_content,
+                'yaml_data': yaml_data,
+                'yaml_path': yaml_file
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/saved-configs/<config_id>/yaml', methods=['PUT'])
+    def update_config_yaml(config_id):
+        """Update YAML file and save as new version"""
+        try:
+            data = request.get_json()
+            yaml_data = data.get('yaml_data')
+            version_note = data.get('version_note', 'Updated configuration')
+            selected_api_ids = data.get('selected_api_ids', [])
+            
+            if not yaml_data:
+                return jsonify({
+                    'success': False,
+                    'error': 'YAML data is required'
+                }), 400
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Get original config
+            cursor.execute('SELECT config_data, type, name FROM saved_configs WHERE id = ?', (config_id,))
+            row = cursor.fetchone()
+            
+            if not row:
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Configuration not found'
+                }), 404
+            
+            config_data_json, config_type, config_name = row
+            config_data = json.loads(config_data_json) if config_data_json else {}
+            
+            # Get original YAML path
+            original_yaml_file = config_data.get('yaml_file')
+            if not original_yaml_file:
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Original YAML file path not found'
+                }), 400
+            
+            # Generate new YAML file path with version timestamp
+            original_path = Path(original_yaml_file)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            new_yaml_filename = f"{original_path.stem}_v{timestamp}{original_path.suffix}"
+            new_yaml_path = original_path.parent / new_yaml_filename
+            
+            # Write new YAML file
+            with open(new_yaml_path, 'w', encoding='utf-8') as f:
+                yaml.dump(yaml_data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+            
+            # Create new version of config
+            new_config_id = str(int(time.time() * 1000))
+            created_at = datetime.now().isoformat()
+            
+            # Update config_data with new YAML path and selected API IDs
+            config_data['yaml_file'] = str(new_yaml_path)
+            config_data['version_note'] = version_note
+            config_data['original_config_id'] = config_id
+            config_data['tool_count'] = len(yaml_data.get('tools', []))
+            if selected_api_ids:
+                config_data['selected_api_ids'] = selected_api_ids
+            
+            config_data_json = json.dumps(config_data, ensure_ascii=False)
+            
+            cursor.execute('''
+                INSERT INTO saved_configs (id, type, name, config_data, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (new_config_id, config_type, f"{config_name} (v{timestamp})", config_data_json, created_at, created_at))
+            
+            conn.commit()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'new_config_id': new_config_id,
+                'yaml_path': str(new_yaml_path),
+                'message': 'Configuration updated and saved as new version'
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/saved-configs/<config_id>/refresh-deployment', methods=['POST'])
+    def refresh_deployment_yaml(config_id):
+        """Refresh deployed instance with updated YAML"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        print(f"[REFRESH-DEPLOYMENT] ========== START ==========")
+        print(f"[REFRESH-DEPLOYMENT] Route called: POST /api/saved-configs/<config_id>/refresh-deployment")
+        print(f"[REFRESH-DEPLOYMENT] Config ID: {config_id}")
+        print(f"[REFRESH-DEPLOYMENT] Request method: {request.method}")
+        print(f"[REFRESH-DEPLOYMENT] Request URL: {request.url}")
+        print(f"[REFRESH-DEPLOYMENT] Request headers: {dict(request.headers)}")
+        
+        try:
+            data = request.get_json()
+            print(f"[REFRESH-DEPLOYMENT] Request JSON data: {data}")
+            
+            deployment_id = data.get('deployment_id') if data else None
+            print(f"[REFRESH-DEPLOYMENT] Extracted deployment_id: {deployment_id}")
+            
+            if not deployment_id:
+                print(f"[REFRESH-DEPLOYMENT] ERROR: Deployment ID is missing")
+                return jsonify({
+                    'success': False,
+                    'error': 'Deployment ID is required'
+                }), 400
+            
+            print(f"[REFRESH-DEPLOYMENT] Step 1: Connecting to database...")
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            print(f"[REFRESH-DEPLOYMENT] Database connection established")
+            
+            # First, check if this config is a versioned config and get original config_id
+            print(f"[REFRESH-DEPLOYMENT] Step 2: Checking if config {config_id} exists and is versioned...")
+            cursor.execute('SELECT config_data FROM saved_configs WHERE id = ?', (config_id,))
+            config_row = cursor.fetchone()
+            original_config_id = config_id
+            
+            if config_row:
+                print(f"[REFRESH-DEPLOYMENT] Config found in database")
+                config_data_json = config_row[0]
+                if config_data_json:
+                    try:
+                        config_data = json.loads(config_data_json)
+                        original_config_id = config_data.get('original_config_id', config_id)
+                        print(f"[REFRESH-DEPLOYMENT] Original config_id: {original_config_id}, Current config_id: {config_id}")
+                        if original_config_id != config_id:
+                            print(f"[REFRESH-DEPLOYMENT] This is a versioned config (v{config_id} of original {original_config_id})")
+                    except Exception as e:
+                        print(f"[REFRESH-DEPLOYMENT] WARNING: Failed to parse config_data JSON: {e}")
+            else:
+                print(f"[REFRESH-DEPLOYMENT] WARNING: Config {config_id} not found in saved_configs table")
+            
+            # Get deployment details - check both current config_id and original_config_id
+            # This handles cases where config was saved as a new version
+            print(f"[REFRESH-DEPLOYMENT] Step 3: Searching for deployment...")
+            print(f"[REFRESH-DEPLOYMENT] Query parameters: deployment_id={deployment_id}, config_id={config_id}, original_config_id={original_config_id}")
+            
+            cursor.execute('''
+                SELECT platform, deployment_data, status, config_id
+                FROM deployments
+                WHERE id = ? AND (config_id = ? OR config_id = ?)
+            ''', (deployment_id, config_id, original_config_id))
+            
+            deployment_row = cursor.fetchone()
+            
+            # Also check what deployments exist for debugging
+            cursor.execute('SELECT id, config_id, platform, status FROM deployments WHERE id = ?', (deployment_id,))
+            all_matching_deployments = cursor.fetchall()
+            print(f"[REFRESH-DEPLOYMENT] All deployments with id={deployment_id}: {all_matching_deployments}")
+            
+            if not deployment_row:
+                conn.close()
+                print(f"[REFRESH-DEPLOYMENT] ERROR: Deployment not found!")
+                print(f"[REFRESH-DEPLOYMENT] Searched for: deployment_id={deployment_id}, config_id={config_id}, original_config_id={original_config_id}")
+                print(f"[REFRESH-DEPLOYMENT] Found {len(all_matching_deployments)} deployment(s) with matching deployment_id but different config_id")
+                return jsonify({
+                    'success': False,
+                    'error': f'Deployment not found for deployment_id: {deployment_id}, config_id: {config_id}',
+                    'debug_info': {
+                        'deployment_id': deployment_id,
+                        'config_id': config_id,
+                        'original_config_id': original_config_id,
+                        'matching_deployments': [{'id': d[0], 'config_id': d[1], 'platform': d[2], 'status': d[3]} for d in all_matching_deployments]
+                    }
+                }), 404
+            
+            platform_name, deployment_data_json, status, deployment_config_id = deployment_row
+            print(f"[REFRESH-DEPLOYMENT] Deployment found successfully!")
+            print(f"[REFRESH-DEPLOYMENT] Platform: {platform_name}")
+            print(f"[REFRESH-DEPLOYMENT] Status: {status}")
+            print(f"[REFRESH-DEPLOYMENT] Deployment config_id: {deployment_config_id}")
+            print(f"[REFRESH-DEPLOYMENT] Deployment data (first 200 chars): {str(deployment_data_json)[:200] if deployment_data_json else 'None'}...")
+            
+            print(f"[REFRESH-DEPLOYMENT] Step 4: Parsing deployment data...")
+            try:
+                deployment_data = json.loads(deployment_data_json) if deployment_data_json else {}
+                print(f"[REFRESH-DEPLOYMENT] Deployment data parsed successfully")
+                print(f"[REFRESH-DEPLOYMENT] Deployment data keys: {list(deployment_data.keys())}")
+                print(f"[REFRESH-DEPLOYMENT] Public IP: {deployment_data.get('public_ip', 'Not found')}")
+                print(f"[REFRESH-DEPLOYMENT] Instance ID: {deployment_data.get('instance_id', 'Not found')}")
+                print(f"[REFRESH-DEPLOYMENT] Domain: {deployment_data.get('domain', 'Not found')}")
+            except Exception as e:
+                print(f"[REFRESH-DEPLOYMENT] ERROR: Failed to parse deployment_data JSON: {e}")
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to parse deployment data: {str(e)}'
+                }), 500
+            
+            # Get config to find latest YAML path
+            # Get the current config
+            print(f"[REFRESH-DEPLOYMENT] Step 5: Fetching config data for YAML path...")
+            cursor.execute('''
+                SELECT config_data, name FROM saved_configs 
+                WHERE id = ?
+            ''', (config_id,))
+            
+            config_row = cursor.fetchone()
+            
+            if not config_row:
+                conn.close()
+                print(f"[REFRESH-DEPLOYMENT] ERROR: Configuration {config_id} not found in saved_configs")
+                return jsonify({
+                    'success': False,
+                    'error': 'Configuration not found'
+                }), 404
+            
+            config_data_json, config_name = config_row
+            print(f"[REFRESH-DEPLOYMENT] Config found: {config_name}")
+            
+            try:
+                config_data = json.loads(config_data_json) if config_data_json else {}
+                print(f"[REFRESH-DEPLOYMENT] Config data parsed successfully")
+                print(f"[REFRESH-DEPLOYMENT] Config data keys: {list(config_data.keys())}")
+            except Exception as e:
+                print(f"[REFRESH-DEPLOYMENT] ERROR: Failed to parse config_data JSON: {e}")
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to parse configuration data: {str(e)}'
+                }), 500
+            
+            # Check if this is a versioned config and find the latest version
+            # original_config_id is stored in config_data JSON, not as a column
+            print(f"[REFRESH-DEPLOYMENT] Step 6: Checking for versioned config...")
+            original_config_id_from_data = config_data.get('original_config_id')
+            print(f"[REFRESH-DEPLOYMENT] original_config_id from config_data: {original_config_id_from_data}")
+            
+            if original_config_id_from_data:
+                print(f"[REFRESH-DEPLOYMENT] This is a versioned config, searching for latest version...")
+                # This is a versioned config, find the latest version
+                # Search for configs with this original_config_id in their JSON data
+                cursor.execute('''
+                    SELECT config_data, name, created_at FROM saved_configs 
+                    WHERE id = ? OR config_data LIKE ?
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                ''', (original_config_id_from_data, f'%"original_config_id":"{original_config_id_from_data}"%'))
+                
+                latest_row = cursor.fetchone()
+                if latest_row:
+                    config_data_json, config_name, created_at = latest_row
+                    print(f"[REFRESH-DEPLOYMENT] Latest version found: {config_name}, created_at: {created_at}")
+                    try:
+                        config_data = json.loads(config_data_json) if config_data_json else {}
+                        print(f"[REFRESH-DEPLOYMENT] Latest version config_data parsed successfully")
+                    except Exception as e:
+                        print(f"[REFRESH-DEPLOYMENT] ERROR: Failed to parse latest version config_data: {e}")
+                else:
+                    print(f"[REFRESH-DEPLOYMENT] No newer version found, using current config")
+            else:
+                print(f"[REFRESH-DEPLOYMENT] Not a versioned config, using current config")
+            
+            conn.close()
+            print(f"[REFRESH-DEPLOYMENT] Database connection closed")
+            
+            print(f"[REFRESH-DEPLOYMENT] Step 7: Extracting YAML file path...")
+            yaml_file = config_data.get('yaml_file')
+            print(f"[REFRESH-DEPLOYMENT] YAML file from config_data: {yaml_file}")
+            
+            # If YAML file doesn't exist, try to find it in generated_servers directory
+            if yaml_file:
+                print(f"[REFRESH-DEPLOYMENT] Checking if YAML file exists: {yaml_file}")
+                if os.path.exists(yaml_file):
+                    print(f"[REFRESH-DEPLOYMENT] YAML file found at: {yaml_file}")
+                else:
+                    print(f"[REFRESH-DEPLOYMENT] YAML file not found at original path, searching alternatives...")
+                    # Try to find in generated_servers directory
+                    yaml_filename = os.path.basename(yaml_file)
+                    potential_paths = [
+                        os.path.join('generated_servers', yaml_filename),
+                        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'generated_servers', yaml_filename)
+                    ]
+                    print(f"[REFRESH-DEPLOYMENT] Searching in potential paths: {potential_paths}")
+                    for path in potential_paths:
+                        print(f"[REFRESH-DEPLOYMENT] Checking: {path}")
+                        if os.path.exists(path):
+                            yaml_file = path
+                            print(f"[REFRESH-DEPLOYMENT] YAML file found at: {yaml_file}")
+                            break
+                    else:
+                        print(f"[REFRESH-DEPLOYMENT] YAML file not found in any potential paths")
+            
+            if not yaml_file or not os.path.exists(yaml_file):
+                print(f"[REFRESH-DEPLOYMENT] ERROR: YAML file not found!")
+                print(f"[REFRESH-DEPLOYMENT] Final yaml_file value: {yaml_file}")
+                print(f"[REFRESH-DEPLOYMENT] File exists check: {os.path.exists(yaml_file) if yaml_file else 'N/A'}")
+                return jsonify({
+                    'success': False,
+                    'error': f'YAML file not found: {yaml_file}',
+                    'debug_info': {
+                        'yaml_file_from_config': config_data.get('yaml_file'),
+                        'yaml_file_final': yaml_file,
+                        'file_exists': os.path.exists(yaml_file) if yaml_file else False,
+                        'current_directory': os.getcwd()
+                    }
+                }), 404
+            
+            # Get deployment details
+            print(f"[REFRESH-DEPLOYMENT] Step 8: Extracting deployment details...")
+            public_ip = deployment_data.get('public_ip')
+            instance_id = deployment_data.get('instance_id')
+            domain = deployment_data.get('domain')
+            
+            print(f"[REFRESH-DEPLOYMENT] Public IP: {public_ip}")
+            print(f"[REFRESH-DEPLOYMENT] Instance ID: {instance_id}")
+            print(f"[REFRESH-DEPLOYMENT] Domain: {domain}")
+            
+            if not public_ip:
+                print(f"[REFRESH-DEPLOYMENT] ERROR: Public IP not found in deployment data")
+                print(f"[REFRESH-DEPLOYMENT] Available deployment_data keys: {list(deployment_data.keys())}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Deployment IP not found',
+                    'debug_info': {
+                        'deployment_data_keys': list(deployment_data.keys()),
+                        'deployment_data': deployment_data
+                    }
+                }), 400
+            
+            print(f"[REFRESH-DEPLOYMENT] Step 9: Preparing YAML refresh...")
+            print(f"[REFRESH-DEPLOYMENT] Platform: {platform_name}")
+            print(f"[REFRESH-DEPLOYMENT] Target IP: {public_ip}")
+            print(f"[REFRESH-DEPLOYMENT] YAML file to deploy: {yaml_file}")
+            
+            # Implement actual YAML refresh on deployed instance
+            print(f"[REFRESH-DEPLOYMENT] Step 10: Connecting to instance via SSH...")
+            
+            # Get SSH credentials from deployment data and original config
+            ssh_username = None
+            ssh_password = None
+            ssh_key_path = None
+            
+            print(f"[REFRESH-DEPLOYMENT] Step 10a: Extracting SSH credentials...")
+            print(f"[REFRESH-DEPLOYMENT] Checking deployment_data for credentials...")
+            
+            # Check for admin credentials (AWS/Azure deployments)
+            admin_credentials = deployment_data.get('admin_credentials', {})
+            print(f"[REFRESH-DEPLOYMENT] admin_credentials: {admin_credentials}")
+            if admin_credentials:
+                ssh_username = admin_credentials.get('username') or admin_credentials.get('user')
+                ssh_password = admin_credentials.get('password')
+                print(f"[REFRESH-DEPLOYMENT] Using admin credentials: username={ssh_username}")
+            
+            # Check for SSH credentials (remote deployments)
+            if not ssh_username:
+                ssh_username = deployment_data.get('ssh_username') or deployment_data.get('username')
+                ssh_password = deployment_data.get('ssh_password') or deployment_data.get('password')
+                ssh_key_path = deployment_data.get('ssh_key_path') or deployment_data.get('key_path')
+                print(f"[REFRESH-DEPLOYMENT] Using SSH credentials from deployment_data: username={ssh_username}, has_password={bool(ssh_password)}, has_key={bool(ssh_key_path)}")
+            
+            # For AWS/Azure, check original config_data for SSH key or credentials
+            if platform_name.upper() in ['AWS', 'AZURE']:
+                print(f"[REFRESH-DEPLOYMENT] Checking original config_data for AWS/Azure credentials...")
+                print(f"[REFRESH-DEPLOYMENT] config_data keys: {list(config_data.keys())}")
+                
+                # Check for SSH key path in config_data
+                if not ssh_key_path:
+                    ssh_key_path = config_data.get('ssh_key_path') or config_data.get('key_path') or config_data.get('key_file')
+                    if ssh_key_path:
+                        print(f"[REFRESH-DEPLOYMENT] Found SSH key path in config_data: {ssh_key_path}")
+                
+                # Check for AWS access keys (we might need to use AWS Systems Manager Session Manager)
+                aws_access_key = config_data.get('access_key') or config_data.get('aws_access_key')
+                aws_secret_key = config_data.get('secret_key') or config_data.get('aws_secret_key')
+                aws_region = config_data.get('region') or deployment_data.get('region')
+                
+                if aws_access_key and aws_secret_key and aws_region:
+                    print(f"[REFRESH-DEPLOYMENT] Found AWS credentials in config_data")
+                    print(f"[REFRESH-DEPLOYMENT] AWS Region: {aws_region}")
+                    # We can use AWS Systems Manager Session Manager as fallback if SSH key is not available
+                    # But for now, we'll try to find the key first
+                
+                # Check serverConfig for nested credentials
+                server_config = config_data.get('serverConfig', {})
+                if server_config and isinstance(server_config, dict):
+                    print(f"[REFRESH-DEPLOYMENT] Checking serverConfig for credentials...")
+                    if not ssh_key_path:
+                        ssh_key_path = server_config.get('ssh_key_path') or server_config.get('key_path')
+                    if not ssh_username:
+                        ssh_username = server_config.get('ssh_username') or server_config.get('username')
+                    if not ssh_password:
+                        ssh_password = server_config.get('ssh_password') or server_config.get('password')
+            
+            # Default username for AWS EC2 (Ubuntu AMI)
+            if not ssh_username and platform_name.upper() == 'AWS':
+                ssh_username = 'ubuntu'
+                print(f"[REFRESH-DEPLOYMENT] Using default AWS username: ubuntu")
+            
+            # Default username for Azure VM (Ubuntu)
+            if not ssh_username and platform_name.upper() == 'AZURE':
+                ssh_username = 'azureuser'
+                print(f"[REFRESH-DEPLOYMENT] Using default Azure username: azureuser")
+            
+            if not ssh_username:
+                print(f"[REFRESH-DEPLOYMENT] ERROR: No SSH username found")
+                return jsonify({
+                    'success': False,
+                    'error': 'SSH username not found in deployment data or config',
+                    'debug_info': {
+                        'deployment_data_keys': list(deployment_data.keys()),
+                        'config_data_keys': list(config_data.keys()),
+                        'admin_credentials': admin_credentials,
+                        'platform': platform_name
+                    }
+                }), 400
+            
+            # For AWS, check deployment_data for key_name first, then try to get from EC2
+            if not ssh_password and not ssh_key_path and platform_name.upper() == 'AWS':
+                # First check if key_name is stored in deployment_data
+                key_name_from_deployment = deployment_data.get('key_name')
+                print(f"[REFRESH-DEPLOYMENT] Key name from deployment_data: {key_name_from_deployment}")
+                
+                if key_name_from_deployment:
+                    # Try common locations for PEM files using the stored key name
+                    common_key_paths = [
+                        os.path.expanduser(f'~/.ssh/{key_name_from_deployment}.pem'),
+                        os.path.expanduser(f'~/.ssh/{key_name_from_deployment}'),
+                        os.path.join(os.path.expanduser('~'), 'Downloads', f'{key_name_from_deployment}.pem'),
+                        os.path.join(os.path.expanduser('~'), 'Downloads', f'{key_name_from_deployment}'),
+                        f'{key_name_from_deployment}.pem',
+                        key_name_from_deployment
+                    ]
+                    
+                    print(f"[REFRESH-DEPLOYMENT] Searching for SSH key using stored key_name: {key_name_from_deployment}")
+                    print(f"[REFRESH-DEPLOYMENT] Searching paths: {common_key_paths}")
+                    
+                    for potential_path in common_key_paths:
+                        if os.path.exists(potential_path):
+                            ssh_key_path = potential_path
+                            print(f"[REFRESH-DEPLOYMENT] Found SSH key at: {ssh_key_path}")
+                            break
+                    
+                    if not ssh_key_path:
+                        print(f"[REFRESH-DEPLOYMENT] SSH key file not found in common locations for key_name: {key_name_from_deployment}")
+                
+                # If still not found, try to get key pair name from EC2 instance
+                if not ssh_key_path:
+                    aws_access_key = config_data.get('access_key') or config_data.get('aws_access_key')
+                    aws_secret_key = config_data.get('secret_key') or config_data.get('aws_secret_key')
+                    aws_region = config_data.get('region') or deployment_data.get('region')
+                    
+                    if aws_access_key and aws_secret_key and aws_region and instance_id:
+                        print(f"[REFRESH-DEPLOYMENT] No SSH key found, attempting to retrieve key_name from EC2 instance...")
+                        try:
+                            import boto3
+                            from botocore.exceptions import ClientError
+                            
+                            ec2_client = boto3.client(
+                                'ec2',
+                                aws_access_key_id=aws_access_key,
+                                aws_secret_access_key=aws_secret_key,
+                                region_name=aws_region
+                            )
+                            
+                            # Get instance details to find key pair name
+                            response = ec2_client.describe_instances(InstanceIds=[instance_id])
+                            if response['Reservations']:
+                                instance = response['Reservations'][0]['Instances'][0]
+                                key_name = instance.get('KeyName')
+                                print(f"[REFRESH-DEPLOYMENT] EC2 instance key pair name: {key_name}")
+                                
+                                if key_name:
+                                    # Try common locations for PEM files
+                                    common_key_paths = [
+                                        os.path.expanduser(f'~/.ssh/{key_name}.pem'),
+                                        os.path.expanduser(f'~/.ssh/{key_name}'),
+                                        os.path.join(os.path.expanduser('~'), 'Downloads', f'{key_name}.pem'),
+                                        os.path.join(os.path.expanduser('~'), 'Downloads', f'{key_name}'),
+                                        f'{key_name}.pem',
+                                        key_name
+                                    ]
+                                    
+                                    for potential_path in common_key_paths:
+                                        if os.path.exists(potential_path):
+                                            ssh_key_path = potential_path
+                                            print(f"[REFRESH-DEPLOYMENT] Found SSH key at: {ssh_key_path}")
+                                            break
+                                    
+                                    if not ssh_key_path:
+                                        print(f"[REFRESH-DEPLOYMENT] SSH key file not found in common locations")
+                                        print(f"[REFRESH-DEPLOYMENT] Searched paths: {common_key_paths}")
+                        except Exception as e:
+                            print(f"[REFRESH-DEPLOYMENT] WARNING: Failed to retrieve EC2 key pair info: {e}")
+                
+                # If still no key found, provide helpful error
+                if not ssh_password and not ssh_key_path:
+                    print(f"[REFRESH-DEPLOYMENT] ERROR: No SSH key found after all attempts")
+                    return jsonify({
+                        'success': False,
+                        'error': 'SSH key not found. For AWS EC2, the SSH key (.pem file) is required to connect.',
+                        'suggestion': f'Please ensure the SSH key file is available. You can manually upload the YAML file using:\nscp "{yaml_file}" ubuntu@{public_ip}:/opt/mcp-server/\nssh ubuntu@{public_ip} "sudo systemctl restart mcp-server"',
+                        'debug_info': {
+                            'has_password': bool(ssh_password),
+                            'has_key': bool(ssh_key_path),
+                            'has_aws_credentials': bool(aws_access_key and aws_secret_key),
+                            'platform': platform_name,
+                            'instance_id': instance_id,
+                            'public_ip': public_ip,
+                            'key_name': key_name if 'key_name' in locals() else None
+                        }
+                    }), 400
+            
+            if not ssh_password and not ssh_key_path:
+                print(f"[REFRESH-DEPLOYMENT] ERROR: No SSH password or key found")
+                return jsonify({
+                    'success': False,
+                    'error': 'SSH password or key not found in deployment data or config',
+                    'debug_info': {
+                        'has_password': bool(ssh_password),
+                        'has_key': bool(ssh_key_path),
+                        'platform': platform_name,
+                        'deployment_data_keys': list(deployment_data.keys()),
+                        'config_data_keys': list(config_data.keys())
+                    }
+                }), 400
+            
+            # Read YAML file content
+            print(f"[REFRESH-DEPLOYMENT] Step 11: Reading YAML file content...")
+            try:
+                with open(yaml_file, 'r', encoding='utf-8') as f:
+                    yaml_content = f.read()
+                print(f"[REFRESH-DEPLOYMENT] YAML file read successfully ({len(yaml_content)} bytes)")
+            except Exception as e:
+                print(f"[REFRESH-DEPLOYMENT] ERROR: Failed to read YAML file: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to read YAML file: {str(e)}'
+                }), 500
+            
+            # Connect via SSH and upload YAML file
+            print(f"[REFRESH-DEPLOYMENT] Step 12: Establishing SSH connection...")
+            try:
+                import paramiko
+                
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                
+                # Connect to the instance
+                print(f"[REFRESH-DEPLOYMENT] Connecting to {public_ip} as {ssh_username}...")
+                if ssh_key_path and os.path.exists(ssh_key_path):
+                    print(f"[REFRESH-DEPLOYMENT] Using SSH key: {ssh_key_path}")
+                    ssh.connect(
+                        hostname=public_ip,
+                        username=ssh_username,
+                        key_filename=ssh_key_path,
+                        timeout=30
+                    )
+                elif ssh_password:
+                    print(f"[REFRESH-DEPLOYMENT] Using SSH password authentication")
+                    ssh.connect(
+                        hostname=public_ip,
+                        username=ssh_username,
+                        password=ssh_password,
+                        timeout=30
+                    )
+                else:
+                    raise Exception("No SSH credentials available")
+                
+                print(f"[REFRESH-DEPLOYMENT] SSH connection established successfully")
+                
+                # Upload YAML file via SFTP
+                print(f"[REFRESH-DEPLOYMENT] Step 13: Uploading YAML file via SFTP...")
+                yaml_filename = os.path.basename(yaml_file)
+                remote_yaml_path = f'/opt/mcp-server/{yaml_filename}'
+                
+                sftp = ssh.open_sftp()
+                try:
+                    # Create remote directory if it doesn't exist
+                    try:
+                        sftp.stat('/opt/mcp-server')
+                    except IOError:
+                        print(f"[REFRESH-DEPLOYMENT] Creating /opt/mcp-server directory...")
+                        stdin, stdout, stderr = ssh.exec_command('sudo mkdir -p /opt/mcp-server && sudo chown ubuntu:ubuntu /opt/mcp-server')
+                        stdout.channel.recv_exit_status()
+                    
+                    # Upload YAML file
+                    print(f"[REFRESH-DEPLOYMENT] Uploading {yaml_filename} to {remote_yaml_path}...")
+                    with sftp.file(remote_yaml_path, 'w') as remote_file:
+                        remote_file.write(yaml_content)
+                    
+                    # Set proper permissions
+                    sftp.chmod(remote_yaml_path, 0o644)
+                    print(f"[REFRESH-DEPLOYMENT] YAML file uploaded successfully")
+                    
+                finally:
+                    sftp.close()
+                
+                # Restart MCP server service
+                print(f"[REFRESH-DEPLOYMENT] Step 14: Restarting MCP server service...")
+                restart_commands = [
+                    'sudo systemctl restart mcp-server',
+                    'sleep 2',
+                    'sudo systemctl status mcp-server --no-pager -l'
+                ]
+                
+                for cmd in restart_commands:
+                    print(f"[REFRESH-DEPLOYMENT] Executing: {cmd}")
+                    stdin, stdout, stderr = ssh.exec_command(cmd)
+                    exit_status = stdout.channel.recv_exit_status()
+                    output = stdout.read().decode('utf-8', errors='ignore')
+                    error_output = stderr.read().decode('utf-8', errors='ignore')
+                    
+                    if exit_status != 0 and 'status' not in cmd:  # status command may have non-zero exit
+                        print(f"[REFRESH-DEPLOYMENT] WARNING: Command '{cmd}' exited with status {exit_status}")
+                        if error_output:
+                            print(f"[REFRESH-DEPLOYMENT] Error output: {error_output}")
+                    else:
+                        print(f"[REFRESH-DEPLOYMENT] Command output: {output[:500]}")  # First 500 chars
+                
+                # Verify service is running
+                print(f"[REFRESH-DEPLOYMENT] Step 15: Verifying service status...")
+                stdin, stdout, stderr = ssh.exec_command('sudo systemctl is-active mcp-server')
+                service_status = stdout.read().decode('utf-8').strip()
+                print(f"[REFRESH-DEPLOYMENT] Service status: {service_status}")
+                
+                if service_status == 'active':
+                    print(f"[REFRESH-DEPLOYMENT] ✓ MCP server service is running")
+                else:
+                    print(f"[REFRESH-DEPLOYMENT] WARNING: MCP server service status: {service_status}")
+                
+                ssh.close()
+                print(f"[REFRESH-DEPLOYMENT] SSH connection closed")
+                
+            except paramiko.AuthenticationException as e:
+                print(f"[REFRESH-DEPLOYMENT] ERROR: SSH authentication failed: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': f'SSH authentication failed: {str(e)}',
+                    'debug_info': {
+                        'host': public_ip,
+                        'username': ssh_username,
+                        'has_password': bool(ssh_password),
+                        'has_key': bool(ssh_key_path)
+                    }
+                }), 401
+            except paramiko.SSHException as e:
+                print(f"[REFRESH-DEPLOYMENT] ERROR: SSH connection error: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': f'SSH connection error: {str(e)}',
+                    'debug_info': {
+                        'host': public_ip,
+                        'username': ssh_username
+                    }
+                }), 500
+            except Exception as e:
+                print(f"[REFRESH-DEPLOYMENT] ERROR: Failed to refresh YAML: {e}")
+                import traceback
+                error_traceback = traceback.format_exc()
+                print(f"[REFRESH-DEPLOYMENT] Traceback: {error_traceback}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to refresh YAML: {str(e)}',
+                    'error_type': type(e).__name__
+                }), 500
+            
+            print(f"[REFRESH-DEPLOYMENT] ========== SUCCESS ==========")
+            print(f"[REFRESH-DEPLOYMENT] YAML refresh completed successfully")
+            print(f"[REFRESH-DEPLOYMENT] Deployment ID: {deployment_id}")
+            print(f"[REFRESH-DEPLOYMENT] Config ID: {config_id}")
+            print(f"[REFRESH-DEPLOYMENT] Platform: {platform_name}")
+            print(f"[REFRESH-DEPLOYMENT] YAML file: {yaml_filename}")
+            print(f"[REFRESH-DEPLOYMENT] Remote path: {remote_yaml_path}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'YAML refresh completed successfully for deployment {deployment_id}',
+                'details': {
+                    'yaml_file': yaml_filename,
+                    'remote_path': remote_yaml_path,
+                    'service_status': service_status,
+                    'platform': platform_name
+                },
+                'debug_info': {
+                    'deployment_id': deployment_id,
+                    'config_id': config_id,
+                    'platform': platform_name,
+                    'public_ip': public_ip,
+                    'instance_id': instance_id,
+                    'yaml_file_local': yaml_file,
+                    'yaml_file_remote': remote_yaml_path
+                }
+            })
+            
+        except Exception as e:
+            import traceback
+            error_traceback = traceback.format_exc()
+            print(f"[REFRESH-DEPLOYMENT] ========== ERROR ==========")
+            print(f"[REFRESH-DEPLOYMENT] Exception occurred: {type(e).__name__}: {str(e)}")
+            print(f"[REFRESH-DEPLOYMENT] Traceback:")
+            print(error_traceback)
+            print(f"[REFRESH-DEPLOYMENT] ===========================")
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'error_type': type(e).__name__,
+                'traceback': error_traceback
+            }), 500
+    
+    @app.route('/api/saved-configs/<config_id>', methods=['DELETE'])
+    def delete_saved_config(config_id):
+        """Delete a saved MCP server configuration"""
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Check if config exists
+            cursor.execute('SELECT id FROM saved_configs WHERE id = ?', (config_id,))
+            if not cursor.fetchone():
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Configuration not found'
+                }), 404
+            
+            # Delete config
+            cursor.execute('DELETE FROM saved_configs WHERE id = ?', (config_id,))
+            conn.commit()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Configuration deleted successfully'
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/saved-configs/<config_id>/deployments', methods=['POST'])
+    def save_deployment(config_id):
+        """Save deployment details for a configuration"""
+        try:
+            data = request.get_json()
+            deployment_data = data.get('deployment_data', {})
+            platform = data.get('platform', 'unknown')
+            status = data.get('status', 'unknown')  # success, failed, unknown
+            
+            if not deployment_data:
+                return jsonify({
+                    'success': False,
+                    'error': 'Deployment data is required'
+                }), 400
+            
+            # Check if config exists
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('SELECT id FROM saved_configs WHERE id = ?', (config_id,))
+            if not cursor.fetchone():
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Configuration not found'
+                }), 404
+            
+            # Check for duplicate deployments (same instance_id or public_ip within last 5 minutes)
+            # This prevents duplicate saves from multiple frontend calls
+            instance_id = deployment_data.get('instance_id')
+            public_ip = deployment_data.get('public_ip')
+            
+            if instance_id or public_ip:
+                # Check for recent duplicate deployments (within last 5 minutes)
+                five_minutes_ago = (datetime.now().timestamp() - 300) * 1000  # Convert to milliseconds
+                cursor.execute('''
+                    SELECT id, deployment_data FROM deployments
+                    WHERE config_id = ? AND platform = ?
+                    ORDER BY deployed_at DESC
+                    LIMIT 10
+                ''', (config_id, platform))
+                
+                existing_deployments = cursor.fetchall()
+                for existing_id, existing_data_json in existing_deployments:
+                    try:
+                        existing_data = json.loads(existing_data_json)
+                        
+                        # Check if instance_id or public_ip matches
+                        if (instance_id and existing_data.get('instance_id') == instance_id) or \
+                           (public_ip and existing_data.get('public_ip') == public_ip):
+                            # Check if deployment is recent (within 5 minutes)
+                            cursor.execute('SELECT deployed_at FROM deployments WHERE id = ?', (existing_id,))
+                            deployed_at_str = cursor.fetchone()[0]
+                            deployed_at = datetime.fromisoformat(deployed_at_str.replace('Z', '+00:00'))
+                            time_diff = (datetime.now() - deployed_at.replace(tzinfo=None)).total_seconds()
+                            
+                            if time_diff < 300:  # Within 5 minutes
+                                conn.close()
+                                return jsonify({
+                                    'success': True,
+                                    'deployment_id': existing_id,
+                                    'message': 'Deployment already exists (duplicate prevented)',
+                                    'duplicate': True
+                                })
+                    except (json.JSONDecodeError, ValueError):
+                        continue  # Skip invalid JSON or date parsing errors
+            
+            # Generate deployment ID
+            deployment_id = str(int(time.time() * 1000))
+            deployed_at = datetime.now().isoformat()
+            
+            # Convert deployment_data to JSON string
+            deployment_data_json = json.dumps(deployment_data, ensure_ascii=False)
+            
+            # Insert deployment
+            cursor.execute('''
+                INSERT INTO deployments (id, config_id, platform, deployment_data, status, deployed_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (deployment_id, config_id, platform, deployment_data_json, status, deployed_at))
+            
+            conn.commit()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'deployment_id': deployment_id,
+                'message': 'Deployment details saved successfully'
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/saved-configs/<config_id>/deployments', methods=['GET'])
+    def get_deployments(config_id):
+        """Get all deployments for a configuration"""
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT id, platform, deployment_data, status, deployed_at
+                FROM deployments
+                WHERE config_id = ?
+                ORDER BY deployed_at DESC
+            ''', (config_id,))
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            deployments = []
+            for row in rows:
+                dep_id, platform, deployment_data_json, status, deployed_at = row
+                deployments.append({
+                    'id': dep_id,
+                    'platform': platform,
+                    'deployment_data': json.loads(deployment_data_json),
+                    'status': status,
+                    'deployed_at': deployed_at
+                })
+            
+            return jsonify({
+                'success': True,
+                'deployments': deployments
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/saved-configs/<config_id>/deployments/<deployment_id>/status', methods=['PUT'])
+    def update_deployment_status(config_id, deployment_id):
+        """Update deployment status"""
+        try:
+            data = request.get_json()
+            new_status = data.get('status', 'unknown')
+            deployment_data = data.get('deployment_data', None)
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Check if deployment exists
+            cursor.execute('SELECT id FROM deployments WHERE id = ? AND config_id = ?', (deployment_id, config_id))
+            if not cursor.fetchone():
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Deployment not found'
+                }), 404
+            
+            # Update status
+            if deployment_data:
+                # Update both status and deployment_data
+                deployment_data_json = json.dumps(deployment_data, ensure_ascii=False)
+                cursor.execute('''
+                    UPDATE deployments 
+                    SET status = ?, deployment_data = ?
+                    WHERE id = ? AND config_id = ?
+                ''', (new_status, deployment_data_json, deployment_id, config_id))
+            else:
+                # Update only status
+                cursor.execute('''
+                    UPDATE deployments 
+                    SET status = ?
+                    WHERE id = ? AND config_id = ?
+                ''', (new_status, deployment_id, config_id))
+            
+            conn.commit()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Deployment status updated successfully'
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
+    @app.route('/api/saved-configs/<config_id>/deployments/<deployment_id>/refresh', methods=['POST'])
+    def refresh_deployment_status(config_id, deployment_id):
+        """Refresh deployment status by checking with cloud provider"""
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Get deployment details
+            cursor.execute('''
+                SELECT platform, deployment_data, status
+                FROM deployments
+                WHERE id = ? AND config_id = ?
+            ''', (deployment_id, config_id))
+            
+            row = cursor.fetchone()
+            if not row:
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Deployment not found'
+                }), 404
+            
+            platform, deployment_data_json, current_status = row
+            deployment_data = json.loads(deployment_data_json)
+            
+            # Get configuration to access credentials
+            cursor.execute('SELECT config_data FROM saved_configs WHERE id = ?', (config_id,))
+            config_row = cursor.fetchone()
+            if not config_row:
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Configuration not found'
+                }), 404
+            
+            config_data = json.loads(config_row[0])
+            
+            # Check status based on platform
+            new_status = 'unknown'
+            updated_deployment_data = deployment_data.copy()
+            
+            if platform == 'aws':
+                # Check AWS instance status
+                try:
+                    import boto3
+                    instance_id = deployment_data.get('instance_id')
+                    if instance_id and config_data.get('access_key') and config_data.get('secret_key'):
+                        ec2 = boto3.client(
+                            'ec2',
+                            aws_access_key_id=config_data.get('access_key'),
+                            aws_secret_access_key=config_data.get('secret_key'),
+                            region_name=deployment_data.get('region', 'ap-south-1')
+                        )
+                        
+                        response = ec2.describe_instances(InstanceIds=[instance_id])
+                        if response['Reservations']:
+                            instance = response['Reservations'][0]['Instances'][0]
+                            state = instance['State']['Name']
+                            
+                            if state == 'running':
+                                new_status = 'success'
+                                # Update public IP if changed
+                                if 'PublicIpAddress' in instance:
+                                    updated_deployment_data['public_ip'] = instance['PublicIpAddress']
+                            elif state in ['pending', 'stopping', 'stopped']:
+                                new_status = 'unknown'
+                            else:
+                                new_status = 'failed'
+                except Exception as e:
+                    print(f"Error checking AWS status: {e}")
+                    new_status = 'unknown'
+            
+            elif platform == 'azure':
+                # Check Azure VM status
+                try:
+                    from azure.identity import ClientSecretCredential
+                    from azure.mgmt.compute import ComputeManagementClient
+                    
+                    subscription_id = deployment_data.get('subscription_id') or config_data.get('subscription_id')
+                    resource_group = deployment_data.get('resource_group') or config_data.get('resource_group')
+                    vm_name = deployment_data.get('vm_name')
+                    
+                    if subscription_id and resource_group and vm_name:
+                        credential = ClientSecretCredential(
+                            tenant_id=config_data.get('tenant_id'),
+                            client_id=config_data.get('client_id'),
+                            client_secret=config_data.get('client_secret')
+                        )
+                        compute_client = ComputeManagementClient(credential, subscription_id)
+                        
+                        vm = compute_client.virtual_machines.get(resource_group, vm_name, expand='instanceView')
+                        if vm.instance_view:
+                            power_state = next((s.code for s in vm.instance_view.statuses if 'PowerState' in s.code), None)
+                            if power_state == 'PowerState/running':
+                                new_status = 'success'
+                            elif power_state in ['PowerState/starting', 'PowerState/stopping']:
+                                new_status = 'unknown'
+                            else:
+                                new_status = 'failed'
+                except Exception as e:
+                    print(f"Error checking Azure status: {e}")
+                    new_status = 'unknown'
+            
+            # Update deployment status
+            updated_deployment_data_json = json.dumps(updated_deployment_data, ensure_ascii=False)
+            cursor.execute('''
+                UPDATE deployments 
+                SET status = ?, deployment_data = ?
+                WHERE id = ? AND config_id = ?
+            ''', (new_status, updated_deployment_data_json, deployment_id, config_id))
+            
+            conn.commit()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'status': new_status,
+                'deployment_data': updated_deployment_data,
+                'message': 'Deployment status refreshed successfully'
+            })
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+    
     @app.route('/api/download-database-config', methods=['GET'])
     def mcp_download_database_config():
         """Download a database config.ini file"""
@@ -3087,10 +4725,17 @@ Respond in JSON:
             return Response(stream_with_context(generate()), mimetype='text/plain')
 
         except ImportError as ie:
+            import traceback
             error_msg = f"Import error: {str(ie)}. Make sure online_deployment.py exists and dependencies are installed."
             print(f"[DEPLOY-AWS] {error_msg}")
+            print(f"[DEPLOY-AWS] Traceback: {traceback.format_exc()}")
             return jsonify({'error': error_msg}), 500
         except Exception as e:
+            import traceback
+            error_msg = f"Deployment error: {str(e)}"
+            print(f"[DEPLOY-AWS] {error_msg}")
+            print(f"[DEPLOY-AWS] Traceback: {traceback.format_exc()}")
+            return jsonify({'error': error_msg}), 500
             error_msg = f"Deployment error: {str(e)}"
             print(f"[DEPLOY-AWS] {error_msg}")
             import traceback

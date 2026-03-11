@@ -52,7 +52,7 @@ def verify_nginx_port():
             s3_prefix="prefix",
             aws_access_key="key",
             aws_secret_key="secret",
-            region="us-east-1"
+            region="ap-south-1"
         )
         
         # Check for port 30210

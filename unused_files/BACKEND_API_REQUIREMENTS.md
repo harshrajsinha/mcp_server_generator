@@ -185,7 +185,7 @@ pip install GitPython
   "oauth_redirect_uris": "http://localhost:3000/callback",
   
   // For AWS
-  "aws_region": "us-east-1",
+  "aws_region": "ap-south-1",
   "aws_access_key": "...",
   "aws_secret_key": "...",
   "instance_type": "t2.micro",

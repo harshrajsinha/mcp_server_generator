@@ -581,7 +581,7 @@ Claude: I'll help you set up DuckDB with S3 support where folders in your S3 buc
     "enable_s3": true,
     "s3_bucket": "company-data-lake",
     "s3_prefix": "analytics/tables/",
-    "s3_region": "us-east-1",
+    "s3_region": "ap-south-1",
     "s3_access_key_id": "your_access_key",
     "s3_secret_access_key": "your_secret_key",
     "default_file_format": "parquet"

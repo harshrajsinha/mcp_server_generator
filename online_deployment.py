@@ -1979,6 +1979,14 @@ fi
                 instance.reload()
                 
                 public_ip = instance.public_ip_address
+                # Get key pair name if available
+                key_name = getattr(instance, 'key_name', None)
+                if key_name:
+                    self.log(f"Instance uses key pair: {key_name}", "INFO")
+                else:
+                    self.log("⚠️  WARNING: No key pair assigned to instance. SSH access may not be available.", "WARNING")
+                    self.log("   To enable SSH access, ensure a key pair is specified during instance creation.", "WARNING")
+                
                 self.log(f"✓ Instance is now running at {public_ip}", "SUCCESS")
             except Exception as e:
                 progress_stop.set()
@@ -2084,6 +2092,9 @@ fi
             self.log(f"  Instance ID: {instance.id}", "INFO")
             self.log(f"  Region: {region}", "INFO")
             self.log(f"  Public IP: {public_ip}", "INFO")
+            key_name = getattr(instance, 'key_name', None)
+            if key_name:
+                self.log(f"  Key Pair: {key_name}", "INFO")
             if hasattr(instance, 'placement') and instance.placement:
                 self.log(f"  Availability Zone: {instance.placement.get('AvailabilityZone', 'N/A')}", "INFO")
             self.log("", "INFO")
@@ -2115,6 +2126,9 @@ fi
             # Get instance type from instance attributes
             instance_type_attr = getattr(instance, 'instance_type', instance_type)
             
+            # Get key pair name from instance
+            key_name = getattr(instance, 'key_name', None)
+            
             # Generate deployment summary for download
             deployment_summary = {
                 'deployment_type': 'AWS EC2',
@@ -2126,6 +2140,7 @@ fi
                 'instance_type': instance_type_attr,
                 'availability_zone': instance.placement.get('AvailabilityZone', 'N/A') if hasattr(instance, 'placement') and instance.placement else 'N/A',
                 'server_type': server_type,
+                'key_name': key_name,  # Store key pair name for SSH access
                 'access_urls': {}
             }
             

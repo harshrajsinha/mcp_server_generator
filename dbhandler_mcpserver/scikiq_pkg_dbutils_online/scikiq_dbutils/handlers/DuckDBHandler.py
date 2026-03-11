@@ -67,7 +67,7 @@ class clsDuckDB(clsDBConnection):
         "database_path": ":memory:" or "/path/to/database.duckdb",
         "s3_access_key_id": "AWS_ACCESS_KEY",
         "s3_secret_access_key": "AWS_SECRET_KEY", 
-        "s3_region": "us-east-1",
+        "s3_region": "ap-south-1",
         "s3_bucket": "my-data-bucket",
         "s3_prefix": "data/tables/",  # Optional prefix for table folders
         "default_file_format": "parquet",  # parquet, csv, json
@@ -90,7 +90,7 @@ class clsDuckDB(clsDBConnection):
         self.enable_s3 = config.get("enable_s3", True)
         self.s3_bucket = config.get("s3_bucket")
         self.s3_prefix = config.get("s3_prefix", "")
-        self.s3_region = config.get("s3_region", "us-east-1")
+        self.s3_region = config.get("s3_region", "ap-south-1")
         self.default_file_format = config.get("default_file_format", "parquet")
         
         # AWS credentials

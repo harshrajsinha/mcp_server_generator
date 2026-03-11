@@ -125,7 +125,7 @@ database_path = :memory:
 s3_bucket = your-data-bucket
 s3_access_key_id = AKIA...
 s3_secret_access_key = xyz123...
-s3_region = us-east-1
+s3_region = ap-south-1
 enable_s3 = true
 
 # Example: MongoDB Connection
@@ -251,7 +251,7 @@ s3_bucket = your-data-lake
 s3_prefix = data/tables/                    # Optional: folder prefix
 s3_access_key_id = AKIA...
 s3_secret_access_key = xyz123...
-s3_region = us-east-1
+s3_region = ap-south-1
 default_file_format = parquet               # parquet, csv, json
 enable_s3 = true
 ```

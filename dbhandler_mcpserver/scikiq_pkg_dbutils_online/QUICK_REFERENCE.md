@@ -71,7 +71,7 @@ database_path = :memory:
 s3_bucket = your-data-bucket
 s3_access_key_id = AKIA...
 s3_secret_access_key = xyz...
-s3_region = us-east-1
+s3_region = ap-south-1
 enable_s3 = true
 ```
 

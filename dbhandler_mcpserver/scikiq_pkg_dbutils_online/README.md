@@ -182,7 +182,7 @@ database_path = :memory:
 s3_bucket = company-data-lake
 s3_access_key_id = ${AWS_ACCESS_KEY}
 s3_secret_access_key = ${AWS_SECRET_KEY}
-s3_region = us-east-1
+s3_region = ap-south-1
 enable_s3 = true
 ```
 

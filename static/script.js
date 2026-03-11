@@ -57,6 +57,9 @@
                 showDatabaseModal();
             }
         }
+        
+        // Expose functions to window for onclick handlers
+        window.selectMethod = selectMethod;
 
         function showSwaggerModal() {
             const modalHTML = `
@@ -1152,19 +1155,19 @@
                                 <div id="online-deployment-content" class="deployment-content" style="display: none;">
                                     <!-- Online Deployment Tabs -->
                                     <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
-                                        <button onclick="switchOnlineDeployTab('aws')" class="online-deploy-tab active" data-tab="aws" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid var(--anthropic-orange); color: var(--anthropic-orange); cursor: pointer; transition: all 0.3s; font-weight: 600;">
+                                        <button onclick="switchDeploymentTab('aws')" class="deployment-tab active" data-tab="aws" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.3s;">
                                             <i class="fab fa-aws"></i> AWS EC2
                                         </button>
-                                        <button onclick="switchOnlineDeployTab('azure')" class="online-deploy-tab" data-tab="azure" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.3s; font-weight: 600;">
+                                        <button onclick="switchDeploymentTab('azure')" class="deployment-tab" data-tab="azure" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.3s;">
                                             <i class="fab fa-microsoft"></i> Azure VM
                                         </button>
-                                        <button onclick="switchOnlineDeployTab('remote')" class="online-deploy-tab" data-tab="remote" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.3s; font-weight: 600;">
+                                        <button onclick="switchDeploymentTab('remote')" class="deployment-tab" data-tab="remote" style="flex: 1; padding: 0.8rem; background: transparent; border: none; border-bottom: 3px solid transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; transition: all 0.3s;">
                                             <i class="fas fa-server"></i> Remote SSH
                                         </button>
                                     </div>
 
                                     <!-- AWS Tab Content -->
-                                    <div id="aws-online-tab" class="online-tab-content" style="display: block;">
+                                    <div id="aws-deploy-tab" class="deployment-tab-content" style="display: block;">
                                         <div class="input-group" style="margin-bottom: 1rem;">
                                             <label>AWS Access Key <span style="color: var(--anthropic-orange);">*</span></label>
                                             <input type="text" id="dbAwsAccessKey" placeholder="AKIA..." style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
@@ -1215,13 +1218,18 @@
                                             <input type="text" id="dbAwsDomain" placeholder="mcp.example.com" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
                                             <small style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; display: block; margin-top: 0.5rem;">Leave empty to use IP address. Format: subdomain.domain.com (no http:// or https://). Requires Route 53 hosted zone.</small>
                                         </div>
-                                        <button onclick="deployDatabaseOnline('aws', '${configPath}', '${serverPath}', '${serverName}', window.databaseMCPSelectedTools || [])" style="background: linear-gradient(135deg, #FF9900, #CC7A00); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
-                                            <i class="fas fa-cloud-upload-alt"></i> Deploy to AWS EC2
-                                        </button>
+                                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                                            <button onclick="saveDatabaseMCPConfig('${configPath}', '${serverPath}', '${serverName}', 'python')" style="background: rgba(0, 163, 224, 0.2); border: 1px solid var(--scikiq-light-blue); color: var(--scikiq-light-blue); padding: 0.8rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                                <i class="fas fa-save"></i> Save Config
+                                            </button>
+                                            <button onclick="deployDatabaseOnline('aws', '${configPath}', '${serverPath}', '${serverName}', window.databaseMCPSelectedTools || [])" style="background: linear-gradient(135deg, #FF9900, #CC7A00); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; flex: 2; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                                <i class="fas fa-cloud-upload-alt"></i> Deploy to AWS EC2
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <!-- Azure Tab Content -->
-                                    <div id="azure-online-tab" class="online-tab-content" style="display: none;">
+                                    <div id="azure-deploy-tab" class="deployment-tab-content" style="display: none;">
                                         <div class="input-group" style="margin-bottom: 1rem;">
                                             <label>Subscription ID <span style="color: var(--anthropic-orange);">*</span></label>
                                             <input type="text" id="dbAzureSubscriptionId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
@@ -1230,13 +1238,18 @@
                                             <label>Client ID <span style="color: var(--anthropic-orange);">*</span></label>
                                             <input type="text" id="dbAzureClientId" placeholder="Application (client) ID" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
                                         </div>
-                                        <button onclick="deployDatabaseOnline('azure', '${configPath}', '${serverPath}', '${serverName}', window.databaseMCPSelectedTools || [])" style="background: linear-gradient(135deg, #0078D4, #005A9E); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
-                                            <i class="fas fa-cloud-upload-alt"></i> Deploy to Azure VM
-                                        </button>
+                                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                                            <button onclick="saveDatabaseMCPConfig('${configPath}', '${serverPath}', '${serverName}', 'python')" style="background: rgba(0, 163, 224, 0.2); border: 1px solid var(--scikiq-light-blue); color: var(--scikiq-light-blue); padding: 0.8rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                                <i class="fas fa-save"></i> Save Config
+                                            </button>
+                                            <button onclick="deployDatabaseOnline('azure', '${configPath}', '${serverPath}', '${serverName}', window.databaseMCPSelectedTools || [])" style="background: linear-gradient(135deg, #0078D4, #005A9E); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; flex: 2; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                                <i class="fas fa-cloud-upload-alt"></i> Deploy to Azure VM
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <!-- Remote Tab Content -->
-                                    <div id="remote-online-tab" class="online-tab-content" style="display: none;">
+                                    <div id="remote-deploy-tab" class="deployment-tab-content" style="display: none;">
                                         <div class="input-group" style="margin-bottom: 1rem;">
                                             <label>Host/IP Address <span style="color: var(--anthropic-orange);">*</span></label>
                                             <input type="text" id="dbRemoteHost" placeholder="192.168.1.100 or server.example.com" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
@@ -1249,15 +1262,23 @@
                                             <label>Password</label>
                                             <input type="password" id="dbRemotePassword" placeholder="Server password" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 0.8rem; color: white; width: 100%;" />
                                         </div>
-                                        <button onclick="deployDatabaseOnline('remote', '${configPath}', '${serverPath}', '${serverName}', window.databaseMCPSelectedTools || [])" style="background: linear-gradient(135deg, var(--scikiq-green), #059669); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
-                                            <i class="fas fa-cloud-upload-alt"></i> Deploy to Remote Server
-                                        </button>
+                                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                                            <button onclick="saveDatabaseMCPConfig('${configPath}', '${serverPath}', '${serverName}', 'python')" style="background: rgba(0, 163, 224, 0.2); border: 1px solid var(--scikiq-light-blue); color: var(--scikiq-light-blue); padding: 0.8rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                                <i class="fas fa-save"></i> Save Config
+                                            </button>
+                                            <button onclick="deployDatabaseOnline('remote', '${configPath}', '${serverPath}', '${serverName}', window.databaseMCPSelectedTools || [])" style="background: linear-gradient(135deg, var(--scikiq-green), #059669); border: none; color: white; padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600; flex: 2; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                                <i class="fas fa-cloud-upload-alt"></i> Deploy to Remote Server
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Action Buttons -->
                             <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                                <button onclick="saveDatabaseMCPConfig('${configPath}', '${serverPath}', '${serverName}', '${pythonPath}')" style="padding: 1rem 2rem; background: rgba(0, 163, 224, 0.2); border: 1px solid var(--scikiq-light-blue); border-radius: 8px; color: var(--scikiq-light-blue); font-weight: 600; cursor: pointer; font-size: 1rem;">
+                                    <i class="fas fa-save"></i> Save Configuration
+                                </button>
                                 <button onclick="this.closest('[style*=fixed]').remove()" style="padding: 1rem 2rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
                                     <i class="fas fa-times"></i> Close
                                 </button>
@@ -2550,17 +2571,19 @@
                     if (result.yaml_path) {
                         window.lastGeneratedYamlPath = result.yaml_path;
                         window.lastGeneratedOutputPath = result.output_path;
+                        // Store result for saving configuration
+                        window.lastConversionResult = {
+                            output_path: result.output_path || result.yaml_path,
+                            output_file: result.output_file || result.yaml_file || 'mcp_server_selected.py',
+                            converted_count: result.converted_count || 0,
+                            yaml_path: result.yaml_path,
+                            base_url: baseUrl,
+                            server_name: serverName
+                        };
                         // Display the generated YAML in the MCP Tools tab
                         displayGeneratedYaml(result.yaml_path, result.converted_count);
                     }
-                    // Show deployment modal with proper result object
-                    // Ensure output_path and output_file are set for the modal
-                    const modalResult = {
-                        output_path: result.output_path || result.yaml_path,
-                        output_file: result.output_file || result.yaml_file || 'mcp_server_selected.py',
-                        converted_count: result.converted_count || 0
-                    };
-                    showMCPSetupModal(modalResult);
+                    // Don't show deployment modal - just show MCP Tools tab
                     btn.innerHTML = '<i class="fas fa-check"></i> Converted!';
                 } else {
                     throw new Error(result.error);
@@ -3694,12 +3717,21 @@
                     // Store yaml_path and base URL for later auto-deploy
                     window.lastGeneratedYamlPath = result.yaml_path;
                     window.currentApiDomain = baseUrl;  // Store API domain for server naming
+                    
+                    // Store result for saving configuration
+                    window.lastConversionResult = {
+                        output_path: result.output_path || result.yaml_path,
+                        output_file: result.output_file || result.yaml_file || 'mcp_server_high_confidence.py',
+                        converted_count: result.converted_count || 0,
+                        yaml_path: result.yaml_path,
+                        base_url: baseUrl,
+                        server_name: serverName
+                    };
 
                     // Display the generated YAML in the MCP Tools tab
                     displayGeneratedYaml(result.yaml_path, result.converted_count);
 
-                    // Show detailed setup modal instead of simple alert
-                    showMCPSetupModal(result);
+                    // Don't show deployment modal - just show MCP Tools tab
 
                     // Enable test button if it exists
                     const testBtn = document.getElementById('testBtn');
@@ -3759,9 +3791,10 @@
                     const highlightedYaml = highlightYamlSyntax(result.content);
                     document.getElementById('yamlCodeContent').innerHTML = highlightedYaml;
 
-                    // Show copy/download/deploy buttons
+                    // Show copy/download/save/deploy buttons
                     document.getElementById('copyYamlBtn').style.display = 'inline-flex';
                     document.getElementById('downloadYamlBtn').style.display = 'inline-flex';
+                    document.getElementById('saveMCPConfigBtn').style.display = 'inline-flex';
                     document.getElementById('deployYamlBtn').style.display = 'inline-flex';
 
                     // Update MCP Tools stat
@@ -3972,6 +4005,132 @@
             }
         }
 
+        // Function to save MCP configuration from MCP Tools tab
+        async function saveMCPConfigFromToolsTab() {
+            try {
+                const buttonElement = document.getElementById('saveMCPConfigBtn');
+                
+                if (!window.lastConversionResult) {
+                    alert('No conversion result found. Please convert APIs first.');
+                    return;
+                }
+                
+                if (buttonElement) {
+                    buttonElement.disabled = true;
+                    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Saving...';
+                }
+                
+                const result = window.lastConversionResult;
+                // Normalize 'api' to 'swagger' for consistency
+                let serverType = window.currentProjectSourceType || 'api';
+                if (serverType === 'api') {
+                    serverType = 'swagger';
+                }
+                
+                // Extract server path and yaml file from paths
+                const yamlPath = result.yaml_path || window.lastGeneratedYamlPath;
+                const outputPath = result.output_path || window.lastGeneratedOutputPath;
+                
+                let serverPath = null;
+                let yamlFileName = null;
+                if (yamlPath) {
+                    const normalizedPath = yamlPath.replace(/\\/g, '/');
+                    serverPath = normalizedPath.substring(0, normalizedPath.lastIndexOf('/'));
+                    yamlFileName = normalizedPath.substring(normalizedPath.lastIndexOf('/') + 1);
+                }
+                
+                // Store source information for rescanning during edit
+                const sourceInfo = {};
+                if (serverType === 'swagger' && window.currentSwaggerUrl) {
+                    sourceInfo.swagger_url = window.currentSwaggerUrl;
+                    sourceInfo.api_base_url = window.currentApiBaseUrl || result.base_url || '';
+                } else if (serverType === 'codebase' && window.currentProjectPath) {
+                    sourceInfo.project_path = window.currentProjectPath;
+                    sourceInfo.source_file = window.currentSourceFile || '';
+                    sourceInfo.api_base_url = window.currentApiBaseUrl || 'http://localhost:9321';
+                }
+                
+                const configData = {
+                    platform: 'unknown', // Will be set when deploying
+                    server_name: result.server_name || window.currentServerName || 'scikiq-mcp-autoAPI',
+                    server_type: serverType,
+                    server_path: serverPath,
+                    yaml_file: yamlFileName,
+                    base_url: result.base_url || '',
+                    serverConfig: window.currentServerConfig || null,
+                    source_info: sourceInfo, // Store source for rescanning
+                    selected_api_ids: window.selectedAPIsForConversion || [] // Store IDs of selected APIs
+                };
+                
+                const defaultName = `${serverType}_${configData.server_name}_${new Date().toISOString().split('T')[0]}`;
+                const configName = prompt('Enter a name for this MCP configuration:', defaultName);
+                if (!configName || configName.trim() === '') {
+                    if (buttonElement) {
+                        buttonElement.disabled = false;
+                        buttonElement.innerHTML = '<i class="fas fa-save" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Save Configuration';
+                    }
+                    return;
+                }
+                
+                // Check for duplicate names
+                const existingConfigs = await fetch('/api/saved-configs').then(r => r.json()).then(r => r.configs || []).catch(() => []);
+                const duplicate = existingConfigs.find(c => c.name === configName.trim() && c.type === serverType);
+                
+                if (duplicate) {
+                    const overwrite = confirm(`A configuration named "${configName.trim()}" already exists. Do you want to overwrite it?`);
+                    if (!overwrite) {
+                        if (buttonElement) {
+                            buttonElement.disabled = false;
+                            buttonElement.innerHTML = '<i class="fas fa-save" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Save Configuration';
+                        }
+                        return;
+                    }
+                    // Update existing config
+                    const updateResponse = await fetch(`/api/saved-configs/${duplicate.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: configName.trim(),
+                            config: configData
+                        })
+                    });
+                    const updateResult = await updateResponse.json();
+                    if (updateResult.success) {
+                        window.currentDeploymentConfigId = duplicate.id;
+                        if (buttonElement) {
+                            buttonElement.innerHTML = '<i class="fas fa-check" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Saved!';
+                            buttonElement.style.background = 'rgba(16, 185, 129, 0.2)';
+                            buttonElement.style.borderColor = '#10B981';
+                            buttonElement.style.color = '#10B981';
+                        }
+                        alert('Configuration updated successfully!');
+                    } else {
+                        throw new Error(updateResult.error || 'Failed to update configuration');
+                    }
+                } else {
+                    const saved = await saveMCPConfig(serverType, configName.trim(), configData);
+                    if (saved) {
+                        window.currentDeploymentConfigId = saved.id;
+                        if (buttonElement) {
+                            buttonElement.innerHTML = '<i class="fas fa-check" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Saved!';
+                            buttonElement.style.background = 'rgba(16, 185, 129, 0.2)';
+                            buttonElement.style.borderColor = '#10B981';
+                            buttonElement.style.color = '#10B981';
+                        }
+                        alert('Configuration saved successfully!');
+                    }
+                }
+            } catch (error) {
+                console.error('Error saving configuration:', error);
+                alert('Error saving configuration: ' + error.message);
+                const buttonElement = document.getElementById('saveMCPConfigBtn');
+                if (buttonElement) {
+                    buttonElement.disabled = false;
+                    buttonElement.innerHTML = '<i class="fas fa-save" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Save Configuration';
+                }
+            }
+        }
+        
         // Function to show deployment modal from MCP Tools tab
         function showDeploymentModalFromMCPTab() {
             if (!window.generatedYamlPath) {
@@ -4002,10 +4161,10 @@
 
             const modalHTML = `
                 <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem;">
-                    <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.98), rgba(26, 31, 58, 0.98)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);">
+                    <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.98), rgba(26, 31, 58, 0.98)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 900px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);">
 
                         <!-- Header -->
-                        <div style="background: linear-gradient(135deg, var(--success-green), #059669); padding: 2rem; border-radius: 14px 14px 0 0; position: relative;">
+                        <div style="background: linear-gradient(135deg, var(--success-green), #059669); padding: 2rem; border-radius: 14px 14px 0 0; position: relative; flex-shrink: 0;">
                             <button onclick="this.closest('[style*=fixed]').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -4018,7 +4177,7 @@
                         </div>
 
                         <!-- Body -->
-                        <div style="padding: 2rem;">
+                        <div style="padding: 2rem; overflow-y: auto; flex: 1;">
 
                             <!-- Deployment Options -->
                             <div style="margin-bottom: 2rem;">
@@ -4873,6 +5032,9 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                             <button class="btn-secondary-custom" onclick="closeInstallationModal()">
                                 <i class="fas fa-times"></i> Cancel
                             </button>
+                            <button class="btn-secondary-custom" onclick="saveCurrentConfig('${serverType}')" style="background: rgba(0, 163, 224, 0.2); border: 1px solid var(--scikiq-light-blue); color: var(--scikiq-light-blue);">
+                                <i class="fas fa-save"></i> Save Configuration
+                            </button>
                             <button class="btn-success-custom" onclick="generateInstaller('${serverType}')">
                                 <i class="fas fa-download"></i> Download Installer
                             </button>
@@ -5198,6 +5360,9 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                             <button class="btn-secondary-custom" onclick="closePublishOnlineModal()">
                                 <i class="fas fa-times"></i> Cancel
                             </button>
+                            <button class="btn-secondary-custom" onclick="saveDeploymentConfigBeforeDeploy()" id="saveConfigBeforeDeployBtn" style="background: rgba(0, 163, 224, 0.2); border: 1px solid var(--scikiq-light-blue); color: var(--scikiq-light-blue);">
+                                <i class="fas fa-save"></i> Save Configuration
+                            </button>
                             <button class="btn-primary-custom" onclick="startDeployment()" id="deployBtn">
                                 <i class="fas fa-rocket"></i> Deploy Now
                             </button>
@@ -5290,11 +5455,23 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
 
         async function startDeployment() {
             const activeTab = document.querySelector('.deployment-tab.active').dataset.tab;
+            
+            // Reset deployment details saved flag for new deployment
+            window.deploymentDetailsSaved = false;
 
             try {
                 let endpoint, payload;
 
                 if (activeTab === 'aws') {
+                    // Validate required fields
+                    const accessKey = document.getElementById('awsAccessKey')?.value;
+                    const secretKey = document.getElementById('awsSecretKey')?.value;
+                    
+                    if (!accessKey || !secretKey) {
+                        alert('Error: AWS Access Key and Secret Key are required');
+                        return;
+                    }
+                    
                     const domain = document.getElementById('awsDomain').value;
                     const domainValidation = validateDomain(domain);
                     
@@ -5334,6 +5511,10 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         serverName = `api-mcp-${timestamp}`;
                     }
 
+                    // Store projectSourceType globally for save function
+                    const currentProjectSourceType = typeof projectSourceType !== 'undefined' ? projectSourceType : 'api';
+                    window.currentProjectSourceType = currentProjectSourceType;
+                    
                     payload = {
                         access_key: document.getElementById('awsAccessKey').value,
                         secret_key: document.getElementById('awsSecretKey').value,
@@ -5341,7 +5522,7 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         instance_type: document.getElementById('awsInstanceType').value,
                         domain: domain,
                         server_name: serverName,
-                        server_type: projectSourceType || 'api',  // Use project source type
+                        server_type: currentProjectSourceType,  // Use project source type
                         server_path: serverPath,  // Send directory path where mcp_server_loader.py and YAML files are
                         yaml_file: yamlFileName,   // Send specific YAML filename to copy (not all YAML files)
                         auto_download_logs: document.getElementById('awsAutoDownloadLogs')?.checked || false
@@ -5352,6 +5533,13 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                         access_key: payload.access_key,
                         secret_key: payload.secret_key,
                         region: payload.region
+                    };
+                    
+                    // Store deployment config globally for saving
+                    window.currentDeploymentConfig = {
+                        platform: 'aws',
+                        payload: payload,
+                        projectSourceType: currentProjectSourceType
                     };
                 } else if (activeTab === 'azure') {
                     // Get server_path and yaml filename from yaml path
@@ -5438,22 +5626,27 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                 const logHTML = `
                     <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 999999; padding: 2rem; display: flex; align-items: center; justify-content: center;" id="deployLogModal">
                         <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 800px; width: 100%; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; position: relative;">
-                            <button onclick="document.getElementById('deployLogModal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
-                                <i class="fas fa-times"></i>
+                            <button onclick="const modal = document.getElementById('deployLogModal'); const publishModal = document.getElementById('publishOnlineModal'); const dbModal = document.getElementById('database-mcp-modal'); if (modal) modal.remove(); if (publishModal) publishModal.remove(); if (dbModal) dbModal.remove();" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                <i class="fas fa-times" style="font-family: 'Font Awesome 6 Free'; font-weight: 900; display: inline-block; line-height: 1;"></i>
                             </button>
                             <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-                                <h3 style="margin: 0; color: var(--scikiq-light-blue);">
-                                    <i class="fas fa-cloud-upload-alt"></i> Deploying to ${activeTab.toUpperCase()}
+                                <h3 style="margin: 0; color: var(--scikiq-light-blue); display: flex; align-items: center; gap: 0.5rem;">
+                                    <i class="fas fa-cloud-upload-alt" style="font-size: 1.2rem; font-family: 'Font Awesome 6 Free'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Deploying to ${activeTab.toUpperCase()}</span>
                                 </h3>
                             </div>
                             <div id="deployLogContent" style="flex: 1; overflow-y: auto; padding: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.85rem; background: rgba(0, 0, 0, 0.5);"></div>
                             <div style="padding: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
                                 <div style="display: flex; gap: 0.5rem;">
-                                    <button id="downloadLogsBtn" onclick="downloadDisplayedLogs()" style="padding: 0.8rem 1.5rem; background: linear-gradient(135deg, #10B981, #059669); border: none; border-radius: 6px; color: white; cursor: pointer; display: inline-flex;" title="Download deployment logs">
-                                        <i class="fas fa-download"></i> Download Logs
+                                    <button id="saveDeploymentConfigBtn" onclick="saveDeploymentConfig('${activeTab}', window.currentProjectSourceType || 'api', this)" style="padding: 0.8rem 1.5rem; background: rgba(0, 163, 224, 0.2); border: 1px solid var(--scikiq-light-blue); border-radius: 6px; color: var(--scikiq-light-blue); cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;" title="Save this deployment configuration">
+                                        <i class="fas fa-save" style="font-size: 1rem; font-family: 'Font Awesome 6 Free'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Save Configuration</span>
+                                    </button>
+                                    <button id="downloadLogsBtn" onclick="downloadDisplayedLogs()" style="padding: 0.8rem 1.5rem; background: linear-gradient(135deg, #10B981, #059669); border: none; border-radius: 6px; color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;" title="Download deployment logs">
+                                        <i class="fas fa-download" style="font-size: 1rem; font-family: 'Font Awesome 6 Free'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Download Logs</span>
                                     </button>
                                 </div>
-                                <button onclick="document.getElementById('deployLogModal').remove()" style="padding: 0.8rem 1.5rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; cursor: pointer;">Close</button>
+                                <button onclick="const modal = document.getElementById('deployLogModal'); const publishModal = document.getElementById('publishOnlineModal'); const dbModal = document.getElementById('database-mcp-modal'); if (modal) { const btn = document.getElementById('saveDeploymentConfigBtn'); if (btn) btn.style.display = 'none'; modal.remove(); } if (publishModal) publishModal.remove(); if (dbModal) dbModal.remove();" style="padding: 0.8rem 1.5rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                    <i class="fas fa-times" style="font-size: 1rem; font-family: 'Font Awesome 6 Free'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Close</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -5503,11 +5696,24 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                 appendLog(`[${new Date().toLocaleTimeString()}] Starting deployment to ${activeTab.toUpperCase()}...`);
                 appendLog(`[${new Date().toLocaleTimeString()}] Connecting to API endpoint: ${endpoint}`);
 
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                let response;
+                try {
+                    response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } catch (fetchError) {
+                    // Handle network errors, CORS issues, timeouts, etc.
+                    console.error('[DEPLOY] Fetch error:', fetchError);
+                    appendLog(`[${new Date().toLocaleTimeString()}] ERROR: Failed to fetch`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] Network Error: ${fetchError.message || 'Connection failed. Please check:'}`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] 1. Server is running and accessible`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] 2. Network connection is stable`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] 3. No firewall blocking the request`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] 4. CORS is properly configured (if cross-origin)`, 'error');
+                    return;
+                }
 
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -5530,9 +5736,43 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     const decoder = new TextDecoder();
 
                     let buffer = '';
+                    let deploymentDetails = {
+                        instance_id: null,
+                        public_ip: null,
+                        domain: null,
+                        region: null,
+                        instance_type: null,
+                        key_name: null,  // AWS key pair name for SSH access
+                        access_urls: {},
+                        admin_credentials: {}
+                    };
+                    let inDeploymentSummary = false;
+                    let deploymentSummaryLines = [];
+                    
                     while (true) {
                         const { done, value } = await reader.read();
-                        if (done) break;
+                        if (done) {
+                            // Process remaining buffer
+                            if (buffer.trim()) {
+                                const lines = buffer.split('\n').filter(l => l.trim());
+                                lines.forEach(line => {
+                                    const isError = line.includes('[ERROR]') || line.includes('ERROR:');
+                                    const isSuccess = line.includes('[SUCCESS]') || line.includes('SUCCESS:');
+                                    appendLog(line, isError ? 'error' : isSuccess ? 'success' : 'info');
+                                });
+                            }
+                            
+                            // Save deployment details if we have a config_id (only once)
+                            if (window.currentDeploymentConfigId && !window.deploymentDetailsSaved) {
+                                const status = deploymentDetails.public_ip ? 'success' : 'unknown';
+                                // Only save if we have meaningful deployment details
+                                if (deploymentDetails.public_ip || deploymentDetails.instance_id || Object.keys(deploymentDetails.access_urls || {}).length > 0) {
+                                    await saveDeploymentDetails(window.currentDeploymentConfigId, activeTab, deploymentDetails, status);
+                                    window.deploymentDetailsSaved = true;
+                                }
+                            }
+                            break;
+                        }
 
                         buffer += decoder.decode(value, { stream: true });
                         const lines = buffer.split('\n');
@@ -5542,16 +5782,87 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                             if (line.trim()) {
                                 const isError = line.includes('[ERROR]') || line.includes('ERROR:');
                                 const isSuccess = line.includes('[SUCCESS]') || line.includes('SUCCESS:');
-                                appendLog(line, isError ? 'error' : isSuccess ? 'success' : 'info');
+                                const logType = isError ? 'error' : isSuccess ? 'success' : 'info';
+                                
+                                // Extract log level and content
+                                const match = line.match(/^\[(ERROR|INFO|WARNING|SUCCESS|LOG)\]\s*(.*)$/);
+                                const content = match ? match[2] : line;
+                                
+                                // Parse deployment details from logs
+                                if (content.includes('DEPLOYMENT DETAILS SUMMARY')) {
+                                    inDeploymentSummary = true;
+                                    deploymentSummaryLines = [];
+                                } else if (inDeploymentSummary) {
+                                    if (content.includes('=') && content.split('=').length === 1 && !content.includes(':')) {
+                                        // End of summary - parse collected lines
+                                        inDeploymentSummary = false;
+                                        deploymentSummaryLines.forEach(summaryLine => {
+                                            if (summaryLine.includes('Instance ID:')) {
+                                                const m = summaryLine.match(/Instance ID:\s*(.+)/i);
+                                                if (m) deploymentDetails.instance_id = m[1].trim();
+                                            } else if (summaryLine.includes('Public IP:')) {
+                                                const m = summaryLine.match(/Public IP:\s*(.+)/i);
+                                                if (m) deploymentDetails.public_ip = m[1].trim();
+                                            } else if (summaryLine.includes('Domain:')) {
+                                                const m = summaryLine.match(/Domain:\s*(.+)/i);
+                                                if (m) deploymentDetails.domain = m[1].trim();
+                                            } else if (summaryLine.includes('Region:')) {
+                                                const m = summaryLine.match(/Region:\s*(.+)/i);
+                                                if (m) deploymentDetails.region = m[1].trim();
+                                            } else if (summaryLine.includes('Instance Type:')) {
+                                                const m = summaryLine.match(/Instance Type:\s*(.+)/i);
+                                                if (m) deploymentDetails.instance_type = m[1].trim();
+                                            } else if (summaryLine.includes('Key Pair:') || summaryLine.includes('Key Name:')) {
+                                                const m = summaryLine.match(/(?:Key Pair|Key Name):\s*(.+)/i);
+                                                if (m) deploymentDetails.key_name = m[1].trim();
+                                            } else if (summaryLine.includes('Username:')) {
+                                                const m = summaryLine.match(/Username:\s*(.+)/i);
+                                                if (m) deploymentDetails.admin_credentials.username = m[1].trim();
+                                            } else if (summaryLine.includes('Password:')) {
+                                                const m = summaryLine.match(/Password:\s*(.+)/i);
+                                                if (m) deploymentDetails.admin_credentials.password = m[1].trim();
+                                            } else if (summaryLine.includes('Email:')) {
+                                                const m = summaryLine.match(/Email:\s*(.+)/i);
+                                                if (m) deploymentDetails.admin_credentials.email = m[1].trim();
+                                            } else if (summaryLine.includes('http://') || summaryLine.includes('https://')) {
+                                                const urlMatch = summaryLine.match(/(\w+):\s*(https?:\/\/[^\s]+)/i);
+                                                if (urlMatch) {
+                                                    deploymentDetails.access_urls[urlMatch[1].trim()] = urlMatch[2].trim();
+                                                }
+                                            }
+                                        });
+                                    } else {
+                                        deploymentSummaryLines.push(content);
+                                    }
+                                } else {
+                                    // Try to extract details from regular log lines
+                                    if (content.includes('Public IP:')) {
+                                        const m = content.match(/Public IP:\s*(.+)/i);
+                                        if (m) deploymentDetails.public_ip = m[1].trim();
+                                    }
+                                    if (content.includes('Domain configured:')) {
+                                        const m = content.match(/Domain configured:\s*(.+)/i);
+                                        if (m) deploymentDetails.domain = m[1].trim();
+                                    }
+                                    if (content.includes('Instance ID:')) {
+                                        const m = content.match(/Instance ID:\s*(i-[a-f0-9]+)/i);
+                                        if (m) deploymentDetails.instance_id = m[1].trim();
+                                    }
+                                }
+                                
+                                appendLog(line, logType);
                             }
                         });
                     }
-
-                    // Process remaining buffer
-                    if (buffer.trim()) {
-                        const isError = buffer.includes('[ERROR]') || buffer.includes('ERROR:');
-                        const isSuccess = buffer.includes('[SUCCESS]') || buffer.includes('SUCCESS:');
-                        appendLog(buffer, isError ? 'error' : isSuccess ? 'success' : 'info');
+                    
+                    // Save deployment details if we have them (only once)
+                    if (window.currentDeploymentConfigId && !window.deploymentDetailsSaved) {
+                        const status = deploymentDetails.public_ip ? 'success' : 'unknown';
+                        // Only save if we have meaningful deployment details
+                        if (deploymentDetails.public_ip || deploymentDetails.instance_id || Object.keys(deploymentDetails.access_urls || {}).length > 0) {
+                            await saveDeploymentDetails(window.currentDeploymentConfigId, activeTab, deploymentDetails, status);
+                            window.deploymentDetailsSaved = true;
+                        }
                     }
                 } else {
                     // Handle JSON response
@@ -5564,7 +5875,19 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     }
                 }
 
-                appendLog(`[${new Date().toLocaleTimeString()}] Deployment process finished.`, 'success');
+                    appendLog(`[${new Date().toLocaleTimeString()}] Deployment process finished.`, 'success');
+                    
+                    // If we have a config_id but no deployment details saved yet, save with unknown status (only once)
+                    if (window.currentDeploymentConfigId && !window.deploymentDetailsSaved) {
+                        const activeTab = document.querySelector('.deployment-tab.active')?.dataset.tab || 'unknown';
+                        await saveDeploymentDetails(
+                            window.currentDeploymentConfigId, 
+                            activeTab, 
+                            { note: 'Deployment completed but details not captured. Status unknown.' },
+                            'unknown'
+                        );
+                        window.deploymentDetailsSaved = true;
+                    }
 
             } catch (error) {
                 console.error('Deployment error:', error);
@@ -5573,6 +5896,18 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     logContent.innerHTML += `<div style="color: #EF4444; margin-bottom: 0.5rem;">[${new Date().toLocaleTimeString()}] ERROR: ${error.message}</div>`;
                 } else {
                     alert('Deployment error: ' + error.message);
+                }
+                
+                // Save deployment with failed status if we have config_id (only once)
+                if (window.currentDeploymentConfigId && !window.deploymentDetailsSaved) {
+                    const activeTab = document.querySelector('.deployment-tab.active')?.dataset.tab || 'unknown';
+                    await saveDeploymentDetails(
+                        window.currentDeploymentConfigId,
+                        activeTab,
+                        { error: error.message, note: 'Deployment failed or network error occurred' },
+                        'failed'
+                    );
+                    window.deploymentDetailsSaved = true;
                 }
             }
         }
@@ -5777,29 +6112,14 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             }
         }
 
-        function switchOnlineDeployTab(tab) {
-            // Update tab styles
-            document.querySelectorAll('.online-deploy-tab').forEach(btn => {
-                if (btn.dataset.tab === tab) {
-                    btn.style.borderBottomColor = 'var(--anthropic-orange)';
-                    btn.style.color = 'var(--anthropic-orange)';
-                } else {
-                    btn.style.borderBottomColor = 'transparent';
-                    btn.style.color = 'rgba(255, 255, 255, 0.6)';
-                }
-            });
-
-            // Show/hide tab content
-            document.querySelectorAll('.online-tab-content').forEach(content => {
-                content.style.display = 'none';
-            });
-            document.getElementById(`${tab}-online-tab`).style.display = 'block';
-        }
 
         async function deployDatabaseOnline(platform, configPath, serverPath, serverName, selectedTools = []) {
             console.log(`[DEPLOY] Starting deployment to ${platform} for ${serverName}`);
             console.log(`[DEPLOY] Config path: ${configPath}`);
             console.log(`[DEPLOY] Server path: ${serverPath}`);
+            
+            // Reset deployment details saved flag for new deployment
+            window.deploymentDetailsSaved = false;
 
             try {
                 let endpoint, payload;
@@ -5863,17 +6183,27 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                 const logHTML = `
                     <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 999999; padding: 2rem; display: flex; align-items: center; justify-content: center;" id="deployLogModal">
                         <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 800px; width: 100%; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; position: relative;">
-                            <button onclick="document.getElementById('deployLogModal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
-                                <i class="fas fa-times"></i>
+                            <button onclick="const modal = document.getElementById('deployLogModal'); const publishModal = document.getElementById('publishOnlineModal'); const dbModal = document.getElementById('database-mcp-modal'); if (modal) modal.remove(); if (publishModal) publishModal.remove(); if (dbModal) dbModal.remove();" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 10;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                <i class="fas fa-times" style="font-family: 'Font Awesome 6 Free'; font-weight: 900; display: inline-block; line-height: 1;"></i>
                             </button>
                             <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-                                <h3 style="margin: 0; color: var(--scikiq-light-blue);">
-                                    <i class="fas fa-cloud-upload-alt"></i> Deploying to ${platform.toUpperCase()}
+                                <h3 style="margin: 0; color: var(--scikiq-light-blue); display: flex; align-items: center; gap: 0.5rem;">
+                                    <i class="fas fa-cloud-upload-alt" style="font-size: 1.2rem; font-family: 'Font Awesome 6 Free'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Deploying to ${platform.toUpperCase()}</span>
                                 </h3>
                             </div>
                             <div id="deployLogContent" style="flex: 1; overflow-y: auto; padding: 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.85rem; background: rgba(0, 0, 0, 0.5);"></div>
-                            <div style="padding: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: flex-end;">
-                                <button onclick="document.getElementById('deployLogModal').remove()" style="padding: 0.8rem 1.5rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; cursor: pointer;">Close</button>
+                            <div style="padding: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button id="saveDeploymentConfigBtn" onclick="saveDatabaseMCPConfig('${configPath}', '${serverPath}', '${serverName}', 'python', this)" style="padding: 0.8rem 1.5rem; background: rgba(0, 163, 224, 0.2); border: 1px solid var(--scikiq-light-blue); border-radius: 6px; color: var(--scikiq-light-blue); cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;" title="Save this deployment configuration">
+                                        <i class="fas fa-save" style="font-size: 1rem; font-family: 'Font Awesome 6 Free'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Save Configuration</span>
+                                    </button>
+                                    <button id="downloadLogsBtn" onclick="downloadDisplayedLogs()" style="padding: 0.8rem 1.5rem; background: linear-gradient(135deg, #10B981, #059669); border: none; border-radius: 6px; color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;" title="Download deployment logs">
+                                        <i class="fas fa-download" style="font-size: 1rem; font-family: 'Font Awesome 6 Free'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Download Logs</span>
+                                    </button>
+                                </div>
+                                <button onclick="const modal = document.getElementById('deployLogModal'); const publishModal = document.getElementById('publishOnlineModal'); const dbModal = document.getElementById('database-mcp-modal'); if (modal) { const btn = document.getElementById('saveDeploymentConfigBtn'); if (btn) btn.style.display = 'none'; modal.remove(); } if (publishModal) publishModal.remove(); if (dbModal) dbModal.remove();" style="padding: 0.8rem 1.5rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                    <i class="fas fa-times" style="font-size: 1rem; font-family: 'Font Awesome 6 Free'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Close</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -5912,14 +6242,27 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                 appendLog(`[${new Date().toLocaleTimeString()}] Starting deployment to ${platform.toUpperCase()}...`);
                 appendLog(`[${new Date().toLocaleTimeString()}] Connecting to API endpoint: ${endpoint}`);
 
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                let response;
+                try {
+                    response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-                console.log(`[DEPLOY] Response status: ${response.status}`);
-                console.log(`[DEPLOY] Response headers:`, response.headers);
+                    console.log(`[DEPLOY] Response status: ${response.status}`);
+                    console.log(`[DEPLOY] Response headers:`, response.headers);
+                } catch (fetchError) {
+                    // Handle network errors, CORS issues, timeouts, etc.
+                    console.error('[DEPLOY] Fetch error:', fetchError);
+                    appendLog(`[${new Date().toLocaleTimeString()}] ERROR: Failed to fetch`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] Network Error: ${fetchError.message || 'Connection failed. Please check:'}`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] 1. Server is running and accessible`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] 2. Network connection is stable`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] 3. No firewall blocking the request`, 'error');
+                    appendLog(`[${new Date().toLocaleTimeString()}] 4. CORS is properly configured (if cross-origin)`, 'error');
+                    return;
+                }
 
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -5943,6 +6286,18 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     const decoder = new TextDecoder();
 
                     let buffer = '';
+                    let deploymentDetails = {
+                        instance_id: null,
+                        public_ip: null,
+                        domain: null,
+                        region: null,
+                        instance_type: null,
+                        access_urls: {},
+                        admin_credentials: {}
+                    };
+                    let inDeploymentSummary = false;
+                    let deploymentSummaryLines = [];
+                    
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) {
@@ -5955,6 +6310,17 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                                     appendLog(cleanLine, logType);
                                 });
                             }
+                            
+                            // Save deployment details if we have a config_id (only once)
+                            if (window.currentDeploymentConfigId && !window.deploymentDetailsSaved) {
+                                const status = deploymentDetails.public_ip ? 'success' : 'unknown';
+                                // Only save if we have meaningful deployment details
+                                if (deploymentDetails.public_ip || deploymentDetails.instance_id || Object.keys(deploymentDetails.access_urls || {}).length > 0) {
+                                    await saveDeploymentDetails(window.currentDeploymentConfigId, activeTab, deploymentDetails, status);
+                                    window.deploymentDetailsSaved = true;
+                                }
+                            }
+                            
                             break;
                         }
 
@@ -5973,6 +6339,69 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                                 if (match) {
                                     const level = match[1];
                                     const content = match[2];
+                                    
+                                    // Parse deployment details from logs
+                                    if (content.includes('DEPLOYMENT DETAILS SUMMARY')) {
+                                        inDeploymentSummary = true;
+                                        deploymentSummaryLines = [];
+                                    } else if (inDeploymentSummary) {
+                                        if (content.includes('=') && content.split('=').length === 1) {
+                                            // End of summary
+                                            inDeploymentSummary = false;
+                                            // Parse collected summary lines
+                                            deploymentSummaryLines.forEach(summaryLine => {
+                                                if (summaryLine.includes('Instance ID:')) {
+                                                    const match = summaryLine.match(/Instance ID:\s*(.+)/i);
+                                                    if (match) deploymentDetails.instance_id = match[1].trim();
+                                                } else if (summaryLine.includes('Public IP:')) {
+                                                    const match = summaryLine.match(/Public IP:\s*(.+)/i);
+                                                    if (match) deploymentDetails.public_ip = match[1].trim();
+                                                } else if (summaryLine.includes('Domain:')) {
+                                                    const match = summaryLine.match(/Domain:\s*(.+)/i);
+                                                    if (match) deploymentDetails.domain = match[1].trim();
+                                                } else if (summaryLine.includes('Region:')) {
+                                                    const match = summaryLine.match(/Region:\s*(.+)/i);
+                                                    if (match) deploymentDetails.region = match[1].trim();
+                                                } else if (summaryLine.includes('Instance Type:')) {
+                                                    const match = summaryLine.match(/Instance Type:\s*(.+)/i);
+                                                    if (match) deploymentDetails.instance_type = match[1].trim();
+                                                } else if (summaryLine.includes('Username:') || summaryLine.includes('Password:') || summaryLine.includes('Email:')) {
+                                                    if (summaryLine.includes('Username:')) {
+                                                        const match = summaryLine.match(/Username:\s*(.+)/i);
+                                                        if (match) deploymentDetails.admin_credentials.username = match[1].trim();
+                                                    } else if (summaryLine.includes('Password:')) {
+                                                        const match = summaryLine.match(/Password:\s*(.+)/i);
+                                                        if (match) deploymentDetails.admin_credentials.password = match[1].trim();
+                                                    } else if (summaryLine.includes('Email:')) {
+                                                        const match = summaryLine.match(/Email:\s*(.+)/i);
+                                                        if (match) deploymentDetails.admin_credentials.email = match[1].trim();
+                                                    }
+                                                } else if (summaryLine.includes('http://') || summaryLine.includes('https://')) {
+                                                    // Access URL
+                                                    const urlMatch = summaryLine.match(/(\w+):\s*(https?:\/\/[^\s]+)/i);
+                                                    if (urlMatch) {
+                                                        deploymentDetails.access_urls[urlMatch[1].trim()] = urlMatch[2].trim();
+                                                    }
+                                                }
+                                            });
+                                        } else {
+                                            deploymentSummaryLines.push(content);
+                                        }
+                                    } else {
+                                        // Try to extract details from regular log lines
+                                        if (content.includes('Public IP:')) {
+                                            const match = content.match(/Public IP:\s*(.+)/i);
+                                            if (match) deploymentDetails.public_ip = match[1].trim();
+                                        }
+                                        if (content.includes('Domain configured:')) {
+                                            const match = content.match(/Domain configured:\s*(.+)/i);
+                                            if (match) deploymentDetails.domain = match[1].trim();
+                                        }
+                                        if (content.includes('Instance ID:')) {
+                                            const match = content.match(/Instance ID:\s*(i-[a-f0-9]+)/i);
+                                            if (match) deploymentDetails.instance_id = match[1].trim();
+                                        }
+                                    }
                                     
                                     // Check if this is a permission suggestion (multi-line with special formatting)
                                     const isPermissionSuggestion = content.includes('Missing Permission') || 
@@ -5997,6 +6426,16 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
                     }
 
                     appendLog(`[${new Date().toLocaleTimeString()}] Deployment process completed`, 'success');
+                    
+                    // Save deployment details if we have them (only once)
+                    if (window.currentDeploymentConfigId && !window.deploymentDetailsSaved) {
+                        const status = deploymentDetails.public_ip ? 'success' : 'unknown';
+                        // Only save if we have meaningful deployment details
+                        if (deploymentDetails.public_ip || deploymentDetails.instance_id || Object.keys(deploymentDetails.access_urls || {}).length > 0) {
+                            await saveDeploymentDetails(window.currentDeploymentConfigId, activeTab, deploymentDetails, status);
+                            window.deploymentDetailsSaved = true;
+                        }
+                    }
                 } else {
                     const result = await response.json();
                     if (result.error) {
@@ -6051,59 +6490,1131 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             const setupModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10000"]');
             if (setupModal) setupModal.remove();
             
-            // Show deployment modal similar to database MCP
+            // Use the same modal as saved configuration deployment for consistency
+            showPublishOnlineModal();
+        }
+
+        // ==================== SAVED CONFIGURATIONS ====================
+        
+        async function showSavedConfigurations() {
+            try {
+                console.log('[Saved Configs] Fetching saved configurations...');
+                const response = await fetch('/api/saved-configs', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('[Saved Configs] Response:', result);
+                
+                if (!result.success) {
+                    alert('Error loading saved configurations: ' + (result.error || 'Unknown error'));
+                    return;
+                }
+                
+                const configs = result.configs || [];
+                console.log('[Saved Configs] Found', configs.length, 'configurations');
+                
+                // Load deployment history for each config
+                const configsWithDeployments = await Promise.all(configs.map(async (config) => {
+                    try {
+                        const depResponse = await fetch(`/api/saved-configs/${config.id}/deployments`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        if (depResponse.ok) {
+                            const depResult = await depResponse.json();
+                            config.deployments = depResult.success ? depResult.deployments : [];
+                        } else {
+                            config.deployments = [];
+                        }
+                    } catch (e) {
+                        console.warn('[Saved Configs] Error loading deployments for config', config.id, ':', e);
+                        config.deployments = [];
+                    }
+                    return config;
+                }));
+                
+                showSavedConfigurationsModal(configsWithDeployments);
+            } catch (error) {
+                console.error('[Saved Configs] Error loading saved configurations:', error);
+                alert('Error loading saved configurations: ' + (error.message || 'Unknown error. Please check the console for details.'));
+            }
+        }
+        
+        // Expose showSavedConfigurations to window for onclick handlers
+        window.showSavedConfigurations = showSavedConfigurations;
+        
+        function showSavedConfigurationsModal(configs) {
             const modalHTML = `
-                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow-y: auto;">
-                    <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.98), rgba(26, 31, 58, 0.98)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
-                        <div style="background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2); padding: 2rem; border-radius: 14px 14px 0 0; position: relative;">
-                            <button onclick="this.closest('[style*=fixed]').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                <div id="saved-configs-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+                    <div style="background: linear-gradient(135deg, var(--dark-bg), #1a1f3a); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 1000px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
+                        <div style="background: linear-gradient(135deg, var(--scikiq-light-blue), var(--scikiq-green)); padding: 2rem; text-align: center; border-radius: 14px 14px 0 0; position: relative;">
+                            <button onclick="document.getElementById('saved-configs-modal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
                                 <i class="fas fa-times"></i>
                             </button>
-                            <h2 style="margin: 0; color: white; font-size: 1.8rem;">
-                                <i class="fas fa-cloud"></i> Deploy MCP Server Online
+                            <i class="fas fa-save" style="font-size: 3rem; margin-bottom: 1rem; color: white;"></i>
+                            <h2 style="margin: 0; color: white; font-family: 'Space Grotesk', sans-serif;">
+                                Saved MCP Server Configurations
                             </h2>
+                            <p style="margin: 0.5rem 0 0; color: rgba(255, 255, 255, 0.9); font-size: 1.1rem;">
+                                Manage your saved MCP server configurations
+                            </p>
                         </div>
                         
                         <div style="padding: 2rem;">
-                            <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1.5rem;">
-                                Deploy your MCP server to a cloud provider or remote server
+                            ${configs.length === 0 ? `
+                                <div style="text-align: center; padding: 3rem; color: rgba(255, 255, 255, 0.6);">
+                                    <i class="fas fa-inbox" style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                    <p style="font-size: 1.2rem; margin: 0;">No saved configurations yet</p>
+                                    <p style="margin-top: 0.5rem;">Save configurations from deployment screens to see them here</p>
+                                </div>
+                            ` : `
+                                <div style="display: grid; gap: 1rem;">
+                                    ${configs.map(config => `
+                                        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1.5rem; transition: all 0.3s ease;" onmouseover="this.style.borderColor='var(--scikiq-light-blue)'; this.style.background='rgba(0, 163, 224, 0.1)'" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.1)'; this.style.background='rgba(255, 255, 255, 0.05)'">
+                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                                                <div style="flex: 1;">
+                                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                                        <i class="fas fa-${getConfigTypeIcon(config.type)}" style="color: var(--scikiq-light-blue); font-size: 1.2rem;"></i>
+                                                        <h3 style="margin: 0; color: white; font-size: 1.2rem;">${escapeHtml(config.name)}</h3>
+                                                        <span style="background: rgba(0, 163, 224, 0.2); color: var(--scikiq-light-blue); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                                                            ${config.type}
+                                                        </span>
+                                                    </div>
+                                                    <p style="margin: 0; color: rgba(255, 255, 255, 0.6); font-size: 0.9rem;">
+                                                        Created: ${new Date(config.created_at).toLocaleString()}
+                                                        ${config.updated_at !== config.created_at ? ` • Updated: ${new Date(config.updated_at).toLocaleString()}` : ''}
+                                                    </p>
+                                                </div>
+                                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                                    ${config.config && config.type !== 'database' && (config.config.yaml_file || config.config.source_info) ? `
+                                                    <button onclick="rescanSavedConfig('${config.id}')" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #A855F7; color: #A855F7; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(168, 85, 247, 0.3)'" onmouseout="this.style.background='rgba(168, 85, 247, 0.2)'" title="Rescan APIs from source and update configuration">
+                                                        <i class="fas fa-sync-alt"></i> Rescan
+                                                    </button>
+                                                    ` : ''}
+                                                    <button onclick="deploySavedConfig('${config.id}')" style="background: var(--scikiq-green); border: none; color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='var(--scikiq-green)'">
+                                                        <i class="fas fa-rocket"></i> Deploy
+                                                    </button>
+                                                    <button onclick="editSavedConfig('${config.id}')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #3B82F6; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(59, 130, 246, 0.3)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.2)'">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button onclick="deleteSavedConfig('${config.id}')" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #EF4444; color: #EF4444; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            ${config.deployments && config.deployments.length > 0 ? `
+                                                <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid var(--scikiq-green); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+                                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                            <i class="fas fa-history" style="color: var(--scikiq-green);"></i>
+                                                            <strong style="color: var(--scikiq-green);">Deployment History (${config.deployments.length})</strong>
+                                                        </div>
+                                                        ${config.deployments.some(d => d.status === 'success') ? `
+                                                        <button onclick="showDeployUpdatedYamlModal('${config.id}')" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #A855F7; color: #A855F7; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(168, 85, 247, 0.3)'" onmouseout="this.style.background='rgba(168, 85, 247, 0.2)'" title="Deploy updated YAML to existing instances">
+                                                            <i class="fas fa-cloud-upload-alt"></i> Deploy Updated YAML
+                                                        </button>
+                                                        ` : ''}
+                                                    </div>
+                                                    <div style="display: grid; gap: 0.75rem;">
+                                                        ${config.deployments.map((deployment, idx) => {
+                                                            // Handle both string and object deployment_data
+                                                            const depData = typeof deployment.deployment_data === 'string' 
+                                                                ? JSON.parse(deployment.deployment_data) 
+                                                                : deployment.deployment_data || {};
+                                                            return `
+                                                                <div style="background: rgba(0, 0, 0, 0.3); border-radius: 6px; padding: 0.75rem;">
+                                                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                                                                        <div>
+                                                                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                                                                <span style="background: rgba(255, 153, 0, 0.2); color: #FF9900; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                                                                                    ${deployment.platform}
+                                                                                </span>
+                                                                                <span style="color: rgba(255, 255, 255, 0.6); font-size: 0.8rem;">
+                                                                                    ${new Date(deployment.deployed_at).toLocaleString()}
+                                                                                </span>
+                                                                            </div>
+                                                                            ${depData.public_ip ? `<div style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem;"><i class="fas fa-server"></i> IP: ${depData.public_ip}</div>` : ''}
+                                                                            ${depData.domain ? `<div style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem;"><i class="fas fa-globe"></i> Domain: ${depData.domain}</div>` : ''}
+                                                                            ${depData.instance_id ? `<div style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem;"><i class="fas fa-id-card"></i> Instance: ${depData.instance_id}</div>` : ''}
+                                                                        </div>
+                                                                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                                                                            <span style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; 
+                                                                                ${deployment.status === 'success' ? 'background: rgba(16, 185, 129, 0.2); color: #10B981;' : 
+                                                                                  deployment.status === 'failed' ? 'background: rgba(239, 68, 68, 0.2); color: #EF4444;' : 
+                                                                                  'background: rgba(255, 153, 0, 0.2); color: #FF9900;'}">
+                                                                                ${deployment.status === 'success' ? '✓ Success' : 
+                                                                                  deployment.status === 'failed' ? '✗ Failed' : 
+                                                                                  '? Unknown'}
+                                                                            </span>
+                                                                            ${deployment.status === 'success' ? `
+                                                                                <button onclick="refreshDeploymentYaml('${config.id}', '${deployment.id}')" 
+                                                                                    style="background: rgba(124, 58, 237, 0.2); border: 1px solid #7C3AED; color: #7C3AED; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 0.25rem; transition: all 0.3s ease;" 
+                                                                                    onmouseover="this.style.background='rgba(124, 58, 237, 0.3)'" 
+                                                                                    onmouseout="this.style.background='rgba(124, 58, 237, 0.2)'"
+                                                                                    title="Update deployed instance with latest YAML configuration">
+                                                                                    <i class="fas fa-sync"></i> Refresh YAML
+                                                                                </button>
+                                                                            ` : ''}
+                                                                            ${deployment.status === 'unknown' ? `
+                                                                                <button onclick="refreshDeploymentStatus('${config.id}', '${deployment.id}')" 
+                                                                                    style="background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #3B82F6; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; gap: 0.25rem; transition: all 0.3s ease;" 
+                                                                                    onmouseover="this.style.background='rgba(59, 130, 246, 0.3)'" 
+                                                                                    onmouseout="this.style.background='rgba(59, 130, 246, 0.2)'">
+                                                                                    <i class="fas fa-sync-alt"></i> Refresh Status
+                                                                                </button>
+                                                                            ` : ''}
+                                                                        </div>
+                                                                    </div>
+                                                                    ${Object.keys(depData.access_urls || {}).length > 0 ? `
+                                                                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                                                                            <div style="color: rgba(255, 255, 255, 0.7); font-size: 0.8rem; margin-bottom: 0.25rem;">Access URLs:</div>
+                                                                            ${Object.entries(depData.access_urls).map(([key, url]) => `
+                                                                                <div style="color: rgba(255, 255, 255, 0.9); font-size: 0.8rem;">
+                                                                                    <a href="${url}" target="_blank" style="color: var(--scikiq-light-blue); text-decoration: none;">${key}: ${url}</a>
+                                                                                </div>
+                                                                            `).join('')}
+                                                                        </div>
+                                                                    ` : ''}
+                                                                    ${depData.admin_credentials && Object.keys(depData.admin_credentials).length > 0 ? `
+                                                                        <details style="margin-top: 0.5rem;">
+                                                                            <summary style="cursor: pointer; color: rgba(255, 255, 255, 0.7); font-size: 0.8rem; list-style: none;">
+                                                                                <i class="fas fa-chevron-right" style="font-size: 0.7rem; transition: transform 0.3s;"></i> Admin Credentials
+                                                                            </summary>
+                                                                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(0, 0, 0, 0.3); border-radius: 4px;">
+                                                                                ${depData.admin_credentials.username ? `<div style="color: rgba(255, 255, 255, 0.9); font-size: 0.8rem;">Username: ${depData.admin_credentials.username}</div>` : ''}
+                                                                                ${depData.admin_credentials.password ? `<div style="color: rgba(255, 255, 255, 0.9); font-size: 0.8rem;">Password: ${depData.admin_credentials.password}</div>` : ''}
+                                                                                ${depData.admin_credentials.email ? `<div style="color: rgba(255, 255, 255, 0.9); font-size: 0.8rem;">Email: ${depData.admin_credentials.email}</div>` : ''}
+                                                                            </div>
+                                                                        </details>
+                                                                    ` : ''}
+                                                                </div>
+                                                            `;
+                                                        }).join('')}
+                                                    </div>
+                                                </div>
+                                            ` : ''}
+                                            <div style="background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+                                                <details>
+                                                    <summary style="cursor: pointer; color: rgba(255, 255, 255, 0.8); font-weight: 500; list-style: none; display: flex; align-items: center; gap: 0.5rem;">
+                                                        <i class="fas fa-chevron-right" style="transition: transform 0.3s;"></i>
+                                                        <span>View Configuration Details</span>
+                                                    </summary>
+                                                    <pre style="margin-top: 1rem; color: rgba(255, 255, 255, 0.9); font-family: 'Fira Code', monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap;">${JSON.stringify(config.config, null, 2)}</pre>
+                                                </details>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Add chevron rotation for details
+            const details = document.querySelectorAll('#saved-configs-modal details');
+            details.forEach(detail => {
+                detail.addEventListener('toggle', function() {
+                    const chevron = this.querySelector('.fa-chevron-right');
+                    if (chevron) {
+                        chevron.style.transform = this.open ? 'rotate(90deg)' : 'rotate(0deg)';
+                    }
+                });
+            });
+        }
+        
+        function getConfigTypeIcon(type) {
+            const icons = {
+                'swagger': 'link',
+                'codebase': 'folder-open',
+                'database': 'database'
+            };
+            return icons[type] || 'server';
+        }
+        
+        async function saveMCPConfig(configType, configName, configData) {
+            try {
+                const response = await fetch('/api/saved-configs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: configType,
+                        name: configName,
+                        config: configData
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Don't show alert here - let calling functions handle user feedback
+                    return result.config;
+                } else {
+                    throw new Error(result.error || 'Failed to save configuration');
+                }
+            } catch (error) {
+                console.error('Error saving configuration:', error);
+                alert('Error saving configuration: ' + error.message);
+                return null;
+            }
+        }
+        
+        async function deleteSavedConfig(configId) {
+            if (!confirm('Are you sure you want to delete this configuration?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/saved-configs/${configId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Reload the modal
+                    document.getElementById('saved-configs-modal').remove();
+                    showSavedConfigurations();
+                } else {
+                    throw new Error(result.error || 'Failed to delete configuration');
+                }
+            } catch (error) {
+                console.error('Error deleting configuration:', error);
+                alert('Error deleting configuration: ' + error.message);
+            }
+        }
+        
+        async function rescanSavedConfig(configId) {
+            try {
+                // Fetch configuration
+                const configResponse = await fetch('/api/saved-configs', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!configResponse.ok) {
+                    throw new Error(`HTTP error! status: ${configResponse.status}`);
+                }
+                
+                const configResult = await configResponse.json();
+                if (!configResult.success) {
+                    throw new Error(configResult.error || 'Failed to load configurations');
+                }
+                
+                const config = configResult.configs.find(c => c.id === configId);
+                if (!config) {
+                    throw new Error('Configuration not found');
+                }
+                
+                const configData = config.config || {};
+                let sourceInfo = configData.source_info || {};
+                
+                // If source_info doesn't exist, try to reconstruct it from serverConfig or other fields
+                if (!sourceInfo || (!sourceInfo.swagger_url && !sourceInfo.project_path)) {
+                    // Try to get source info from serverConfig
+                    if (configData.serverConfig) {
+                        if (configData.serverConfig.swagger_url) {
+                            sourceInfo = {
+                                swagger_url: configData.serverConfig.swagger_url,
+                                api_base_url: configData.serverConfig.base_url || configData.base_url || ''
+                            };
+                        } else if (configData.serverConfig.project_path) {
+                            sourceInfo = {
+                                project_path: configData.serverConfig.project_path,
+                                source_file: configData.serverConfig.source_file || '',
+                                api_base_url: configData.serverConfig.api_server_url || configData.base_url || 'http://localhost:9321'
+                            };
+                        }
+                    }
+                    
+                    // If still no source info, check server_type and try to prompt user
+                    if (!sourceInfo || (!sourceInfo.swagger_url && !sourceInfo.project_path)) {
+                        const serverType = config.type || configData.server_type || '';
+                        if (serverType === 'swagger' || serverType === 'api') {
+                            const swaggerUrl = prompt('This configuration does not have source information stored. Please enter the Swagger/OpenAPI URL to rescan:', '');
+                            if (!swaggerUrl || swaggerUrl.trim() === '') {
+                                return;
+                            }
+                            sourceInfo = {
+                                swagger_url: swaggerUrl.trim(),
+                                api_base_url: configData.base_url || ''
+                            };
+                        } else if (serverType === 'codebase') {
+                            const projectPath = prompt('This configuration does not have source information stored. Please enter the project path to rescan:', '');
+                            if (!projectPath || projectPath.trim() === '') {
+                                return;
+                            }
+                            sourceInfo = {
+                                project_path: projectPath.trim(),
+                                source_file: '',
+                                api_base_url: configData.base_url || 'http://localhost:9321'
+                            };
+                        } else {
+                            alert('This configuration does not have source information. Cannot rescan. Please edit the configuration manually or provide source information.');
+                            return;
+                        }
+                    }
+                }
+                
+                // Find the button that was clicked
+                const buttons = document.querySelectorAll(`button[onclick*="rescanSavedConfig('${configId}')"]`);
+                const button = buttons.length > 0 ? buttons[0] : null;
+                const originalHTML = button ? button.innerHTML : '';
+                if (button) {
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rescanning...';
+                }
+                
+                // Rescan APIs from source
+                const rescanResponse = await fetch('/api/rescan-apis', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source_info: sourceInfo })
+                });
+                
+                if (!rescanResponse.ok) {
+                    throw new Error('Failed to rescan APIs from source');
+                }
+                
+                const rescanResult = await rescanResponse.json();
+                if (!rescanResult.success) {
+                    throw new Error(rescanResult.error || 'Failed to rescan APIs');
+                }
+                
+                const allApis = rescanResult.api_definitions || [];
+                
+                if (allApis.length === 0) {
+                    alert('No APIs found in the source. Please check the source URL or path.');
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = originalHTML;
+                    }
+                    return;
+                }
+                
+                // Open edit modal with rescanned APIs
+                // Fetch YAML data first
+                const yamlResponse = await fetch(`/api/saved-configs/${configId}/yaml`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                let yamlData = {};
+                let tools = [];
+                let selectedApiIds = configData.selected_api_ids || [];
+                
+                if (yamlResponse.ok) {
+                    const yamlResult = await yamlResponse.json();
+                    if (yamlResult.success) {
+                        yamlData = yamlResult.yaml_data || {};
+                        tools = yamlData.tools || [];
+                        
+                        // Update selected API IDs based on current tools
+                        // Normalize method and endpoint to ensure consistent ID generation
+                        selectedApiIds = tools.map(tool => {
+                            const toolMethod = (tool.method || 'GET').toUpperCase();
+                            const toolPath = tool.endpoint || '';
+                            return `${toolMethod}_${toolPath}`.replace(/[\/\{\}]/g, '_');
+                        });
+                    }
+                }
+                
+                // Show edit modal with all APIs
+                showEditConfigModal(configId, config, yamlData, tools, allApis, selectedApiIds);
+                
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = originalHTML;
+                }
+                
+            } catch (error) {
+                console.error('Error rescanning configuration:', error);
+                alert('Error rescanning configuration: ' + error.message);
+                const buttons = document.querySelectorAll(`button[onclick*="rescanSavedConfig('${configId}')"]`);
+                const button = buttons.length > 0 ? buttons[0] : null;
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-sync-alt"></i> Rescan';
+                }
+            }
+        }
+        
+        // Expose rescanSavedConfig to window for onclick handlers
+        window.rescanSavedConfig = rescanSavedConfig;
+        
+        async function editSavedConfig(configId) {
+            try {
+                // First fetch configuration to get config data
+                const configResponse = await fetch('/api/saved-configs', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!configResponse.ok) {
+                    throw new Error(`HTTP error! status: ${configResponse.status}`);
+                }
+                
+                const configResult = await configResponse.json();
+                
+                if (!configResult.success) {
+                    throw new Error(configResult.error || 'Failed to load configurations');
+                }
+                
+                const config = configResult.configs.find(c => c.id === configId);
+                if (!config) {
+                    throw new Error('Configuration not found');
+                }
+                
+                // Check if config has yaml_file path
+                const configData = config.config || {};
+                const yamlFile = configData.yaml_file;
+                
+                if (!yamlFile) {
+                    throw new Error('YAML file path not found in configuration. This configuration may not have been generated from a YAML file.');
+                }
+                
+                // Fetch YAML data
+                const yamlResponse = await fetch(`/api/saved-configs/${configId}/yaml`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!yamlResponse.ok) {
+                    const errorText = await yamlResponse.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        throw new Error(`Failed to load YAML file: HTTP ${yamlResponse.status}. ${errorText}`);
+                    }
+                    throw new Error(errorData.error || `Failed to load YAML file: HTTP ${yamlResponse.status}`);
+                }
+                
+                const yamlResult = await yamlResponse.json();
+                
+                if (!yamlResult.success) {
+                    // Check if it's a database configuration
+                    if (yamlResult.error && yamlResult.error.includes('Database configurations')) {
+                        alert('Database configurations cannot be edited through this interface. Please use the database configuration editor.');
+                        return;
+                    }
+                    throw new Error(yamlResult.error || 'Failed to load YAML data');
+                }
+                
+                const yamlData = yamlResult.yaml_data || {};
+                let tools = yamlData.tools || [];
+                
+                // Debug logging
+                console.log('[Edit Config] YAML Result:', yamlResult);
+                console.log('[Edit Config] YAML Data:', yamlData);
+                console.log('[Edit Config] Tools from YAML:', tools);
+                console.log('[Edit Config] Tools count:', tools.length);
+                
+                // If tools array is empty, try to get from config_data as fallback
+                if (!tools || tools.length === 0) {
+                    console.warn('[Edit Config] No tools found in YAML, checking config_data...');
+                    if (configData.tools && Array.isArray(configData.tools) && configData.tools.length > 0) {
+                        console.log('[Edit Config] Found tools in config_data:', configData.tools.length);
+                        tools = configData.tools;
+                        // Update yamlData with tools from config
+                        yamlData.tools = tools;
+                    }
+                }
+                
+                // Show warning if YAML file was not found but data was constructed from config
+                if (yamlResult.note) {
+                    console.warn('YAML file not found, using configuration data:', yamlResult.note);
+                }
+                
+                console.log('[Edit Config] Final tools to display:', tools.length);
+                
+                // Check if source information exists for rescanning
+                // configData is already declared above, reuse it
+                const sourceInfo = configData.source_info || {};
+                let selectedApiIds = configData.selected_api_ids || [];
+                
+                // Update selected API IDs from current tools if available
+                if (tools && tools.length > 0) {
+                    selectedApiIds = tools.map(tool => {
+                        const toolMethod = (tool.method || 'GET').toUpperCase();
+                        const toolPath = tool.endpoint || '';
+                        return `${toolMethod}_${toolPath}`.replace(/[\/\{\}]/g, '_');
+                    });
+                }
+                
+                // If source info exists, rescan APIs
+                let allApis = [];
+                if (sourceInfo && (sourceInfo.swagger_url || sourceInfo.project_path)) {
+                    try {
+                        console.log('[Edit Config] Rescanning APIs from source:', sourceInfo);
+                        const rescanResponse = await fetch('/api/rescan-apis', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ source_info: sourceInfo })
+                        });
+                        
+                        if (rescanResponse.ok) {
+                            const rescanResult = await rescanResponse.json();
+                            if (rescanResult.success) {
+                                allApis = rescanResult.api_definitions || [];
+                                console.log('[Edit Config] Rescanned APIs:', allApis.length);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('[Edit Config] Error rescanning APIs:', error);
+                        // Continue with existing tools if rescan fails
+                    }
+                }
+                
+                // Show edit modal with all APIs and selected tools
+                showEditConfigModal(configId, config, yamlData, tools, allApis, selectedApiIds);
+                
+            } catch (error) {
+                console.error('Error loading configuration for edit:', error);
+                console.error('Error details:', error.stack);
+                alert('Error loading configuration: ' + error.message);
+            }
+        }
+        
+        function showEditConfigModal(configId, config, yamlData, tools, allApis = [], selectedApiIds = []) {
+            const modalHTML = `
+                <div id="edit-config-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 10002; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow-y: auto;">
+                    <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.98), rgba(26, 31, 58, 0.98)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 1200px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);">
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, var(--scikiq-light-blue), #0891B2); padding: 1.5rem 2rem; border-radius: 14px 14px 0 0; flex-shrink: 0; position: relative;">
+                            <button onclick="document.getElementById('edit-config-modal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <h2 style="margin: 0; color: white; font-size: 1.8rem;">
+                                <i class="fas fa-edit"></i> Edit Configuration: ${config.name}
+                            </h2>
+                            <p style="margin: 0.5rem 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 1rem;">
+                                Modify APIs, tools, parameters, and descriptions
                             </p>
-                            
-                            <!-- Deployment Options -->
-                            <div style="display: grid; gap: 1rem;">
-                                <button onclick="deployToAWS('${serverPath}', '${filename}')" style="padding: 1.5rem; background: rgba(255, 153, 0, 0.1); border: 2px solid #FF9900; border-radius: 8px; color: white; cursor: pointer; text-align: left; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 153, 0, 0.2)'" onmouseout="this.style.background='rgba(255, 153, 0, 0.1)'">
-                                    <div style="display: flex; align-items: center; gap: 1rem;">
-                                        <i class="fab fa-aws" style="font-size: 2rem;"></i>
-                                        <div>
-                                            <div style="font-weight: 700; font-size: 1.1rem;">AWS EC2</div>
-                                            <div style="font-size: 0.9rem; opacity: 0.8;">Deploy to Amazon Web Services</div>
-                                        </div>
-                                    </div>
-                                </button>
-                                
-                                <button onclick="deployToAzure('${serverPath}', '${filename}')" style="padding: 1.5rem; background: rgba(0, 120, 215, 0.1); border: 2px solid #0078D7; border-radius: 8px; color: white; cursor: pointer; text-align: left; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(0, 120, 215, 0.2)'" onmouseout="this.style.background='rgba(0, 120, 215, 0.1)'">
-                                    <div style="display: flex; align-items: center; gap: 1rem;">
-                                        <i class="fab fa-microsoft" style="font-size: 2rem;"></i>
-                                        <div>
-                                            <div style="font-weight: 700; font-size: 1.1rem;">Azure VM</div>
-                                            <div style="font-size: 0.9rem; opacity: 0.8;">Deploy to Microsoft Azure</div>
-                                        </div>
-                                    </div>
-                                </button>
-                                
-                                <button onclick="deployToRemote('${serverPath}', '${filename}')" style="padding: 1.5rem; background: rgba(124, 58, 237, 0.1); border: 2px solid #7C3AED; border-radius: 8px; color: white; cursor: pointer; text-align: left; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(124, 58, 237, 0.2)'" onmouseout="this.style.background='rgba(124, 58, 237, 0.1)'">
-                                    <div style="display: flex; align-items: center; gap: 1rem;">
-                                        <i class="fas fa-server" style="font-size: 2rem;"></i>
-                                        <div>
-                                            <div style="font-weight: 700; font-size: 1.1rem;">Remote Server (SSH)</div>
-                                            <div style="font-size: 0.9rem; opacity: 0.8;">Deploy to any server via SSH</div>
-                                        </div>
-                                    </div>
-                                </button>
+                        </div>
+                        
+                        <!-- Body -->
+                        <div style="padding: 2rem; overflow-y: auto; flex: 1;">
+                            <!-- Configuration Name -->
+                            <div style="margin-bottom: 2rem;">
+                                <label style="display: block; color: var(--scikiq-light-blue); font-weight: 600; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-tag"></i> Configuration Name
+                                </label>
+                                <input type="text" id="editConfigName" value="${config.name}" style="width: 100%; padding: 0.8rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 1rem;" />
                             </div>
                             
-                            <button onclick="this.closest('[style*=fixed]').remove()" style="width: 100%; margin-top: 1.5rem; padding: 1rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">
-                                <i class="fas fa-times"></i> Cancel
+                            <!-- Base URL -->
+                            <div style="margin-bottom: 2rem;">
+                                <label style="display: block; color: var(--scikiq-light-blue); font-weight: 600; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-link"></i> Base URL
+                                </label>
+                                <input type="text" id="editBaseUrl" value="${yamlData.base_url || ''}" style="width: 100%; padding: 0.8rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 1rem;" />
+                            </div>
+                            
+                            ${allApis.length > 0 ? `
+                            <!-- API Selection Section -->
+                            <div style="margin-bottom: 2rem; background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                    <label style="color: var(--scikiq-light-blue); font-weight: 600;">
+                                        <i class="fas fa-list-check"></i> Available APIs (${allApis.length})
+                                    </label>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button onclick="selectAllAPIs()" style="background: rgba(0, 163, 224, 0.2); border: 1px solid var(--scikiq-light-blue); color: var(--scikiq-light-blue); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                                            Select All
+                                        </button>
+                                        <button onclick="deselectAllAPIs()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                                            Deselect All
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="apiSelectionList" style="max-height: 300px; overflow-y: auto; display: grid; gap: 0.75rem;">
+                                    ${allApis.map((api, index) => {
+                                        // Normalize API structure - handle both 'route'/'path' and 'methods'/'method'
+                                        const apiPath = api.path || api.route || '';
+                                        const apiMethod = (api.method || (api.methods && api.methods[0]) || 'GET').toUpperCase();
+                                        const apiId = api.id || `${apiMethod}_${apiPath}`.replace(/[\/\{\}]/g, '_');
+                                        
+                                        // Check if this API is already selected by matching ID or by method+path
+                                        const isSelected = selectedApiIds.includes(apiId) || tools.some(t => {
+                                            const toolPath = t.endpoint || '';
+                                            const toolMethod = (t.method || 'GET').toUpperCase();
+                                            return toolPath === apiPath && toolMethod === apiMethod;
+                                        });
+                                        
+                                        return `
+                                            <div class="api-selection-item" data-api-id="${apiId}" style="background: ${isSelected ? 'rgba(0, 163, 224, 0.2)' : 'rgba(255, 255, 255, 0.05)'}; border: 2px solid ${isSelected ? 'var(--scikiq-light-blue)' : 'rgba(255, 255, 255, 0.2)'}; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: all 0.3s ease;" onclick="toggleAPISelection('${apiId}')">
+                                                <input type="checkbox" class="api-checkbox" data-api-id="${apiId}" ${isSelected ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;" onclick="event.stopPropagation(); toggleAPISelection('${apiId}')" />
+                                                <div style="flex: 1;">
+                                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                                        <span style="background: var(--scikiq-light-blue); color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">${apiMethod}</span>
+                                                        <span style="color: white; font-weight: 500; font-family: 'Fira Code', monospace;">${apiPath || ''}</span>
+                                                    </div>
+                                                    ${api.summary || api.description || api.docstring ? `<div style="color: rgba(255, 255, 255, 0.7); font-size: 0.85rem;">${api.summary || api.description || api.docstring || ''}</div>` : ''}
+                                                </div>
+                                                ${isSelected ? '<i class="fas fa-check-circle" style="color: var(--scikiq-light-blue);"></i>' : ''}
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.2);">
+                                    <button onclick="addSelectedAPIsToTools()" style="background: var(--scikiq-green); border: none; color: white; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; margin: 0 auto;">
+                                        <i class="fas fa-plus"></i> Add Selected APIs to Tools
+                                    </button>
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            <!-- Tools Section -->
+                            <div style="margin-bottom: 2rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                    <label style="color: var(--scikiq-light-blue); font-weight: 600;">
+                                        <i class="fas fa-tools"></i> Tools (${tools.length})
+                                    </label>
+                                    <button onclick="addNewTool()" style="background: var(--scikiq-green); border: none; color: white; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-plus"></i> Add Tool
+                                    </button>
+                                </div>
+                                
+                                <div id="toolsList" style="display: grid; gap: 1rem;">
+                                    ${tools.map((tool, index) => renderToolEditor(tool, index)).join('')}
+                                </div>
+                            </div>
+                            
+                            <!-- Version Note -->
+                            <div style="margin-bottom: 2rem;">
+                                <label style="display: block; color: var(--scikiq-light-blue); font-weight: 600; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-sticky-note"></i> Version Note (optional)
+                                </label>
+                                <input type="text" id="versionNote" placeholder="Describe changes made in this version" style="width: 100%; padding: 0.8rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 1rem;" />
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                                <button onclick="document.getElementById('edit-config-modal').remove()" style="padding: 0.8rem 1.5rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">
+                                    Cancel
+                                </button>
+                                <button onclick="saveEditedConfig('${configId}')" style="padding: 0.8rem 1.5rem; background: var(--scikiq-light-blue); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                                    <i class="fas fa-save"></i> Save as New Version
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Store original data for reference
+            window.editConfigData = {
+                configId: configId,
+                originalYamlData: yamlData,
+                originalTools: JSON.parse(JSON.stringify(tools)),
+                allApis: allApis,
+                selectedApiIds: [...selectedApiIds]
+            };
+            
+            // Update base URL previews when base URL changes
+            setTimeout(() => {
+                const baseUrlInput = document.getElementById('editBaseUrl');
+                if (baseUrlInput) {
+                    baseUrlInput.addEventListener('input', function(e) {
+                        document.querySelectorAll('[id^="baseUrlPreview-"]').forEach(preview => {
+                            preview.textContent = e.target.value || '';
+                        });
+                    });
+                }
+            }, 100);
+        }
+        
+        function renderToolEditor(tool, index) {
+            const baseUrl = window.editConfigData?.originalYamlData?.base_url || '';
+            const properties = tool.input_schema?.properties || {};
+            const required = tool.input_schema?.required || [];
+            const propertiesList = Object.keys(properties).map(key => {
+                const prop = properties[key];
+                const isRequired = required.includes(key);
+                const escapedKey = escapeHtml(key);
+                const escapedType = escapeHtml(prop.type || 'string');
+                const escapedDesc = prop.description ? escapeHtml(prop.description) : '';
+                return `
+                    <div class="param-item" data-param-name="${escapedKey}" style="background: rgba(0, 0, 0, 0.3); padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                    <strong style="color: white;">${escapedKey}</strong>
+                                    <span style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;">(${escapedType})</span>
+                                    ${isRequired ? '<span style="color: var(--anthropic-orange); font-weight: 600;">*</span>' : ''}
+                                    <button onclick="editParameter(${index}, '${escapedKey.replace(/'/g, "\\'")}')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #3B82F6; padding: 0.2rem 0.4rem; border-radius: 4px; cursor: pointer; font-size: 0.7rem; margin-left: 0.5rem;">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                </div>
+                                ${escapedDesc ? `<div style="color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; margin-top: 0.25rem;">${escapedDesc}</div>` : ''}
+                            </div>
+                            <button onclick="removeParameter(${index}, '${escapedKey.replace(/'/g, "\\'")}')" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #EF4444; color: #EF4444; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            return `
+                <div class="tool-editor" data-tool-index="${index}" style="background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 1.5rem; transition: all 0.3s ease;" onmouseover="this.style.borderColor='rgba(0, 163, 224, 0.5)'" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="background: var(--scikiq-light-blue); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem;">
+                                ${index + 1}
+                            </div>
+                            <h4 style="margin: 0; color: white; font-size: 1.1rem;">${tool.name || 'Unnamed Tool'}</h4>
+                        </div>
+                        <button onclick="removeTool(${index})" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #EF4444; color: #EF4444; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <label style="display: block; color: rgba(255, 255, 255, 0.9); font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 500;">
+                                <i class="fas fa-tag"></i> Tool Name <span style="color: var(--anthropic-orange);">*</span>
+                            </label>
+                            <input type="text" class="tool-name" data-index="${index}" value="${tool.name || ''}" placeholder="e.g., getPetById" style="width: 100%; padding: 0.7rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 0.95rem; transition: border-color 0.3s;" onfocus="this.style.borderColor='var(--scikiq-light-blue)'" onblur="this.style.borderColor='rgba(255, 255, 255, 0.3)'" />
+                        </div>
+                        <div>
+                            <label style="display: block; color: rgba(255, 255, 255, 0.9); font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 500;">
+                                <i class="fas fa-code"></i> HTTP Method <span style="color: var(--anthropic-orange);">*</span>
+                            </label>
+                            <select class="tool-method" data-index="${index}" style="width: 100%; padding: 0.7rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 0.95rem; cursor: pointer;">
+                                <option value="GET" ${tool.method === 'GET' ? 'selected' : ''}>GET - Retrieve data</option>
+                                <option value="POST" ${tool.method === 'POST' ? 'selected' : ''}>POST - Create new resource</option>
+                                <option value="PUT" ${tool.method === 'PUT' ? 'selected' : ''}>PUT - Update resource</option>
+                                <option value="DELETE" ${tool.method === 'DELETE' ? 'selected' : ''}>DELETE - Remove resource</option>
+                                <option value="PATCH" ${tool.method === 'PATCH' ? 'selected' : ''}>PATCH - Partial update</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; color: rgba(255, 255, 255, 0.9); font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 500;">
+                            <i class="fas fa-route"></i> API Endpoint <span style="color: var(--anthropic-orange);">*</span>
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; white-space: nowrap;" id="baseUrlPreview-${index}">${baseUrl}</span>
+                            <input type="text" class="tool-endpoint" data-index="${index}" value="${tool.endpoint || ''}" placeholder="/api/pets/{petId}" style="flex: 1; padding: 0.7rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 0.95rem; font-family: 'Fira Code', monospace; transition: border-color 0.3s;" onfocus="this.style.borderColor='var(--scikiq-light-blue)'" onblur="this.style.borderColor='rgba(255, 255, 255, 0.3)'" />
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; color: rgba(255, 255, 255, 0.9); font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 500;">
+                            <i class="fas fa-align-left"></i> Description
+                        </label>
+                        <textarea class="tool-description" data-index="${index}" rows="3" placeholder="Describe what this tool does..." style="width: 100%; padding: 0.7rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 0.95rem; resize: vertical; transition: border-color 0.3s;" onfocus="this.style.borderColor='var(--scikiq-light-blue)'" onblur="this.style.borderColor='rgba(255, 255, 255, 0.3)'">${tool.description || ''}</textarea>
+                    </div>
+                    
+                    <details style="margin-top: 1rem;" ${Object.keys(properties).length > 0 ? 'open' : ''}>
+                        <summary style="color: var(--scikiq-light-blue); cursor: pointer; padding: 0.5rem; background: rgba(255, 255, 255, 0.05); border-radius: 6px; font-weight: 600;">
+                            <i class="fas fa-cog"></i> Parameters (${Object.keys(properties).length})
+                        </summary>
+                        <div style="margin-top: 1rem;">
+                            ${propertiesList || '<div style="color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; padding: 0.5rem;">No parameters defined. Click "Add Parameter" to add one.</div>'}
+                            <button onclick="addProperty(${index})" style="margin-top: 0.5rem; background: rgba(0, 163, 224, 0.2); border: 1px solid var(--scikiq-light-blue); color: var(--scikiq-light-blue); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; width: 100%; justify-content: center;">
+                                <i class="fas fa-plus"></i> Add Parameter
+                            </button>
+                        </div>
+                    </details>
+                </div>
+            `;
+        }
+        
+        // API Selection Functions
+        function toggleAPISelection(apiId) {
+            const checkbox = document.querySelector(`.api-checkbox[data-api-id="${apiId}"]`);
+            const item = document.querySelector(`.api-selection-item[data-api-id="${apiId}"]`);
+            
+            if (checkbox && item) {
+                const isChecked = checkbox.checked;
+                
+                // Update visual state
+                if (isChecked) {
+                    item.style.background = 'rgba(0, 163, 224, 0.2)';
+                    item.style.borderColor = 'var(--scikiq-light-blue)';
+                    if (!item.querySelector('.fa-check-circle')) {
+                        item.insertAdjacentHTML('beforeend', '<i class="fas fa-check-circle" style="color: var(--scikiq-light-blue);"></i>');
+                    }
+                } else {
+                    item.style.background = 'rgba(255, 255, 255, 0.05)';
+                    item.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    const checkIcon = item.querySelector('.fa-check-circle');
+                    if (checkIcon) {
+                        checkIcon.remove();
+                    }
+                }
+                
+                // Update selected API IDs
+                if (!window.editConfigData.selectedApiIds) {
+                    window.editConfigData.selectedApiIds = [];
+                }
+                
+                if (isChecked && !window.editConfigData.selectedApiIds.includes(apiId)) {
+                    window.editConfigData.selectedApiIds.push(apiId);
+                } else if (!isChecked) {
+                    window.editConfigData.selectedApiIds = window.editConfigData.selectedApiIds.filter(id => id !== apiId);
+                }
+            }
+        }
+        
+        function selectAllAPIs() {
+            document.querySelectorAll('.api-checkbox').forEach(checkbox => {
+                if (!checkbox.checked) {
+                    checkbox.checked = true;
+                    const apiId = checkbox.getAttribute('data-api-id');
+                    toggleAPISelection(apiId);
+                }
+            });
+        }
+        
+        function deselectAllAPIs() {
+            document.querySelectorAll('.api-checkbox').forEach(checkbox => {
+                if (checkbox.checked) {
+                    checkbox.checked = false;
+                    const apiId = checkbox.getAttribute('data-api-id');
+                    toggleAPISelection(apiId);
+                }
+            });
+        }
+        
+        function addSelectedAPIsToTools() {
+            const selectedCheckboxes = document.querySelectorAll('.api-checkbox:checked');
+            const allApis = window.editConfigData.allApis || [];
+            const toolsList = document.getElementById('toolsList');
+            
+            if (!toolsList) {
+                alert('Tools list not found');
+                return;
+            }
+            
+            let addedCount = 0;
+            selectedCheckboxes.forEach(checkbox => {
+                const apiId = checkbox.getAttribute('data-api-id');
+                const api = allApis.find(a => {
+                    // Normalize API structure
+                    const aPath = a.path || a.route || '';
+                    const aMethod = (a.method || (a.methods && a.methods[0]) || 'GET').toUpperCase();
+                    const aId = a.id || `${aMethod}_${aPath}`.replace(/[\/\{\}]/g, '_');
+                    return aId === apiId;
+                });
+                
+                if (api) {
+                    // Normalize API fields
+                    const apiPath = api.path || api.route || '';
+                    const apiMethod = (api.method || (api.methods && api.methods[0]) || 'GET').toUpperCase();
+                    
+                    // Check if tool already exists
+                    const existingTools = Array.from(toolsList.querySelectorAll('.tool-editor'));
+                    const alreadyExists = existingTools.some(toolEl => {
+                        const endpointInput = toolEl.querySelector('.tool-endpoint');
+                        const methodSelect = toolEl.querySelector('.tool-method');
+                        return endpointInput && methodSelect && 
+                               endpointInput.value === apiPath && 
+                               methodSelect.value === apiMethod;
+                    });
+                    
+                    if (!alreadyExists) {
+                        // Create tool from API
+                        const toolName = apiPath.split('/').pop().replace(/\{|\}/g, '') || 'api_endpoint';
+                        const newTool = {
+                            name: toolName,
+                            description: api.summary || api.description || api.docstring || `${apiMethod} ${apiPath}`,
+                            endpoint: apiPath,
+                            method: apiMethod,
+                            input_schema: {
+                                type: 'object',
+                                properties: {},
+                                required: []
+                            }
+                        };
+                        
+                        // Add parameters if available
+                        if (api.parameters && Array.isArray(api.parameters) && api.parameters.length > 0) {
+                            api.parameters.forEach(param => {
+                                // Handle parameter structure from Swagger/OpenAPI
+                                const paramName = param.name || param.param_name || '';
+                                if (!paramName) {
+                                    console.warn('Parameter without name found:', param);
+                                    return; // Skip parameters without names
+                                }
+                                
+                                // Normalize parameter type
+                                let paramType = param.type || 'string';
+                                // Handle array types like "array[string]" or "array[string]"
+                                if (typeof paramType === 'string' && paramType.startsWith('array[')) {
+                                    paramType = paramType; // Keep as is for display
+                                }
+                                
+                                // Get description - check multiple possible fields
+                                const paramDescription = param.description || param.desc || param.docstring || '';
+                                
+                                // Add parameter to properties
+                                newTool.input_schema.properties[paramName] = {
+                                    type: paramType,
+                                    description: paramDescription
+                                };
+                                
+                                // Handle required field - can be boolean or in required array
+                                const isRequired = param.required === true || param.required === 'true' || 
+                                                  (param.location === 'path') || // Path parameters are always required
+                                                  (Array.isArray(newTool.input_schema.required) && newTool.input_schema.required.includes(paramName));
+                                
+                                if (isRequired) {
+                                    if (!newTool.input_schema.required) {
+                                        newTool.input_schema.required = [];
+                                    }
+                                    if (!newTool.input_schema.required.includes(paramName)) {
+                                        newTool.input_schema.required.push(paramName);
+                                    }
+                                }
+                            });
+                        }
+                        
+                        const currentTools = existingTools.length;
+                        const toolHTML = renderToolEditor(newTool, currentTools);
+                        toolsList.insertAdjacentHTML('beforeend', toolHTML);
+                        
+                        // Ensure parameters section is expanded if there are parameters
+                        if (Object.keys(newTool.input_schema.properties || {}).length > 0) {
+                            const newToolEditor = toolsList.querySelector(`.tool-editor[data-tool-index="${currentTools}"]`);
+                            if (newToolEditor) {
+                                const detailsElement = newToolEditor.querySelector('details');
+                                if (detailsElement) {
+                                    detailsElement.open = true;
+                                }
+                            }
+                        }
+                        
+                        addedCount++;
+                    }
+                }
+            });
+            
+            if (addedCount > 0) {
+                reindexTools();
+                alert(`Added ${addedCount} API(s) to tools`);
+            } else {
+                alert('No new APIs to add. They may already be in the tools list.');
+            }
+        }
+        
+        function addNewTool() {
+            const toolsList = document.getElementById('toolsList');
+            const newTool = {
+                name: 'new_tool',
+                description: 'New tool description',
+                endpoint: '/api/new-endpoint',
+                method: 'GET',
+                input_schema: {
+                    type: 'object',
+                    properties: {},
+                    required: []
+                }
+            };
+            
+            const index = toolsList.children.length;
+            const toolHTML = renderToolEditor(newTool, index);
+            toolsList.insertAdjacentHTML('beforeend', toolHTML);
+        }
+        
+        function removeTool(index) {
+            if (confirm('Are you sure you want to remove this tool?')) {
+                const toolEditor = document.querySelector(`.tool-editor[data-tool-index="${index}"]`);
+                if (toolEditor) {
+                    toolEditor.remove();
+                    // Re-index remaining tools
+                    reindexTools();
+                }
+            }
+        }
+        
+        function reindexTools() {
+            const tools = document.querySelectorAll('.tool-editor');
+            tools.forEach((tool, newIndex) => {
+                tool.setAttribute('data-tool-index', newIndex);
+                tool.querySelector('h4').textContent = `Tool #${newIndex + 1}`;
+                tool.querySelectorAll('[data-index]').forEach(el => {
+                    el.setAttribute('data-index', newIndex);
+                });
+            });
+        }
+        
+        function addProperty(toolIndex) {
+            // Show add parameter modal
+            showAddParameterModal(toolIndex);
+        }
+        
+        function showAddParameterModal(toolIndex, existingParam = null) {
+            const isEdit = existingParam !== null;
+            const modalHTML = `
+                <div id="add-param-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10003; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+                    <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.98), rgba(26, 31, 58, 0.98)); border: 2px solid var(--scikiq-light-blue); border-radius: 12px; max-width: 500px; width: 100%; padding: 2rem;">
+                        <h3 style="margin: 0 0 1.5rem 0; color: white; font-size: 1.3rem;">
+                            <i class="fas fa-${isEdit ? 'edit' : 'plus'}"></i> ${isEdit ? 'Edit' : 'Add'} Parameter
+                        </h3>
+                        
+                        <div style="display: grid; gap: 1rem;">
+                            <div>
+                                <label style="display: block; color: rgba(255, 255, 255, 0.9); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    Parameter Name <span style="color: var(--anthropic-orange);">*</span>
+                                </label>
+                                <input type="text" id="paramName" value="${existingParam?.name || ''}" placeholder="e.g., petId" style="width: 100%; padding: 0.7rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 0.95rem;" />
+                            </div>
+                            
+                            <div>
+                                <label style="display: block; color: rgba(255, 255, 255, 0.9); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    Parameter Type <span style="color: var(--anthropic-orange);">*</span>
+                                </label>
+                                <select id="paramType" style="width: 100%; padding: 0.7rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 0.95rem;">
+                                    <option value="string" ${existingParam?.type === 'string' ? 'selected' : ''}>String</option>
+                                    <option value="number" ${existingParam?.type === 'number' ? 'selected' : ''}>Number</option>
+                                    <option value="integer" ${existingParam?.type === 'integer' ? 'selected' : ''}>Integer</option>
+                                    <option value="boolean" ${existingParam?.type === 'boolean' ? 'selected' : ''}>Boolean</option>
+                                    <option value="object" ${existingParam?.type === 'object' ? 'selected' : ''}>Object</option>
+                                    <option value="array" ${existingParam?.type === 'array' ? 'selected' : ''}>Array</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label style="display: block; color: rgba(255, 255, 255, 0.9); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    Description
+                                </label>
+                                <textarea id="paramDesc" rows="3" placeholder="Describe what this parameter does..." style="width: 100%; padding: 0.7rem; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 6px; background: rgba(255, 255, 255, 0.1); color: white; font-size: 0.95rem; resize: vertical;">${existingParam?.description || ''}</textarea>
+                            </div>
+                            
+                            <div>
+                                <label style="display: flex; align-items: center; gap: 0.5rem; color: rgba(255, 255, 255, 0.9); font-size: 0.9rem; cursor: pointer;">
+                                    <input type="checkbox" id="paramRequired" ${existingParam?.required ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;" />
+                                    Required Parameter
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                            <button onclick="document.getElementById('add-param-modal').remove()" style="padding: 0.7rem 1.5rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; color: white; font-weight: 600; cursor: pointer;">
+                                Cancel
+                            </button>
+                            <button onclick="saveParameter(${toolIndex}, ${isEdit ? `'${existingParam?.name}'` : 'null'})" style="padding: 0.7rem 1.5rem; background: var(--scikiq-light-blue); border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;">
+                                <i class="fas fa-save"></i> ${isEdit ? 'Update' : 'Add'} Parameter
                             </button>
                         </div>
                     </div>
@@ -6112,39 +7623,1115 @@ server = <span style="color: #3B82F6;">Server</span>(<span style="color: #10B981
             
             document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
-
-        async function deployToAWS(serverPath, filename) {
-            // Close current modal and show publish online modal with AWS tab
-            const currentModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10001"]');
-            if (currentModal) currentModal.remove();
+        
+        function saveParameter(toolIndex, oldParamName = null) {
+            const paramName = document.getElementById('paramName').value.trim();
+            const paramType = document.getElementById('paramType').value;
+            const paramDesc = document.getElementById('paramDesc').value.trim();
+            const paramRequired = document.getElementById('paramRequired').checked;
             
-            showPublishOnlineModal();
-            // Wait for modal to render, then switch to AWS tab
-            setTimeout(() => {
-                switchDeploymentTab('aws');
-            }, 100);
+            if (!paramName) {
+                alert('Parameter name is required');
+                return;
+            }
+            
+            // Close modal
+            document.getElementById('add-param-modal').remove();
+            
+            // Find the tool editor
+            const toolEditor = document.querySelector(`.tool-editor[data-tool-index="${toolIndex}"]`);
+            if (!toolEditor) return;
+            
+            const details = toolEditor.querySelector('details');
+            const summary = details.querySelector('summary');
+            const content = details.querySelector('div');
+            
+            // Remove old parameter if editing
+            if (oldParamName && oldParamName !== paramName) {
+                const oldParamDiv = Array.from(content.querySelectorAll('strong')).find(s => s.textContent === oldParamName)?.closest('div[style*="background: rgba(0, 0, 0, 0.3)"]');
+                if (oldParamDiv) oldParamDiv.remove();
+            }
+            
+            // Check if parameter already exists
+            const existingParamDiv = Array.from(content.querySelectorAll('strong')).find(s => s.textContent === paramName)?.closest('div[style*="background: rgba(0, 0, 0, 0.3)"]');
+            if (existingParamDiv && (!oldParamName || oldParamName !== paramName)) {
+                alert('A parameter with this name already exists');
+                return;
+            }
+            
+            // Create parameter HTML
+            const propHTML = `
+                <div class="param-item" data-param-name="${paramName}" style="background: rgba(0, 0, 0, 0.3); padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                <strong style="color: white;">${paramName}</strong>
+                                <span style="color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;">(${paramType})</span>
+                                ${paramRequired ? '<span style="color: var(--anthropic-orange); font-weight: 600;">*</span>' : ''}
+                                <button onclick="editParameter(${toolIndex}, '${paramName}')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #3B82F6; padding: 0.2rem 0.4rem; border-radius: 4px; cursor: pointer; font-size: 0.7rem; margin-left: 0.5rem;">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                            </div>
+                            ${paramDesc ? `<div style="color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; margin-top: 0.25rem;">${paramDesc}</div>` : ''}
+                        </div>
+                        <button onclick="removeParameter(${toolIndex}, '${paramName}')" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #EF4444; color: #EF4444; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Add or replace parameter
+            if (oldParamName && existingParamDiv) {
+                existingParamDiv.outerHTML = propHTML;
+            } else {
+                const addButton = content.querySelector('button');
+                if (addButton) {
+                    addButton.insertAdjacentHTML('beforebegin', propHTML);
+                } else {
+                    content.insertAdjacentHTML('beforeend', propHTML);
+                }
+            }
+            
+            // Update count in summary
+            const paramCount = content.querySelectorAll('.param-item').length;
+            summary.innerHTML = `<i class="fas fa-cog"></i> Parameters (${paramCount})`;
         }
-
-        async function deployToAzure(serverPath, filename) {
-            // Close current modal and show publish online modal with Azure tab
-            const currentModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10001"]');
-            if (currentModal) currentModal.remove();
+        
+        function editParameter(toolIndex, paramName) {
+            const toolEditor = document.querySelector(`.tool-editor[data-tool-index="${toolIndex}"]`);
+            if (!toolEditor) return;
             
-            showPublishOnlineModal();
-            // Wait for modal to render, then switch to Azure tab
-            setTimeout(() => {
-                switchDeploymentTab('azure');
-            }, 100);
+            const paramDiv = toolEditor.querySelector(`.param-item[data-param-name="${paramName}"]`);
+            if (!paramDiv) return;
+            
+            const strong = paramDiv.querySelector('strong');
+            const typeSpan = paramDiv.querySelector('span');
+            const descDiv = paramDiv.querySelector('div[style*="color: rgba(255, 255, 255, 0.7)"]');
+            const isRequired = paramDiv.innerHTML.includes('var(--anthropic-orange)');
+            
+            const existingParam = {
+                name: strong?.textContent.trim() || paramName,
+                type: typeSpan?.textContent.match(/\(([^)]+)\)/)?.[1] || 'string',
+                description: descDiv?.textContent.trim() || '',
+                required: isRequired
+            };
+            
+            showAddParameterModal(toolIndex, existingParam);
         }
-
-        async function deployToRemote(serverPath, filename) {
-            // Close current modal and show publish online modal with Remote tab
-            const currentModal = document.querySelector('[style*="position: fixed"][style*="z-index: 10001"]');
-            if (currentModal) currentModal.remove();
+        
+        function removeParameter(toolIndex, paramName) {
+            if (!confirm(`Remove parameter "${paramName}"?`)) return;
             
-            showPublishOnlineModal();
-            // Wait for modal to render, then switch to Remote tab
-            setTimeout(() => {
-                switchDeploymentTab('remote');
-            }, 100);
+            const toolEditor = document.querySelector(`.tool-editor[data-tool-index="${toolIndex}"]`);
+            if (!toolEditor) return;
+            
+            const paramDiv = toolEditor.querySelector(`.param-item[data-param-name="${paramName}"]`);
+            if (paramDiv) {
+                paramDiv.remove();
+                const details = toolEditor.querySelector('details');
+                const summary = details.querySelector('summary');
+                const content = details.querySelector('div');
+                const paramCount = content.querySelectorAll('.param-item').length;
+                summary.innerHTML = `<i class="fas fa-cog"></i> Parameters (${paramCount})`;
+            }
+        }
+        
+        // Keep old function name for backward compatibility
+        function removeProperty(toolIndex, propName) {
+            removeParameter(toolIndex, propName);
+        }
+        
+        function removeProperty(toolIndex, propName) {
+            if (confirm(`Remove parameter "${propName}"?`)) {
+                // This will be handled when saving
+                const toolEditor = document.querySelector(`.tool-editor[data-tool-index="${toolIndex}"]`);
+                if (toolEditor) {
+                    const propDiv = Array.from(toolEditor.querySelectorAll('strong')).find(s => s.textContent === propName)?.closest('div[style*="background: rgba(0, 0, 0, 0.3)"]');
+                    if (propDiv) {
+                        propDiv.remove();
+                        const details = toolEditor.querySelector('details');
+                        const summary = details.querySelector('summary');
+                        const currentCount = parseInt(summary.textContent.match(/\((\d+)\)/)?.[1] || '0');
+                        summary.innerHTML = `<i class="fas fa-cog"></i> Parameters (${currentCount - 1})`;
+                    }
+                }
+            }
+        }
+        
+        async function saveEditedConfig(configId) {
+            try {
+                // Collect all tool data
+                const tools = [];
+                const toolEditors = document.querySelectorAll('.tool-editor');
+                
+                toolEditors.forEach((editor, index) => {
+                    const name = editor.querySelector('.tool-name').value.trim();
+                    const method = editor.querySelector('.tool-method').value;
+                    const endpoint = editor.querySelector('.tool-endpoint').value.trim();
+                    const description = editor.querySelector('.tool-description').value.trim();
+                    
+                    // Collect parameters
+                    const properties = {};
+                    const required = [];
+                    const paramItems = editor.querySelectorAll('.param-item');
+                    
+                    paramItems.forEach(paramItem => {
+                        const paramName = paramItem.getAttribute('data-param-name');
+                        const strong = paramItem.querySelector('strong');
+                        const typeSpan = paramItem.querySelector('span');
+                        const descDiv = paramItem.querySelector('div[style*="color: rgba(255, 255, 255, 0.7)"]');
+                        const isRequired = paramItem.innerHTML.includes('var(--anthropic-orange)');
+                        
+                        if (paramName && strong) {
+                            const propType = typeSpan?.textContent.match(/\(([^)]+)\)/)?.[1] || 'string';
+                            const propDesc = descDiv?.textContent.trim() || '';
+                            
+                            properties[paramName] = {
+                                type: propType,
+                                description: propDesc
+                            };
+                            
+                            if (isRequired) {
+                                required.push(paramName);
+                            }
+                        }
+                    });
+                    
+                    tools.push({
+                        name: name,
+                        description: description,
+                        endpoint: endpoint,
+                        method: method,
+                        input_schema: {
+                            type: 'object',
+                            properties: properties,
+                            required: required
+                        }
+                    });
+                });
+                
+                const baseUrl = document.getElementById('editBaseUrl').value.trim();
+                const versionNote = document.getElementById('versionNote').value.trim();
+                
+                // Update selected API IDs based on current tools
+                const updatedSelectedApiIds = [];
+                tools.forEach(tool => {
+                    const apiId = `${tool.method}_${tool.endpoint}`.replace(/[\/\{\}]/g, '_');
+                    updatedSelectedApiIds.push(apiId);
+                });
+                
+                // Build YAML data
+                const yamlData = {
+                    base_url: baseUrl,
+                    tools: tools,
+                    generated_at: window.editConfigData.originalYamlData.generated_at || new Date().toISOString()
+                };
+                
+                // Update config data with selected API IDs
+                const configData = window.editConfigData.originalYamlData.config || {};
+                configData.selected_api_ids = updatedSelectedApiIds;
+                
+                // Save as new version
+                const response = await fetch(`/api/saved-configs/${configId}/yaml`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        yaml_data: yamlData,
+                        version_note: versionNote || 'Configuration updated',
+                        selected_api_ids: updatedSelectedApiIds
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                    }
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const newConfigId = result.new_config_id || configId;
+                    
+                    // Check if there are existing deployments for this configuration
+                    const deploymentsResponse = await fetch(`/api/saved-configs/${configId}/deployments`);
+                    let existingDeployments = [];
+                    
+                    if (deploymentsResponse.ok) {
+                        const deploymentsResult = await deploymentsResponse.json();
+                        if (deploymentsResult.success && deploymentsResult.deployments) {
+                            existingDeployments = deploymentsResult.deployments.filter(d => d.status === 'success');
+                        }
+                    }
+                    
+                    // Close edit modal
+                    document.getElementById('edit-config-modal').remove();
+                    
+                    // If there are existing successful deployments, ask if user wants to deploy updated YAML
+                    if (existingDeployments.length > 0) {
+                        const deployToExisting = confirm(
+                            `Configuration saved as new version!\n\n` +
+                            `Found ${existingDeployments.length} existing deployment(s). ` +
+                            `Would you like to deploy the updated YAML to these instances?`
+                        );
+                        
+                        if (deployToExisting) {
+                            // Get tool count from result
+                            const toolCount = result.yaml_data?.tools?.length || tools.length || 0;
+                            // Show deployment selection modal
+                            showDeployToExistingModal(newConfigId, existingDeployments, result.yaml_path, toolCount);
+                            return;
+                        }
+                    } else {
+                        alert('Configuration saved as new version successfully!');
+                    }
+                    
+                    // Reload saved configurations
+                    const savedModal = document.getElementById('saved-configs-modal');
+                    if (savedModal) savedModal.remove();
+                    showSavedConfigurations();
+                } else {
+                    throw new Error(result.error || 'Failed to save configuration');
+                }
+            } catch (error) {
+                console.error('Error saving edited configuration:', error);
+                alert('Error saving configuration: ' + error.message);
+            }
+        }
+        
+        async function deploySavedConfig(configId) {
+            try {
+                const response = await fetch('/api/saved-configs');
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to load configurations');
+                }
+                
+                const config = result.configs.find(c => c.id === configId);
+                if (!config) {
+                    throw new Error('Configuration not found');
+                }
+                
+                // Close saved configs modal
+                document.getElementById('saved-configs-modal').remove();
+                
+                // Deploy based on type
+                // Handle 'api' type as 'swagger' for backward compatibility
+                const normalizedType = config.type === 'api' ? 'swagger' : config.type;
+                
+                if (normalizedType === 'swagger' || normalizedType === 'codebase') {
+                    const configData = config.config;
+                    
+                    // Check if this is a deployment configuration (has platform) or installation configuration (has serverConfig)
+                    if (configData.platform) {
+                        // This is a deployment configuration - restore deployment form
+                        // Set global variables needed for deployment
+                        if (configData.server_path && configData.yaml_file) {
+                            // Join paths properly - handle both Windows and Unix paths
+                            const separator = configData.server_path.includes('\\') ? '\\' : '/';
+                            window.lastGeneratedYamlPath = configData.server_path + separator + configData.yaml_file;
+                        }
+                        if (configData.server_name) {
+                            window.currentServerName = configData.server_name;
+                        }
+                        window.currentProjectSourceType = normalizedType;
+                        
+                        // Show deployment modal and restore form values
+                        showPublishOnlineModal();
+                        
+                        // Wait for modal to render, then restore form values and switch to the correct tab
+                        setTimeout(() => {
+                            const platform = configData.platform;
+                            switchDeploymentTab(platform);
+                            
+                            // Restore form values based on platform
+                            if (platform === 'aws') {
+                                if (document.getElementById('awsDomain')) {
+                                    document.getElementById('awsDomain').value = configData.domain || '';
+                                }
+                                if (document.getElementById('awsRegion')) {
+                                    document.getElementById('awsRegion').value = configData.region || 'ap-south-1';
+                                }
+                                if (document.getElementById('awsInstanceType')) {
+                                    document.getElementById('awsInstanceType').value = configData.instance_type || 't2.micro';
+                                }
+                                // Note: We don't restore credentials for security - user needs to enter them
+                            } else if (platform === 'azure') {
+                                if (document.getElementById('azureTenantId')) {
+                                    document.getElementById('azureTenantId').value = configData.tenant_id || '';
+                                }
+                                if (document.getElementById('azureResourceGroup')) {
+                                    document.getElementById('azureResourceGroup').value = configData.resource_group || '';
+                                }
+                                if (document.getElementById('azureLocation')) {
+                                    document.getElementById('azureLocation').value = configData.location || '';
+                                }
+                            } else if (platform === 'remote') {
+                                if (document.getElementById('remoteHost')) {
+                                    document.getElementById('remoteHost').value = configData.host || '';
+                                }
+                                if (document.getElementById('remoteUsername')) {
+                                    document.getElementById('remoteUsername').value = configData.username || '';
+                                }
+                                if (document.getElementById('remoteAuthMethod')) {
+                                    document.getElementById('remoteAuthMethod').value = configData.auth_method || 'password';
+                                }
+                            }
+                        }, 200);
+                    } else if (configData.serverConfig) {
+                        // This is an installation configuration - show installation modal
+                        if (normalizedType === 'swagger') {
+                            showInstallationModal('swagger', 'Swagger API MCP Server', configData.serverConfig);
+                        } else {
+                            showInstallationModal('codebase', 'Codebase MCP Server', configData.serverConfig);
+                        }
+                    } else {
+                        alert('Invalid configuration: missing deployment or installation config. Please check the configuration details.');
+                    }
+                } else if (config.type === 'database') {
+                    // Restore database config and show deployment modal
+                    const configData = config.config;
+                    if (configData.config_path && configData.server_path && configData.server_name) {
+                        showDatabaseMCPSetupModal({
+                            config_path: configData.config_path,
+                            server_path: configData.server_path,
+                            server_name: configData.server_name,
+                            python_path: configData.python_path || 'python',
+                            selected_tools: configData.selected_tools || []
+                        });
+                    } else {
+                        alert('Invalid configuration: missing required fields');
+                    }
+                } else {
+                    alert('Unknown configuration type: ' + config.type);
+                }
+            } catch (error) {
+                console.error('Error deploying configuration:', error);
+                alert('Error deploying configuration: ' + error.message);
+            }
+        }
+        
+        async function saveCurrentConfig(serverType) {
+            try {
+                const installationPath = document.getElementById('installationPath')?.value || '';
+                const serverName = document.getElementById('clientServerName')?.value || '';
+                
+                if (!window.currentServerConfig) {
+                    alert('No server configuration available to save');
+                    return;
+                }
+                
+                const configName = prompt('Enter a name for this configuration:', `${serverType}_${serverName || 'config'}_${new Date().toISOString().split('T')[0]}`);
+                if (!configName || configName.trim() === '') {
+                    return;
+                }
+                
+                const configData = {
+                    serverConfig: window.currentServerConfig,
+                    installationPath: installationPath,
+                    serverName: serverName
+                };
+                
+                const saved = await saveMCPConfig(serverType, configName.trim(), configData);
+                if (saved) {
+                    // Store config_id for tracking deployments
+                    window.currentDeploymentConfigId = saved.id;
+                    console.log('Configuration saved:', saved);
+                }
+            } catch (error) {
+                console.error('Error saving configuration:', error);
+                alert('Error saving configuration: ' + error.message);
+            }
+        }
+        
+        async function saveDatabaseMCPConfig(configPath, serverPath, serverName, pythonPath, buttonElement) {
+            try {
+                if (buttonElement) {
+                    buttonElement.disabled = true;
+                    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size: 1rem; font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Saving...</span>';
+                }
+                
+                const configName = prompt('Enter a name for this configuration:', `database_${serverName}_${new Date().toISOString().split('T')[0]}`);
+                if (!configName || configName.trim() === '') {
+                    if (buttonElement) {
+                        buttonElement.disabled = false;
+                        buttonElement.innerHTML = '<i class="fas fa-save" style="font-size: 1rem; font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Save Configuration</span>';
+                    }
+                    return;
+                }
+                
+                const configData = {
+                    config_path: configPath,
+                    server_path: serverPath,
+                    server_name: serverName,
+                    python_path: pythonPath,
+                    selected_tools: window.databaseMCPSelectedTools || []
+                };
+                
+                // Check for duplicate names
+                const existingConfigs = await fetch('/api/saved-configs').then(r => r.json()).then(r => r.configs || []).catch(() => []);
+                const duplicate = existingConfigs.find(c => c.name === configName.trim() && c.type === 'database');
+                
+                if (duplicate) {
+                    const overwrite = confirm(`A configuration named "${configName.trim()}" already exists. Do you want to overwrite it?`);
+                    if (!overwrite) {
+                        if (buttonElement) {
+                            buttonElement.disabled = false;
+                            buttonElement.innerHTML = '<i class="fas fa-save" style="font-size: 1rem; font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Save Configuration</span>';
+                        }
+                        return;
+                    }
+                    // Update existing config
+                    const updateResponse = await fetch(`/api/saved-configs/${duplicate.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: configName.trim(),
+                            config: configData
+                        })
+                    });
+                    const updateResult = await updateResponse.json();
+                    if (updateResult.success) {
+                        window.currentDeploymentConfigId = duplicate.id;
+                        if (buttonElement) {
+                            buttonElement.innerHTML = '<i class="fas fa-check" style="font-size: 1rem; font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Saved!</span>';
+                            buttonElement.style.background = 'rgba(16, 185, 129, 0.2)';
+                            buttonElement.style.borderColor = '#10B981';
+                            buttonElement.style.color = '#10B981';
+                        }
+                        alert('Configuration updated successfully!');
+                    } else {
+                        throw new Error(updateResult.error || 'Failed to update configuration');
+                    }
+                } else {
+                    const saved = await saveMCPConfig('database', configName.trim(), configData);
+                    if (saved) {
+                        // Store config_id for tracking deployments
+                        window.currentDeploymentConfigId = saved.id;
+                        if (buttonElement) {
+                            buttonElement.innerHTML = '<i class="fas fa-check" style="font-size: 1rem; font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Saved!</span>';
+                            buttonElement.style.background = 'rgba(16, 185, 129, 0.2)';
+                            buttonElement.style.borderColor = '#10B981';
+                            buttonElement.style.color = '#10B981';
+                        }
+                        alert('Configuration saved successfully!');
+                        console.log('Configuration saved:', saved);
+                    }
+                }
+            } catch (error) {
+                console.error('Error saving configuration:', error);
+                alert('Error saving configuration: ' + error.message);
+                if (buttonElement) {
+                    buttonElement.disabled = false;
+                    buttonElement.innerHTML = '<i class="fas fa-save" style="font-size: 1rem; font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> <span>Save Configuration</span>';
+                }
+            }
+        }
+        
+        async function saveDeploymentDetails(configId, platform, deploymentDetails, status = 'success') {
+            try {
+                const response = await fetch(`/api/saved-configs/${configId}/deployments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        platform: platform,
+                        deployment_data: deploymentDetails,
+                        status: status
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    console.log('Deployment details saved:', result.deployment_id);
+                } else {
+                    console.error('Failed to save deployment details:', result.error);
+                }
+            } catch (error) {
+                console.error('Error saving deployment details:', error);
+            }
+        }
+        
+        async function refreshDeploymentYaml(configId, deploymentId) {
+            try {
+                if (!confirm('This will update the deployed instance with the latest YAML configuration. Continue?')) {
+                    return;
+                }
+                
+                const response = await fetch(`/api/saved-configs/${configId}/refresh-deployment`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        deployment_id: deploymentId
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                    }
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('YAML refresh initiated successfully! ' + (result.note || ''));
+                    // Reload saved configurations to show updated status
+                    const savedModal = document.getElementById('saved-configs-modal');
+                    if (savedModal) savedModal.remove();
+                    showSavedConfigurations();
+                } else {
+                    throw new Error(result.error || 'Failed to refresh YAML');
+                }
+            } catch (error) {
+                console.error('Error refreshing deployment YAML:', error);
+                alert('Error refreshing YAML: ' + error.message);
+            }
+        }
+        
+        async function showDeployUpdatedYamlModal(configId) {
+            try {
+                // Fetch deployments for this config
+                const deploymentsResponse = await fetch(`/api/saved-configs/${configId}/deployments`);
+                if (!deploymentsResponse.ok) {
+                    throw new Error('Failed to load deployments');
+                }
+                
+                const deploymentsResult = await deploymentsResponse.json();
+                if (!deploymentsResult.success) {
+                    throw new Error(deploymentsResult.error || 'Failed to load deployments');
+                }
+                
+                const allDeployments = deploymentsResult.deployments || [];
+                const successfulDeployments = allDeployments.filter(d => d.status === 'success');
+                
+                if (successfulDeployments.length === 0) {
+                    alert('No successful deployments found for this configuration.');
+                    return;
+                }
+                
+                // Get YAML path from config
+                const configResponse = await fetch(`/api/saved-configs/${configId}/yaml`);
+                let yamlPath = null;
+                let toolCount = 0;
+                if (configResponse.ok) {
+                    const yamlResult = await configResponse.json();
+                    if (yamlResult.success) {
+                        yamlPath = yamlResult.yaml_path || yamlResult.yaml_data?.yaml_path;
+                        toolCount = yamlResult.yaml_data?.tools?.length || 0;
+                    }
+                }
+                
+                showDeployToExistingModal(configId, successfulDeployments, yamlPath, toolCount);
+            } catch (error) {
+                console.error('Error loading deployments:', error);
+                alert('Error loading deployments: ' + error.message);
+            }
+        }
+        
+        function showDeployToExistingModal(configId, deployments, yamlPath, toolCount = 0) {
+            const modalHTML = `
+                <div id="deploy-to-existing-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 10003; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+                    <div style="background: linear-gradient(135deg, rgba(0, 48, 135, 0.98), rgba(26, 31, 58, 0.98)); border: 2px solid var(--scikiq-light-blue); border-radius: 16px; max-width: 700px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);">
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, var(--scikiq-green), #059669); padding: 1.5rem 2rem; border-radius: 14px 14px 0 0; flex-shrink: 0; position: relative;">
+                            <button onclick="document.getElementById('deploy-to-existing-modal').remove()" style="position: absolute; top: 1rem; right: 1rem; background: rgba(255, 255, 255, 0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <h2 style="margin: 0; color: white; font-size: 1.8rem;">
+                                <i class="fas fa-cloud-upload-alt"></i> Deploy Updated YAML
+                            </h2>
+                            <p style="margin: 0.5rem 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 1rem;">
+                                Select existing deployments to update with the new YAML configuration
+                            </p>
+                        </div>
+                        
+                        <!-- Body -->
+                        <div style="padding: 2rem; overflow-y: auto; flex: 1;">
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; color: var(--scikiq-light-blue); font-weight: 600; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-server"></i> Select Deployments to Update
+                                </label>
+                                <div id="deployment-selection-list" style="display: grid; gap: 0.75rem; max-height: 400px; overflow-y: auto;">
+                                    ${deployments.map((deployment, index) => {
+                                        const depData = typeof deployment.deployment_data === 'string' 
+                                            ? JSON.parse(deployment.deployment_data) 
+                                            : deployment.deployment_data || {};
+                                        return `
+                                            <div class="deployment-selection-item" data-deployment-id="${deployment.id}" style="background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: all 0.3s ease;" onclick="toggleDeploymentSelection('${deployment.id}')">
+                                                <input type="checkbox" class="deployment-checkbox" data-deployment-id="${deployment.id}" checked style="width: 20px; height: 20px; cursor: pointer;" onclick="event.stopPropagation(); toggleDeploymentSelection('${deployment.id}')" />
+                                                <div style="flex: 1;">
+                                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                                        <span style="background: rgba(255, 153, 0, 0.2); color: #FF9900; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                                                            ${deployment.platform}
+                                                        </span>
+                                                        <span style="color: rgba(255, 255, 255, 0.6); font-size: 0.8rem;">
+                                                            ${new Date(deployment.deployed_at).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                    ${depData.public_ip ? `<div style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem;"><i class="fas fa-server"></i> IP: ${depData.public_ip}</div>` : ''}
+                                                    ${depData.domain ? `<div style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem;"><i class="fas fa-globe"></i> Domain: ${depData.domain}</div>` : ''}
+                                                    ${depData.instance_id ? `<div style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem;"><i class="fas fa-id-card"></i> Instance: ${depData.instance_id}</div>` : ''}
+                                                </div>
+                                                <span style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: rgba(16, 185, 129, 0.2); color: #10B981;">
+                                                    ✓ Success
+                                                </span>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                            
+                            <div style="background: rgba(0, 163, 224, 0.1); border-left: 4px solid var(--scikiq-light-blue); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                                <div style="color: rgba(255, 255, 255, 0.9); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-file-code" style="color: var(--scikiq-light-blue); margin-right: 0.5rem;"></i>
+                                    <strong style="color: var(--scikiq-light-blue);">YAML Configuration Details:</strong>
+                                </div>
+                                ${yamlPath ? `
+                                <div style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; margin-bottom: 0.5rem;">
+                                    <strong>File Path:</strong>
+                                    <div style="font-family: 'Fira Code', monospace; background: rgba(0, 0, 0, 0.3); padding: 0.5rem; border-radius: 4px; word-break: break-all; margin-top: 0.25rem;">
+                                        ${yamlPath}
+                                    </div>
+                                </div>
+                                ` : '<div style="color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; font-style: italic;">YAML file path will be determined from configuration</div>'}
+                                ${toolCount > 0 ? `
+                                <div style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem;">
+                                    <strong>Tools Count:</strong> <span style="color: var(--scikiq-green); font-weight: 600;">${toolCount} tool${toolCount !== 1 ? 's' : ''}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                            <div style="background: rgba(0, 163, 224, 0.1); border-left: 4px solid var(--scikiq-light-blue); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                                <div style="color: rgba(255, 255, 255, 0.9); font-size: 0.9rem;">
+                                    <i class="fas fa-info-circle" style="color: var(--scikiq-light-blue); margin-right: 0.5rem;"></i>
+                                    This will update the selected deployments with the latest YAML configuration. The MCP server will reload the new tools automatically.
+                                </div>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                                <button onclick="document.getElementById('deploy-to-existing-modal').remove(); showSavedConfigurations();" style="padding: 0.8rem 1.5rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">
+                                    Cancel
+                                </button>
+                                <button onclick="deployUpdatedYamlToSelected('${configId}')" style="padding: 0.8rem 1.5rem; background: var(--scikiq-green); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                                    <i class="fas fa-cloud-upload-alt"></i> Deploy to Selected
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Store config ID and YAML path for deployment
+            window.deployToExistingData = {
+                configId: configId,
+                yamlPath: yamlPath,
+                deployments: deployments
+            };
+        }
+        
+        function toggleDeploymentSelection(deploymentId) {
+            const checkbox = document.querySelector(`.deployment-checkbox[data-deployment-id="${deploymentId}"]`);
+            const item = document.querySelector(`.deployment-selection-item[data-deployment-id="${deploymentId}"]`);
+            
+            if (checkbox && item) {
+                const isChecked = checkbox.checked;
+                
+                // Update visual state
+                if (isChecked) {
+                    item.style.borderColor = 'var(--scikiq-light-blue)';
+                    item.style.background = 'rgba(0, 163, 224, 0.1)';
+                } else {
+                    item.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    item.style.background = 'rgba(255, 255, 255, 0.05)';
+                }
+            }
+        }
+        
+        async function deployUpdatedYamlToSelected(configId) {
+            try {
+                const selectedCheckboxes = document.querySelectorAll('.deployment-checkbox:checked');
+                
+                if (selectedCheckboxes.length === 0) {
+                    alert('Please select at least one deployment to update.');
+                    return;
+                }
+                
+                const deployButton = document.querySelector('button[onclick*="deployUpdatedYamlToSelected"]');
+                const originalHTML = deployButton ? deployButton.innerHTML : '';
+                
+                if (deployButton) {
+                    deployButton.disabled = true;
+                    deployButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deploying...';
+                }
+                
+                const deploymentIds = Array.from(selectedCheckboxes).map(cb => cb.getAttribute('data-deployment-id'));
+                let successCount = 0;
+                let failCount = 0;
+                
+                // Deploy to each selected deployment
+                for (const deploymentId of deploymentIds) {
+                    try {
+                        const response = await fetch(`/api/saved-configs/${configId}/refresh-deployment`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                deployment_id: deploymentId
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            if (result.success) {
+                                successCount++;
+                            } else {
+                                failCount++;
+                                console.error(`Failed to deploy to ${deploymentId}:`, result.error);
+                            }
+                        } else {
+                            failCount++;
+                            const errorText = await response.text();
+                            console.error(`Failed to deploy to ${deploymentId}:`, errorText);
+                        }
+                    } catch (error) {
+                        failCount++;
+                        console.error(`Error deploying to ${deploymentId}:`, error);
+                    }
+                }
+                
+                // Show results
+                let message = `Deployment completed!\n\n`;
+                if (successCount > 0) {
+                    message += `✓ Successfully updated ${successCount} deployment(s)\n`;
+                }
+                if (failCount > 0) {
+                    message += `✗ Failed to update ${failCount} deployment(s)\n`;
+                }
+                
+                alert(message);
+                
+                // Close modal and reload saved configurations
+                document.getElementById('deploy-to-existing-modal').remove();
+                const savedModal = document.getElementById('saved-configs-modal');
+                if (savedModal) savedModal.remove();
+                showSavedConfigurations();
+                
+            } catch (error) {
+                console.error('Error deploying updated YAML:', error);
+                alert('Error deploying updated YAML: ' + error.message);
+                const deployButton = document.querySelector('button[onclick*="deployUpdatedYamlToSelected"]');
+                if (deployButton) {
+                    deployButton.disabled = false;
+                    deployButton.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Deploy to Selected';
+                }
+            }
+        }
+        
+        // Expose functions to window for onclick handlers
+        window.showDeployUpdatedYamlModal = showDeployUpdatedYamlModal;
+        window.deployUpdatedYamlToSelected = deployUpdatedYamlToSelected;
+        window.toggleDeploymentSelection = toggleDeploymentSelection;
+        
+        async function refreshDeploymentStatus(configId, deploymentId) {
+            try {
+                const response = await fetch(`/api/saved-configs/${configId}/deployments/${deploymentId}/refresh`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    // Reload the saved configurations modal to show updated status
+                    document.getElementById('saved-configs-modal').remove();
+                    showSavedConfigurations();
+                    return result;
+                } else {
+                    throw new Error(result.error || 'Failed to refresh deployment status');
+                }
+            } catch (error) {
+                console.error('Error refreshing deployment status:', error);
+                alert('Error refreshing deployment status: ' + error.message);
+                return null;
+            }
+        }
+        
+        async function saveDeploymentConfigBeforeDeploy() {
+            try {
+                const activeTab = document.querySelector('.deployment-tab.active')?.dataset.tab || 'aws';
+                const serverType = window.currentProjectSourceType || 'api';
+                const buttonElement = document.getElementById('saveConfigBeforeDeployBtn');
+                
+                await saveDeploymentConfig(activeTab, serverType, buttonElement);
+            } catch (error) {
+                console.error('Error saving configuration:', error);
+                alert('Error saving configuration: ' + error.message);
+            }
+        }
+        
+        async function saveDeploymentConfig(platform, serverType, buttonElement) {
+            try {
+                // Disable button to prevent duplicate saves
+                if (buttonElement) {
+                    buttonElement.disabled = true;
+                    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Saving...';
+                }
+                
+                // Get deployment configuration from stored config or form fields
+                const activeTab = platform;
+                let configData = {};
+                
+                // Try to use stored deployment config first
+                if (window.currentDeploymentConfig && window.currentDeploymentConfig.platform === activeTab) {
+                    const storedPayload = window.currentDeploymentConfig.payload;
+                    // Store source information for rescanning during edit
+                    const sourceInfo = {};
+                    if (serverType === 'swagger' && window.currentSwaggerUrl) {
+                        sourceInfo.swagger_url = window.currentSwaggerUrl;
+                        sourceInfo.api_base_url = window.currentApiBaseUrl || '';
+                    } else if (serverType === 'codebase' && window.currentProjectPath) {
+                        sourceInfo.project_path = window.currentProjectPath;
+                        sourceInfo.source_file = window.currentSourceFile || '';
+                        sourceInfo.api_base_url = window.currentApiBaseUrl || 'http://localhost:9321';
+                    }
+                    
+                    configData = {
+                        platform: activeTab,
+                        access_key: '', // Don't save credentials for security
+                        secret_key: '', // Don't save credentials for security
+                        region: storedPayload.region || 'ap-south-1',
+                        instance_type: storedPayload.instance_type || 't2.micro',
+                        domain: storedPayload.domain || '',
+                        server_name: storedPayload.server_name,
+                        server_type: storedPayload.server_type || serverType,
+                        server_path: storedPayload.server_path,
+                        yaml_file: storedPayload.yaml_file,
+                        serverConfig: window.currentServerConfig || null,
+                        source_info: sourceInfo,
+                        selected_api_ids: window.selectedAPIsForConversion || []
+                    };
+                } else if (activeTab === 'aws') {
+                    // Fallback to reading from form fields
+                    const domain = document.getElementById('awsDomain')?.value || '';
+                    const serverPath = window.lastGeneratedYamlPath ? 
+                        window.lastGeneratedYamlPath.substring(0, window.lastGeneratedYamlPath.lastIndexOf('/')).replace(/\\/g, '/') : null;
+                    const yamlFileName = window.lastGeneratedYamlPath ? 
+                        window.lastGeneratedYamlPath.substring(window.lastGeneratedYamlPath.lastIndexOf('/') + 1) : null;
+                    
+                    let serverName = window.currentServerName;
+                    if (!serverName && window.currentApiDomain) {
+                        const domainMatch = window.currentApiDomain.match(/(?:https?:\/\/)?([^/:]+)/);
+                        if (domainMatch && domainMatch[1]) {
+                            const cleanDomain = domainMatch[1].replace(/\./g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                            serverName = cleanDomain.substring(0, 30) + '-mcp';
+                        }
+                    }
+                    if (!serverName) {
+                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                        serverName = `api-mcp-${timestamp}`;
+                    }
+                    
+                    // Store source information for rescanning during edit
+                    const sourceInfo = {};
+                    if (serverType === 'swagger' && window.currentSwaggerUrl) {
+                        sourceInfo.swagger_url = window.currentSwaggerUrl;
+                        sourceInfo.api_base_url = window.currentApiBaseUrl || '';
+                    } else if (serverType === 'codebase' && window.currentProjectPath) {
+                        sourceInfo.project_path = window.currentProjectPath;
+                        sourceInfo.source_file = window.currentSourceFile || '';
+                        sourceInfo.api_base_url = window.currentApiBaseUrl || 'http://localhost:9321';
+                    }
+                    
+                    configData = {
+                        platform: 'aws',
+                        access_key: '', // Don't save credentials for security
+                        secret_key: '', // Don't save credentials for security
+                        region: document.getElementById('awsRegion')?.value || 'ap-south-1',
+                        instance_type: document.getElementById('awsInstanceType')?.value || 't2.micro',
+                        domain: domain,
+                        server_name: serverName,
+                        server_type: serverType,
+                        server_path: serverPath,
+                        yaml_file: yamlFileName,
+                        serverConfig: window.currentServerConfig || null,
+                        source_info: sourceInfo,
+                        selected_api_ids: window.selectedAPIsForConversion || []
+                    };
+                } else if (activeTab === 'azure') {
+                    const serverPath = window.lastGeneratedYamlPath ? 
+                        window.lastGeneratedYamlPath.substring(0, window.lastGeneratedYamlPath.lastIndexOf('/')).replace(/\\/g, '/') : null;
+                    const yamlFileName = window.lastGeneratedYamlPath ? 
+                        window.lastGeneratedYamlPath.substring(window.lastGeneratedYamlPath.lastIndexOf('/') + 1) : null;
+                    
+                    let serverName = window.currentServerName;
+                    if (!serverName && window.currentApiDomain) {
+                        const domainMatch = window.currentApiDomain.match(/(?:https?:\/\/)?([^/:]+)/);
+                        if (domainMatch && domainMatch[1]) {
+                            const cleanDomain = domainMatch[1].replace(/\./g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                            serverName = cleanDomain.substring(0, 30) + '-mcp';
+                        }
+                    }
+                    if (!serverName) {
+                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                        serverName = `api-mcp-${timestamp}`;
+                    }
+                    
+                    // Store source information for rescanning during edit
+                    const sourceInfo = {};
+                    if (serverType === 'swagger' && window.currentSwaggerUrl) {
+                        sourceInfo.swagger_url = window.currentSwaggerUrl;
+                        sourceInfo.api_base_url = window.currentApiBaseUrl || '';
+                    } else if (serverType === 'codebase' && window.currentProjectPath) {
+                        sourceInfo.project_path = window.currentProjectPath;
+                        sourceInfo.source_file = window.currentSourceFile || '';
+                        sourceInfo.api_base_url = window.currentApiBaseUrl || 'http://localhost:9321';
+                    }
+                    
+                    configData = {
+                        platform: 'azure',
+                        subscription_id: '', // Don't save credentials
+                        client_id: '', // Don't save credentials
+                        tenant_id: document.getElementById('azureTenantId')?.value || '',
+                        resource_group: document.getElementById('azureResourceGroup')?.value || '',
+                        location: document.getElementById('azureLocation')?.value || '',
+                        server_name: serverName,
+                        server_type: serverType,
+                        server_path: serverPath,
+                        yaml_file: yamlFileName,
+                        serverConfig: window.currentServerConfig || null,
+                        source_info: sourceInfo,
+                        selected_api_ids: window.selectedAPIsForConversion || []
+                    };
+                } else if (activeTab === 'remote') {
+                    const serverPath = window.lastGeneratedYamlPath ? 
+                        window.lastGeneratedYamlPath.substring(0, window.lastGeneratedYamlPath.lastIndexOf('/')).replace(/\\/g, '/') : null;
+                    const yamlFileName = window.lastGeneratedYamlPath ? 
+                        window.lastGeneratedYamlPath.substring(window.lastGeneratedYamlPath.lastIndexOf('/') + 1) : null;
+                    
+                    let serverName = window.currentServerName;
+                    if (!serverName && window.currentApiDomain) {
+                        const domainMatch = window.currentApiDomain.match(/(?:https?:\/\/)?([^/:]+)/);
+                        if (domainMatch && domainMatch[1]) {
+                            const cleanDomain = domainMatch[1].replace(/\./g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                            serverName = cleanDomain.substring(0, 30) + '-mcp';
+                        }
+                    }
+                    if (!serverName) {
+                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                        serverName = `api-mcp-${timestamp}`;
+                    }
+                    
+                    // Store source information for rescanning during edit
+                    const sourceInfo = {};
+                    if (serverType === 'swagger' && window.currentSwaggerUrl) {
+                        sourceInfo.swagger_url = window.currentSwaggerUrl;
+                        sourceInfo.api_base_url = window.currentApiBaseUrl || '';
+                    } else if (serverType === 'codebase' && window.currentProjectPath) {
+                        sourceInfo.project_path = window.currentProjectPath;
+                        sourceInfo.source_file = window.currentSourceFile || '';
+                        sourceInfo.api_base_url = window.currentApiBaseUrl || 'http://localhost:9321';
+                    }
+                    
+                    configData = {
+                        platform: 'remote',
+                        host: document.getElementById('remoteHost')?.value || '',
+                        username: document.getElementById('remoteUsername')?.value || '',
+                        auth_method: document.getElementById('remoteAuthMethod')?.value || 'password',
+                        server_name: serverName,
+                        server_type: serverType,
+                        server_path: serverPath,
+                        yaml_file: yamlFileName,
+                        serverConfig: window.currentServerConfig || null,
+                        source_info: sourceInfo,
+                        selected_api_ids: window.selectedAPIsForConversion || []
+                    };
+                }
+                
+                const defaultName = `${serverType}_${configData.server_name || 'deployment'}_${activeTab}_${new Date().toISOString().split('T')[0]}`;
+                const configName = prompt('Enter a name for this deployment configuration:', defaultName);
+                if (!configName || configName.trim() === '') {
+                    if (buttonElement) {
+                        buttonElement.disabled = false;
+                        buttonElement.innerHTML = '<i class="fas fa-save" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Save Configuration';
+                    }
+                    return;
+                }
+                
+                // Check for duplicate names
+                const existingConfigs = await fetch('/api/saved-configs').then(r => r.json()).then(r => r.configs || []).catch(() => []);
+                const duplicate = existingConfigs.find(c => c.name === configName.trim() && c.type === serverType);
+                
+                if (duplicate) {
+                    const overwrite = confirm(`A configuration named "${configName.trim()}" already exists. Do you want to overwrite it?`);
+                    if (!overwrite) {
+                        if (buttonElement) {
+                            buttonElement.disabled = false;
+                            buttonElement.innerHTML = '<i class="fas fa-save" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Save Configuration';
+                        }
+                        return;
+                    }
+                    // Update existing config instead of creating new one
+                    const updateResponse = await fetch(`/api/saved-configs/${duplicate.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: configName.trim(),
+                            config: configData
+                        })
+                    });
+                    const updateResult = await updateResponse.json();
+                    if (updateResult.success) {
+                        window.currentDeploymentConfigId = duplicate.id;
+                        if (buttonElement) {
+                            buttonElement.innerHTML = '<i class="fas fa-check" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Saved!';
+                            buttonElement.style.background = 'rgba(16, 185, 129, 0.2)';
+                            buttonElement.style.borderColor = '#10B981';
+                            buttonElement.style.color = '#10B981';
+                        }
+                        alert('Configuration updated successfully!');
+                    } else {
+                        throw new Error(updateResult.error || 'Failed to update configuration');
+                    }
+                } else {
+                    const saved = await saveMCPConfig(serverType, configName.trim(), configData);
+                    if (saved) {
+                        // Store config_id for tracking deployments
+                        window.currentDeploymentConfigId = saved.id;
+                        if (buttonElement) {
+                            buttonElement.innerHTML = '<i class="fas fa-check" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Saved!';
+                            buttonElement.style.background = 'rgba(16, 185, 129, 0.2)';
+                            buttonElement.style.borderColor = '#10B981';
+                            buttonElement.style.color = '#10B981';
+                        }
+                        alert('Deployment configuration saved successfully!');
+                        console.log('Configuration saved:', saved);
+                    }
+                }
+            } catch (error) {
+                console.error('Error saving deployment configuration:', error);
+                alert('Error saving configuration: ' + error.message);
+                if (buttonElement) {
+                    buttonElement.disabled = false;
+                    buttonElement.innerHTML = '<i class="fas fa-save" style="font-family: \'Font Awesome 6 Free\'; font-weight: 900; display: inline-block; line-height: 1;"></i> Save Configuration';
+                }
+            }
         }

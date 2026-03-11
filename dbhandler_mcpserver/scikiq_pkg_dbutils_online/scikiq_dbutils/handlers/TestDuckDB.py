@@ -88,7 +88,7 @@ def test_duckdb_s3():
         "enable_s3": True,
         "s3_bucket": "your-test-bucket",  # Replace with actual bucket
         "s3_prefix": "duckdb_tables/",
-        "s3_region": "us-east-1",
+        "s3_region": "ap-south-1",
         "s3_access_key_id": "YOUR_ACCESS_KEY",  # Replace with actual key
         "s3_secret_access_key": "YOUR_SECRET_KEY",  # Replace with actual key
         "default_file_format": "parquet",
@@ -219,7 +219,7 @@ def create_sample_config():
         "enable_s3": True,
         "s3_bucket": "my-data-warehouse",
         "s3_prefix": "tables/",
-        "s3_region": "us-east-1",
+        "s3_region": "ap-south-1",
         "s3_access_key_id": "${AWS_ACCESS_KEY_ID}",
         "s3_secret_access_key": "${AWS_SECRET_ACCESS_KEY}",
         "default_file_format": "parquet",

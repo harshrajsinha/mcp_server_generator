@@ -62,7 +62,7 @@ database_path = :memory:
 s3_bucket = company-data-lake
 s3_access_key_id = AKIA1234567890
 s3_secret_access_key = abcdef1234567890
-s3_region = us-east-1
+s3_region = ap-south-1
 enable_s3 = true
 ```
 
@@ -204,7 +204,7 @@ database_path = :memory:
 s3_bucket = my-company-data-lake
 s3_access_key_id = AKIA...
 s3_secret_access_key = secret...
-s3_region = us-east-1
+s3_region = ap-south-1
 enable_s3 = true
 s3_prefix = analytics/tables/  # Optional: folder prefix
 ```
